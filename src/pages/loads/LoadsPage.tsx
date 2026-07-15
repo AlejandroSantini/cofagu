@@ -1,0 +1,372 @@
+import React, { useState, useEffect } from 'react';
+import { loadService, driverService, truckService } from '../../api/services';
+import { type Load, type Driver, type Truck } from '../../types';
+import { getErrorMessage } from '../../api/errorUtils';
+import { type LoadFormValues } from '../../schemas/load.schema';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { useToast } from '../../hooks/useToast';
+import { Toast } from '../../components/ui/Toast';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useAuthStore } from '../../store/useAuthStore';
+
+// Tabs, Form & Details Subcomponents (Local to Page Module)
+import { LoadsTable } from './LoadsTable';
+import { LoadForm } from './LoadForm';
+import { LoadDetails } from './LoadDetails';
+
+import { Plus, ChevronLeft } from 'lucide-react';
+
+export const LoadsPage: React.FC = () => {
+  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const user = useAuthStore((state) => state.user);
+
+  const [loads, setLoads] = useState<Load[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
+  
+  // Filtering & Selection for Assignment
+  const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED'>('ALL');
+  const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
+  const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(null);
+  const [carrierDrivers, setCarrierDrivers] = useState<Driver[]>([]);
+  const [carrierTrucks, setCarrierTrucks] = useState<Truck[]>([]);
+  const [assignDriverId, setAssignDriverId] = useState('');
+  const [assignTruckId, setAssignTruckId] = useState('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const [error, setError] = useState('');
+  const { toast, showToast, hideToast } = useToast();
+  const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
+
+  const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
+
+  // Load list effect
+  useEffect(() => {
+    let active = true;
+    const fetchLoads = async () => {
+      setLoading(true);
+      try {
+        const loadParams: { status?: string } = {};
+        if (activeTab !== 'ALL') {
+          if (activeTab === 'PUBLISHED') loadParams.status = 'PUBLISHED';
+          if (activeTab === 'ASSIGNED') loadParams.status = 'ASSIGNED';
+          if (activeTab === 'COMPLETED') loadParams.status = 'COMPLETED';
+        }
+        const res = await loadService.getLoads(loadParams);
+        if (active && res.data.success) {
+          setLoads(res.data.data);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) setError('Error al cargar la información de cargas.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchLoads();
+    return () => { active = false; };
+  }, [activeTab, refreshTrigger]);
+
+  // Load details refresh helper after action mutations
+  const refreshDetails = async () => {
+    if (!selectedLoad) return;
+    try {
+      const detailsRes = await loadService.getLoad(selectedLoad.id);
+      if (detailsRes.data.success) setSelectedLoad(detailsRes.data.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Load carrier drivers/trucks when an application is selected for assignment
+  useEffect(() => {
+    if (!selectedCarrierId) return;
+
+    const loadCarrierResources = async () => {
+      try {
+        const [drvRes, trkRes] = await Promise.all([
+          driverService.getDrivers({ carrierId: selectedCarrierId }),
+          truckService.getTrucks({ carrierId: selectedCarrierId })
+        ]);
+        if (drvRes.data.success) setCarrierDrivers(drvRes.data.data);
+        if (trkRes.data.success) setCarrierTrucks(trkRes.data.data);
+      } catch (err) {
+        console.error(err);
+        showToast('Error al cargar choferes/camiones del transportista.', 'error');
+      }
+    };
+    loadCarrierResources();
+  }, [selectedCarrierId]);
+
+  const handleRowClick = async (load: Load) => {
+    setSelectedLoad(load);
+    setSelectedAppId(null);
+    setSelectedCarrierId(null);
+    setCarrierDrivers([]);
+    setCarrierTrucks([]);
+    setAssignDriverId('');
+    setAssignTruckId('');
+  };
+
+  const onSubmit = async (data: LoadFormValues) => {
+    setSubmitLoading(true);
+    setError('');
+    try {
+      const res = await loadService.createLoad({
+        ...data,
+        rate: Number(data.rate),
+        date: new Date(data.date).toISOString()
+      });
+      if (res.data.success) {
+        showToast('Carga publicada con éxito');
+        handleBack();
+        triggerRefresh();
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error al publicar la carga.'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!delId) return;
+    setSubmitLoading(true);
+    try {
+      const res = await loadService.deleteLoad(delId);
+      if (res.data.success) {
+        showToast('Carga cancelada/eliminada correctamente');
+        confirmDelete();
+        setSelectedLoad(null);
+        triggerRefresh();
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error al eliminar la carga.'));
+      cancelDelete();
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleApply = async (notes: string): Promise<boolean> => {
+    if (!selectedLoad) return false;
+    if (!user?.carrierId) {
+      showToast('Tu cuenta no está asociada a ninguna empresa transportista.', 'error');
+      return false;
+    }
+    try {
+      const res = await loadService.applyToLoad(selectedLoad.id, {
+        carrierId: user.carrierId,
+        notes
+      });
+      if (res.data.success) {
+        showToast('Postulación enviada correctamente');
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al enviar postulación'), 'error');
+    }
+    return false;
+  };
+
+  const handleAssign = async () => {
+    if (!selectedLoad || !selectedAppId || !assignDriverId || !assignTruckId) {
+      showToast('Por favor, selecciona chofer y camión.', 'error');
+      return;
+    }
+    setSubmitLoading(true);
+    try {
+      const res = await loadService.assignLoad(selectedLoad.id, {
+        applicationId: selectedAppId,
+        driverId: Number(assignDriverId),
+        truckId: Number(assignTruckId)
+      });
+      if (res.data.success) {
+        showToast('Viaje asignado correctamente');
+        setSelectedAppId(null);
+        setSelectedCarrierId(null);
+        setCarrierDrivers([]);
+        setCarrierTrucks([]);
+        setAssignDriverId('');
+        setAssignTruckId('');
+        refreshDetails();
+        triggerRefresh();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al asignar viaje.'), 'error');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!selectedLoad) return;
+    setSubmitLoading(true);
+    try {
+      const res = await loadService.patchLoadStatus(selectedLoad.id, newStatus);
+      if (res.data.success) {
+        showToast(`Estado actualizado a ${newStatus}`);
+        refreshDetails();
+        triggerRefresh();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al actualizar estado.'), 'error');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleReportContingency = async (description: string, reportedBy: string): Promise<boolean> => {
+    if (!selectedLoad || !description) return false;
+    try {
+      const res = await loadService.reportContingency(selectedLoad.id, {
+        description,
+        reportedBy: reportedBy || user?.name || 'Chofer'
+      });
+      if (res.data.success) {
+        showToast('Contingencia reportada con éxito');
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al registrar contingencia'), 'error');
+    }
+    return false;
+  };
+
+  const handleBack = () => {
+    setShowForm(false);
+  };
+
+  const handleTabChange = (tab: 'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED') => {
+    setLoading(true);
+    setActiveTab(tab);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
+
+      <Modal
+        isOpen={isDelOpen}
+        onClose={cancelDelete}
+        onConfirm={handleDelete}
+        title="Cancelar Carga"
+        description="¿Estás seguro de que deseas cancelar esta publicación? Se desactivará del listado."
+        type="danger"
+        confirmText="Cancelar Carga"
+        isLoading={submitLoading}
+      />
+
+      <div className="flex flex-col gap-6 mb-8">
+        <PageHeader
+          title={showForm ? 'Nueva Carga' : selectedLoad ? 'Detalle de Carga' : 'Gestión de Cargas'}
+          description={
+            showForm 
+              ? 'Publica una nueva solicitud de traslado.' 
+              : selectedLoad 
+                ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
+                : 'Consulta cargas disponibles, postulaciones y estado operativo.'
+          }
+        />
+
+        <div>
+          {showForm || selectedLoad ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (showForm) handleBack();
+                if (selectedLoad) setSelectedLoad(null);
+              }}
+              icon={ChevronLeft}
+              className="w-full md:w-fit px-8"
+            >
+              Volver al Listado
+            </Button>
+          ) : (
+            isAdmin && (
+              <Button 
+                variant="primary" 
+                icon={Plus} 
+                onClick={() => setShowForm(true)} 
+                className="w-full md:w-fit px-8"
+              >
+                Publicar Carga
+              </Button>
+            )
+          )}
+        </div>
+      </div>
+
+      <ErrorMessage message={error} className="mb-6" />
+      {selectedLoad ? (
+        <LoadDetails
+          load={selectedLoad}
+          isAdmin={isAdmin}
+          user={user}
+          onCancelLoad={askDelete}
+          onApply={handleApply}
+          onStatusChange={handleStatusChange}
+          onReportContingency={handleReportContingency}
+          selectedAppId={selectedAppId}
+          setSelectedAppId={setSelectedAppId}
+          setSelectedCarrierId={setSelectedCarrierId}
+          carrierDrivers={carrierDrivers}
+          carrierTrucks={carrierTrucks}
+          assignDriverId={assignDriverId}
+          setAssignDriverId={setAssignDriverId}
+          assignTruckId={assignTruckId}
+          setAssignTruckId={setAssignTruckId}
+          onAssign={handleAssign}
+          submitLoading={submitLoading}
+        />
+      ) : showForm ? (
+        <LoadForm 
+          onSubmit={onSubmit} 
+          onCancel={handleBack} 
+          isLoading={submitLoading} 
+        />
+      ) : (
+        <div className="space-y-4">
+          {/* Tab Filters Navigation */}
+          <div className="flex border-b border-slate-200 dark:border-zinc-800">
+            {([
+              { id: 'ALL', label: 'Todas' },
+              { id: 'PUBLISHED', label: 'Disponibles' },
+              { id: 'ASSIGNED', label: 'En Curso' },
+              { id: 'COMPLETED', label: 'Completadas' }
+            ] as const).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${
+                  activeTab === tab.id
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content Render */}
+          <LoadsTable
+            loads={loads}
+            isLoading={loading}
+            onRowClick={handleRowClick}
+            statusFilter={activeTab !== 'ALL' ? activeTab : undefined}
+          />
+        </div>
+      )}
+    </div>
+  );
+};

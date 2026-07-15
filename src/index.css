@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
+    color-scheme: dark;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-black, .font-bold {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-slate-50 transition-colors duration-300;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+}
+
+/* Fix Autofill background in Dark Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  -webkit-text-fill-color: inherit !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #09090b inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
+/* Global Reset for Interactive Elements */
+button, 
+select, 
+[role="button"] {
+  cursor: pointer;
+}
+
+/* Normalize Date Inputs */
+input[type="date"] {
+  min-height: 3rem; /* match h-12 */
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+/* Ensure buttons and inputs are always contained */
+* {
+  min-width: 0;
+}
+
+/* Utility to hide scrollbars but keep functionality */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
