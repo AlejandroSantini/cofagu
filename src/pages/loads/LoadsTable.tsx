@@ -63,10 +63,22 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       )
     },
     {
+      header: 'Cupo (Aprobados)',
+      render: (l: Load) => {
+        const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+        const maxCapacity = l.maxTrucks || 1;
+        return (
+          <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-md">
+            {acceptedCount} / {maxCapacity}
+          </span>
+        );
+      }
+    },
+    {
       header: 'Postulantes',
       render: (l: Load) => (
         <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-md">
-          {l.applications?.length || 0}
+          {l.applications?.filter(a => a.status === 'PENDING').length || 0}
         </span>
       )
     }

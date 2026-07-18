@@ -54,7 +54,7 @@ export const LoadsPage: React.FC = () => {
         const loadParams: { status?: string } = {};
         if (activeTab !== 'ALL') {
           if (activeTab === 'PUBLISHED') loadParams.status = 'PUBLISHED';
-          if (activeTab === 'ASSIGNED') loadParams.status = 'ASSIGNED';
+          if (activeTab === 'ASSIGNED') loadParams.status = 'IN_PROGRESS';
           if (activeTab === 'COMPLETED') loadParams.status = 'COMPLETED';
         }
         const res = await loadService.getLoads(loadParams);
@@ -120,6 +120,7 @@ export const LoadsPage: React.FC = () => {
       const res = await loadService.createLoad({
         ...data,
         rate: Number(data.rate),
+        maxTrucks: Number(data.maxTrucks),
         date: new Date(data.date).toISOString()
       });
       if (res.data.success) {
@@ -189,7 +190,11 @@ export const LoadsPage: React.FC = () => {
         truckId: Number(assignTruckId)
       });
       if (res.data.success) {
-        showToast('Viaje asignado correctamente');
+        if (res.data.data.cupoCompleto) {
+          showToast('¡Cupo completo! La carga pasó a En Curso.', 'success');
+        } else {
+          showToast('Viaje asignado correctamente', 'success');
+        }
         setSelectedAppId(null);
         setSelectedCarrierId(null);
         setCarrierDrivers([]);
@@ -238,6 +243,30 @@ export const LoadsPage: React.FC = () => {
       }
     } catch (err) {
       showToast(getErrorMessage(err, 'Error al registrar contingencia'), 'error');
+    }
+    return false;
+  };
+
+  const handleReportArrival = async (arrivedTrucks: number, notes?: string): Promise<boolean> => {
+    if (!selectedLoad) return false;
+    try {
+      const res = await loadService.reportArrival(selectedLoad.id, {
+        arrivedTrucks,
+        notes
+      });
+      if (res.data.success) {
+        const arrivalData = res.data.data;
+        if (arrivalData.hayFaltantes) {
+          showToast(`Llegada parcial: llegaron ${arrivalData.arrivedTrucks} de ${arrivalData.maxTrucks} camiones. Se reabrió el cupo faltante y se registró una contingencia automáticamente.`, 'error');
+        } else {
+          showToast('Llegada registrada correctamente.', 'success');
+        }
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al reportar la llegada a planta.'), 'error');
     }
     return false;
   };
@@ -316,6 +345,7 @@ export const LoadsPage: React.FC = () => {
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
+          onReportArrival={handleReportArrival}
           selectedAppId={selectedAppId}
           setSelectedAppId={setSelectedAppId}
           setSelectedCarrierId={setSelectedCarrierId}

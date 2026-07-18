@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, ChevronLeft, Shield, Mail, Trash2, Save } from 'lucide-react';
-import { authService } from '../api/services';
+import { Users, Plus, ChevronLeft, Shield, Mail, Trash2, Save, Building } from 'lucide-react';
+import { authService, carrierService } from '../api/services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -12,12 +12,13 @@ import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import { getErrorMessage } from '../api/errorUtils';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { type User } from '../types';
+import { type User, type Carrier } from '../types';
 
 export const UsersPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +33,8 @@ export const UsersPage: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'EMPLOYEE'
+    role: 'EMPLOYEE',
+    carrierId: '' as string | number
   });
 
   const loadUsers = async () => {
@@ -53,13 +55,21 @@ export const UsersPage: React.FC = () => {
     let mounted = true;
     const load = async () => {
       try {
-        const response = await authService.getUsers();
-        if (mounted && response.data.success) {
-          setUsers(response.data.data || []);
-          setTotalItems(response.data.pagination?.total || response.data.data?.length || 0);
+        const [usersRes, carriersRes] = await Promise.all([
+          authService.getUsers(),
+          carrierService.getCarriers()
+        ]);
+        if (mounted) {
+          if (usersRes.data.success) {
+            setUsers(usersRes.data.data || []);
+            setTotalItems(usersRes.data.pagination?.total || usersRes.data.data?.length || 0);
+          }
+          if (carriersRes.data.success) {
+            setCarriers(carriersRes.data.data || []);
+          }
         }
       } catch (err) {
-        console.error('Error loading users', err);
+        console.error('Error loading initial data', err);
       } finally {
         if (mounted) setFetching(false);
       }
@@ -74,7 +84,8 @@ export const UsersPage: React.FC = () => {
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      carrierId: user.carrierId || ''
     });
     setShowForm(true);
   };
@@ -102,15 +113,24 @@ export const UsersPage: React.FC = () => {
     setError('');
     
     try {
+      const payload = {
+        name: formData.name,
+        role: formData.role as 'ADMIN' | 'EMPLOYEE' | 'CARRIER',
+        carrierId: formData.role === 'CARRIER' && formData.carrierId ? Number(formData.carrierId) : null
+      };
+
       const response = editingId 
-        ? await authService.updateUser(editingId, { name: formData.name, role: formData.role as 'ADMIN' | 'EMPLOYEE' })
-        : await authService.register(formData);
+        ? await authService.updateUser(editingId, payload)
+        : await authService.register({
+            ...formData,
+            carrierId: formData.role === 'CARRIER' && formData.carrierId ? Number(formData.carrierId) : null
+          });
 
       if (response.data.success) {
         loadUsers();
         setEditingId(null);
         setShowForm(false);
-        setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+        setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
         showToast(editingId ? 'Usuario actualizado' : 'Usuario creado con éxito');
       }
     } catch (err) {
@@ -123,12 +143,21 @@ export const UsersPage: React.FC = () => {
   const columns = [
     { 
       header: 'Usuario', 
-      render: (u: User) => (
-        <div>
-          <p className="font-bold text-slate-900 dark:text-white">{u.name}</p>
-          <p className="text-xs text-slate-500">{u.email}</p>
-        </div>
-      )
+      render: (u: User) => {
+        const carrier = carriers.find(c => c.id === u.carrierId);
+        return (
+          <div>
+            <p className="font-bold text-slate-900 dark:text-white">{u.name}</p>
+            <p className="text-xs text-slate-500">{u.email}</p>
+            {carrier && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold flex items-center gap-1.5">
+                <Building size={14} className="shrink-0" />
+                {carrier.name}
+              </p>
+            )}
+          </div>
+        );
+      }
     },
     { 
       header: 'Rol', 
@@ -181,7 +210,7 @@ export const UsersPage: React.FC = () => {
           onClick={() => {
             if (showForm) {
               setEditingId(null);
-              setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+              setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
             }
             setShowForm(!showForm);
           }}
@@ -232,13 +261,27 @@ export const UsersPage: React.FC = () => {
                 label="Rol de Usuario"
                 icon={Shield}
                 options={[
-                  { value: 'EMPLOYEE', label: 'Empleado (Solo carga)' },
-                  { value: 'ADMIN', label: 'Administrador (Todo)' }
+                  { value: 'EMPLOYEE', label: 'Empleado (Cooperativa)' },
+                  { value: 'ADMIN', label: 'Administrador (Cooperativa)' },
+                  { value: 'CARRIER', label: 'Transportista (Externo)' }
                 ]}
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
                 required
               />
+              {formData.role === 'CARRIER' && (
+                <Select 
+                  label="Transportista Asociado"
+                  icon={Building}
+                  options={[
+                    { value: '', label: 'Seleccione un transportista' },
+                    ...carriers.map((c) => ({ value: String(c.id), label: c.name }))
+                  ]}
+                  value={String(formData.carrierId)}
+                  onChange={(e) => setFormData({...formData, carrierId: e.target.value})}
+                  required
+                />
+              )}
             </div>
             <div className="flex justify-end pt-4">
               <Button type="submit" className="w-full md:w-72" isLoading={loading} icon={Save}>

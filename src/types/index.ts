@@ -1,11 +1,11 @@
-export type UserRole = 'ADMIN' | 'EMPLOYEE';
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'CARRIER';
 
 export interface User {
   id: number;
   name: string;
   email: string;
   role: UserRole;
-  carrierId?: number;
+  carrierId?: number | null;
 }
 
 export interface Carrier {
@@ -59,6 +59,8 @@ export interface Load {
   rate: number;
   status: LoadStatus;
   notes?: string;
+  maxTrucks?: number;
+  arrivedTrucks?: number;
   carrierId?: number | null;
   driverId?: number | null;
   truckId?: number | null;
@@ -103,5 +105,23 @@ export interface CreateLoadPayload {
   destination: string;
   date: string;
   rate: number;
+  maxTrucks?: number;
   notes?: string;
+}
+
+export interface AssignLoadResponse {
+  id: number;
+  status: string;
+  maxTrucks: number;
+  acceptedCount: number;
+  cupoCompleto: boolean;
+}
+
+export interface ReportArrivalResponse {
+  id: number;
+  status: string;
+  maxTrucks: number;
+  arrivedTrucks: number;
+  hayFaltantes: boolean;
+  faltantes: number;
 }

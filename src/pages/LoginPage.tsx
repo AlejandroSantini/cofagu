@@ -56,8 +56,11 @@ export const LoginPage: React.FC = () => {
 
       <div className="w-full max-w-sm relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="text-center mb-10">
-          <span className="text-5xl font-black tracking-wider text-emerald-600 dark:text-emerald-500 uppercase block mb-2">Cofagu</span>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm">Gestión de Transporte y Maquinaria</p>
+          <img 
+            src={isDarkMode ? "/LOGO COFAGU-05.png" : "/LOGO COFAGU-06.png"} 
+            alt="COFAGU" 
+            className="h-40 mx-auto mb-4 object-contain"
+          />
         </div>
 
         <div className="bg-white dark:bg-zinc-900 p-10 rounded-3xl border border-slate-100 dark:border-zinc-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">

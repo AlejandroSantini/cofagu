@@ -50,8 +50,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         >
           <Menu size={24} />
         </button>
-        <div className="ml-4 flex items-center">
-          <span className="text-xl font-black tracking-wider text-emerald-500 uppercase font-sans">Cofagu</span>
+        <div className="ml-4 h-16 flex items-center overflow-hidden">
+          <img src="/LOGO COFAGU-04.png" alt="COFAGU" className="h-36 w-auto object-contain -ml-2" />
         </div>
       </header>
 
@@ -69,13 +69,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Sidebar Header */}
-        <div className="p-6 border-b border-zinc-700/50 dark:border-zinc-800/50 flex items-center justify-between">
-          <div className="flex items-center">
-            <span className="text-2xl font-black tracking-wider text-emerald-500 uppercase font-sans">Cofagu</span>
+        <div className="h-16 px-4 border-b border-zinc-700/50 dark:border-zinc-800/50 flex items-center justify-center relative overflow-hidden shrink-0">
+          <div className="flex items-center justify-center">
+            <img src="/LOGO COFAGU-04.png" alt="COFAGU" className="h-48 w-auto object-contain" />
           </div>
           <button 
             onClick={() => setIsOpen(false)}
-            className="lg:hidden p-2 hover:bg-zinc-700 dark:hover:bg-white/5 rounded-xl text-zinc-300 dark:text-zinc-400"
+            className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-zinc-700 dark:hover:bg-white/5 rounded-xl text-zinc-300 dark:text-zinc-400"
           >
             <X size={20} />
           </button>

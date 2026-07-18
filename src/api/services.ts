@@ -9,7 +9,9 @@ import {
   type CreateCarrierPayload,
   type CreateDriverPayload,
   type CreateTruckPayload,
-  type CreateLoadPayload
+  type CreateLoadPayload,
+  type AssignLoadResponse,
+  type ReportArrivalResponse
 } from '../types';
 
 // --- AUTH & USERS ---
@@ -24,7 +26,7 @@ export const authService = {
   register: (data: unknown) => api.post<ApiResponse<User>>('/users/register', data),
 
   updateUser: (id: number, data: Partial<User>) => 
-    api.patch<ApiResponse<User>>(`/users/${id}`, data),
+    api.put<ApiResponse<User>>(`/users/${id}`, data),
 
   deleteUser: (id: number) => 
     api.delete<ApiResponse<void>>(`/users/${id}`),
@@ -92,7 +94,9 @@ export const loadService = {
   applyToLoad: (id: number, data: { carrierId: number; notes?: string }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
   assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
-    api.post<ApiResponse<void>>(`/loads/${id}/assign`, data),
+    api.post<ApiResponse<AssignLoadResponse>>(`/loads/${id}/assign`, data),
   reportContingency: (id: number, data: { description: string; reportedBy: string }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
+  reportArrival: (id: number, data: { arrivedTrucks: number; notes?: string }) =>
+    api.patch<ApiResponse<ReportArrivalResponse>>(`/loads/${id}/arrival`, data),
 };

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loadSchema, type LoadFormValues } from '../../schemas/load.schema';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { MapPin, Calendar, DollarSign, Save } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Save, Truck } from 'lucide-react';
 
 interface LoadFormProps {
   onSubmit: (data: LoadFormValues) => void;
@@ -19,7 +19,10 @@ export const LoadForm: React.FC<LoadFormProps> = ({ onSubmit, onCancel, isLoadin
     formState: { errors, isValid }
   } = useForm<LoadFormValues>({
     resolver: zodResolver(loadSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      maxTrucks: '1'
+    }
   });
 
   return (
@@ -55,6 +58,17 @@ export const LoadForm: React.FC<LoadFormProps> = ({ onSubmit, onCancel, isLoadin
             {...register('rate')}
             error={errors.rate?.message}
           />
+          <div className="md:col-span-2">
+            <Input
+              label="Cantidad de camiones necesarios"
+              type="number"
+              min="1"
+              placeholder="Ej: 1"
+              icon={Truck}
+              {...register('maxTrucks')}
+              error={errors.maxTrucks?.message}
+            />
+          </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">Observaciones</label>
             <textarea

@@ -18,6 +18,7 @@ interface LoadDetailsProps {
   onApply: (notes: string) => Promise<boolean>;
   onStatusChange: (newStatus: string) => void;
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
+  onReportArrival: (arrivedTrucks: number, notes?: string) => Promise<boolean>;
   
   // Assignment resources props
   selectedAppId: number | null;
@@ -41,6 +42,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onApply,
   onStatusChange,
   onReportContingency,
+  onReportArrival,
   
   selectedAppId,
   setSelectedAppId,
@@ -57,12 +59,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   // Local modal states
   const [showPostulateModal, setShowPostulateModal] = useState(false);
   const [showContingencyModal, setShowContingencyModal] = useState(false);
+  const [showArrivalModal, setShowArrivalModal] = useState(false);
   
   // Local input states
   const [postulateNotes, setPostulateNotes] = useState('');
   const [contingencyDesc, setContingencyDesc] = useState('');
   const [contingencyReporter, setContingencyReporter] = useState('');
+  const [arrivedTrucksInput, setArrivedTrucksInput] = useState(load.maxTrucks || 1);
+  const [arrivalNotes, setArrivalNotes] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
+
+  const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+  const maxCapacity = load.maxTrucks || 1;
+  const selectedApp = load.applications?.find(a => a.id === selectedAppId);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -93,6 +102,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       setShowContingencyModal(false);
       setContingencyDesc('');
       setContingencyReporter('');
+    }
+  };
+
+  const handleLocalReportArrival = async () => {
+    setLocalSubmitLoading(true);
+    const success = await onReportArrival(arrivedTrucksInput, arrivalNotes);
+    setLocalSubmitLoading(false);
+    if (success) {
+      setShowArrivalModal(false);
     }
   };
 
@@ -145,6 +163,47 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         </div>
       </Modal>
 
+      {/* Arrival Modal */}
+      <Modal
+        isOpen={showArrivalModal}
+        onClose={() => setShowArrivalModal(false)}
+        onConfirm={handleLocalReportArrival}
+        title="Reportar Llegada a Planta"
+        confirmText="Registrar Llegada"
+        isLoading={localSubmitLoading}
+      >
+        <div className="mt-4 space-y-4">
+          <p className="text-sm text-slate-500">
+            Registra el arribo de los camiones a la planta de destino.
+          </p>
+          <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 mb-2">
+            <span className="text-xs font-bold text-slate-400 uppercase">Cupo total esperado</span>
+            <span className="text-lg font-black text-slate-800 dark:text-zinc-200 block mt-1">
+              {load.maxTrucks || 1} camión/es
+            </span>
+          </div>
+          <Input
+            label={`¿Cuántos camiones llegaron? (se esperaban ${load.maxTrucks || 1})`}
+            type="number"
+            min="0"
+            icon={TruckIcon}
+            value={arrivedTrucksInput}
+            onChange={(e) => setArrivedTrucksInput(parseInt(e.target.value) || 0)}
+          />
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">
+              Observaciones / Novedades (Opcional)
+            </label>
+            <textarea
+              className="w-full bg-white dark:bg-zinc-900 border-2 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white border-slate-100 dark:border-zinc-800 focus:border-emerald-500 focus:outline-none transition-all resize-none h-24"
+              placeholder="Ej: Llegada completa sin novedades, o reportar inconvenientes..."
+              value={arrivalNotes}
+              onChange={(e) => setArrivalNotes(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Load Card */}
@@ -165,7 +224,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               <div>
                 <span className="text-xs font-bold text-slate-400 block uppercase">Fecha de Carga</span>
                 <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 mt-1">
@@ -180,8 +239,24 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   ${Number(load.rate).toLocaleString('es-AR')}
                 </span>
               </div>
+              <div>
+                <span className="text-xs font-bold text-slate-400 block uppercase">Cupo (Aprobados)</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 mt-1">
+                  <TruckIcon size={16} className="text-emerald-500" />
+                  {acceptedCount} / {load.maxTrucks || 1}
+                </span>
+              </div>
+              {load.arrivedTrucks !== undefined && load.arrivedTrucks !== null && (
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Arribados</span>
+                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 mt-1">
+                    <CheckCircle size={16} className="text-emerald-500" />
+                    {load.arrivedTrucks} / {load.maxTrucks || 1}
+                  </span>
+                </div>
+              )}
               {load.notes && (
-                <div className="col-span-2 md:col-span-1">
+                <div className="col-span-2">
                   <span className="text-xs font-bold text-slate-400 block uppercase">Observaciones</span>
                   <span className="text-sm text-slate-600 dark:text-zinc-300 mt-1 block">
                     {load.notes}
@@ -190,14 +265,28 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               )}
             </div>
 
-            {/* Operations Actions based on roles */}
             <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
               {isAdmin ? (
-                load.status !== 'CANCELLED' && (
-                  <Button variant="danger" icon={Trash2} onClick={() => onCancelLoad(load.id)}>
-                    Cancelar Carga
-                  </Button>
-                )
+                <>
+                  {load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && (
+                    <Button variant="danger" icon={Trash2} onClick={() => onCancelLoad(load.id)}>
+                      Cancelar Carga
+                    </Button>
+                  )}
+                  {(load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS') && (
+                    <Button 
+                      variant="primary" 
+                      icon={CheckCircle} 
+                      onClick={() => {
+                        setArrivedTrucksInput(load.maxTrucks || 1);
+                        setArrivalNotes('');
+                        setShowArrivalModal(true);
+                      }}
+                    >
+                      Reportar Llegada
+                    </Button>
+                  )}
+                </>
               ) : (
                 <>
                   {load.status === 'PUBLISHED' && (
@@ -295,37 +384,45 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <div className="border-t border-slate-100 dark:border-zinc-800 pt-4 space-y-4 animate-in fade-in duration-200">
                     <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Asignar Recursos</span>
                     
-                    <Select
-                      label="Chofer Habilitado"
-                      icon={User}
-                      options={[
-                        { value: '', label: 'Seleccione un chofer' },
-                        ...carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))
-                      ]}
-                      value={assignDriverId}
-                      onChange={(e) => setAssignDriverId(e.target.value)}
-                    />
-                    <Select
-                      label="Camión Flota"
-                      icon={TruckIcon}
-                      options={[
-                        { value: '', label: 'Seleccione un camión' },
-                        ...carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))
-                      ]}
-                      value={assignTruckId}
-                      onChange={(e) => setAssignTruckId(e.target.value)}
-                    />
+                    {selectedApp?.status === 'ACCEPTED' ? (
+                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-sm font-semibold">
+                        Esta postulación ya ha sido aprobada y asignada.
+                      </div>
+                    ) : (
+                      <>
+                        <Select
+                          label="Chofer Habilitado"
+                          icon={User}
+                          options={[
+                            { value: '', label: 'Seleccione un chofer' },
+                            ...carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))
+                          ]}
+                          value={assignDriverId}
+                          onChange={(e) => setAssignDriverId(e.target.value)}
+                        />
+                        <Select
+                          label="Camión Flota"
+                          icon={TruckIcon}
+                          options={[
+                            { value: '', label: 'Seleccione un camión' },
+                            ...carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))
+                          ]}
+                          value={assignTruckId}
+                          onChange={(e) => setAssignTruckId(e.target.value)}
+                        />
 
-                    <Button
-                      variant="primary"
-                      icon={CheckCircle}
-                      onClick={onAssign}
-                      disabled={!assignDriverId || !assignTruckId}
-                      isLoading={submitLoading}
-                      className="w-full"
-                    >
-                      Confirmar Asignación
-                    </Button>
+                        <Button
+                          variant="primary"
+                          icon={CheckCircle}
+                          onClick={onAssign}
+                          disabled={!assignDriverId || !assignTruckId || acceptedCount >= maxCapacity}
+                          isLoading={submitLoading}
+                          className="w-full"
+                        >
+                          {acceptedCount >= maxCapacity ? 'Cupo completo' : 'Confirmar Asignación'}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
