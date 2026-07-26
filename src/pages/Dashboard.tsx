@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { loadService } from '../api/services';
+import { loadService, carrierDocumentService } from '../api/services';
 import { type Load } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/StatCard';
@@ -12,16 +12,19 @@ import { Loader2, Box, Truck, AlertTriangle, CheckCircle, FilePlus, Users } from
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isStaff = useAuthStore((state) => state.isStaff());
+  const canWrite = useAuthStore((state) => state.canWrite());
   const user = useAuthStore((state) => state.user);
+  const isAdmin = useAuthStore((state) => state.isAdmin());
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [carrierDocStatus, setCarrierDocStatus] = useState<'APPROVED' | 'PENDING' | 'REJECTED' | 'EXPIRED' | 'MISSING'>('APPROVED');
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
+    
+    const fetchDashboardData = async () => {
       try {
         const res = await loadService.getLoads();
         if (active && res.data.success) {
@@ -29,15 +32,41 @@ export const Dashboard: React.FC = () => {
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-      } finally {
-        if (active) setLoading(false);
       }
+      
+      // If user is a CARRIER, fetch their document status
+      if (user?.role === 'CARRIER') {
+        try {
+          const docsRes = await carrierDocumentService.getDocuments();
+          if (active && docsRes.data.success) {
+            const carrierDocs = docsRes.data.data.filter(d => d.type === 'SEGURO_CARGA');
+            if (carrierDocs.length === 0) {
+              setCarrierDocStatus('MISSING');
+            } else {
+              // Sort by creation date descending
+              const latest = [...carrierDocs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+              const isExpired = new Date(latest.expirationDate).getTime() <= Date.now();
+              if (isExpired) {
+                setCarrierDocStatus('EXPIRED');
+              } else {
+                setCarrierDocStatus(latest.status);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching carrier documents:', err);
+        }
+      }
+      
+      if (active) setLoading(false);
     };
-    load();
+
+    fetchDashboardData();
+    
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
   // Compute logistics metrics
   const pendingAssignments = loads.filter((l) => l.status === 'PUBLISHED' || l.status === 'PENDING').length;
@@ -115,12 +144,34 @@ export const Dashboard: React.FC = () => {
           title="Panel de Control"
           description={`Bienvenido, ${user?.name}. Consulta el estado de la operación logística.`}
         />
-        {isAdmin && (
+        {canWrite && (
           <Button variant="primary" icon={FilePlus} onClick={() => navigate('/loads')}>
             Publicar Nueva Carga
           </Button>
         )}
       </div>
+
+      {/* Alerta de Seguro de Carga para Transportistas */}
+      {!isStaff && user?.role === 'CARRIER' && (carrierDocStatus === 'MISSING' || carrierDocStatus === 'EXPIRED' || carrierDocStatus === 'REJECTED') && (
+        <div className="p-4 md:p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 flex flex-col md:flex-row items-center md:justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 shrink-0">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h4 className="font-black text-rose-800 dark:text-rose-400">Póliza de seguro ausente o vencida</h4>
+              <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">Debes registrar o renovar tu póliza de seguro de carga para poder postularte a nuevos viajes.</p>
+            </div>
+          </div>
+          <Button 
+            variant="primary" 
+            className="bg-rose-600 hover:bg-rose-700 text-white font-bold w-full md:w-fit shrink-0 border-none shadow-lg shadow-rose-600/20"
+            onClick={() => navigate('/documents')}
+          >
+            Cargar Nueva Póliza
+          </Button>
+        </div>
+      )}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -154,20 +205,19 @@ export const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Quick Links Section for Admin */}
-      {isAdmin && (
+      {/* Quick Links Section for Staff */}
+      {isStaff && (
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Accesos Rápidos de Administración</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button variant="outline" icon={Truck} onClick={() => navigate('/carriers')} className="justify-start py-3">
               Administrar Transportistas
             </Button>
-            <Button variant="outline" icon={Users} onClick={() => navigate('/drivers')} className="justify-start py-3">
-              Administrar Choferes
-            </Button>
-            <Button variant="outline" icon={Truck} onClick={() => navigate('/trucks')} className="justify-start py-3">
-              Administrar Camiones
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" icon={Users} onClick={() => navigate('/users')} className="justify-start py-3">
+                Administrar Cuentas / Personal
+              </Button>
+            )}
           </div>
         </div>
       )}

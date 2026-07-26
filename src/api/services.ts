@@ -11,7 +11,8 @@ import {
   type CreateTruckPayload,
   type CreateLoadPayload,
   type AssignLoadResponse,
-  type ReportArrivalResponse
+  type ReportArrivalResponse,
+  type CarrierDocument
 } from '../types';
 
 // --- AUTH & USERS ---
@@ -26,7 +27,7 @@ export const authService = {
   register: (data: unknown) => api.post<ApiResponse<User>>('/users/register', data),
 
   updateUser: (id: number, data: Partial<User>) => 
-    api.put<ApiResponse<User>>(`/users/${id}`, data),
+    api.patch<ApiResponse<User>>(`/users/${id}`, data),
 
   deleteUser: (id: number) => 
     api.delete<ApiResponse<void>>(`/users/${id}`),
@@ -95,8 +96,26 @@ export const loadService = {
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
   assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
     api.post<ApiResponse<AssignLoadResponse>>(`/loads/${id}/assign`, data),
+  assignResources: (id: number, data: { driverId: number; truckId: number }) =>
+    api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
   reportContingency: (id: number, data: { description: string; reportedBy: string }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
   reportArrival: (id: number, data: { arrivedTrucks: number; notes?: string }) =>
     api.patch<ApiResponse<ReportArrivalResponse>>(`/loads/${id}/arrival`, data),
+  postCompletionData: (id: number, data: unknown) =>
+    api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
+};
+
+// --- CARRIER DOCUMENTS ---
+export const carrierDocumentService = {
+  getDocuments: (params?: { carrierId?: number }) =>
+    api.get<ApiResponse<CarrierDocument[]>>('/carrier-documents', { params }),
+  getDocument: (id: number) =>
+    api.get<ApiResponse<CarrierDocument>>(`/carrier-documents/${id}`),
+  createDocument: (data: { type: 'SEGURO_CARGA'; fileUrl: string; expirationDate: string; carrierId?: number; status?: 'PENDING' | 'APPROVED' | 'REJECTED' }) =>
+    api.post<ApiResponse<CarrierDocument>>('/carrier-documents', data),
+  updateDocument: (id: number, data: Partial<CarrierDocument>) =>
+    api.put<ApiResponse<CarrierDocument>>(`/carrier-documents/${id}`, data),
+  deleteDocument: (id: number) =>
+    api.delete<ApiResponse<void>>(`/carrier-documents/${id}`),
 };

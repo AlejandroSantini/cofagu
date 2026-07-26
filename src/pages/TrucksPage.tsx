@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
@@ -15,7 +15,8 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
-import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2, ShieldCheck } from 'lucide-react';
 
 export const TrucksPage: React.FC = () => {
   const [trucks, setTrucks] = useState<Truck[]>([]);
@@ -29,6 +30,10 @@ export const TrucksPage: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
 
+  const user = useAuthStore((state) => state.user);
+  const isCarrier = user?.role === 'CARRIER';
+  const canWriteTrucks = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.user?.role === 'CARRIER');
+
   const {
     register,
     handleSubmit,
@@ -37,18 +42,27 @@ export const TrucksPage: React.FC = () => {
     formState: { errors, isValid }
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      plate: '',
+      type: '',
+      capacity: '',
+      carrierId: '',
+      insurancePolicy: '',
+      insuranceCompany: '',
+      insuranceExpiration: ''
+    }
   });
 
   const fetchData = async () => {
     try {
       const [trkRes, crrRes] = await Promise.all([
         truckService.getTrucks(),
-        carrierService.getCarriers()
+        isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
       ]);
 
       if (trkRes.data.success) setTrucks(trkRes.data.data);
-      if (crrRes.data.success) setCarriers(crrRes.data.data);
+      if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
     } catch (err) {
       console.error(err);
       setError('Error al cargar camiones o transportistas.');
@@ -63,11 +77,11 @@ export const TrucksPage: React.FC = () => {
       try {
         const [trkRes, crrRes] = await Promise.all([
           truckService.getTrucks(),
-          carrierService.getCarriers()
+          isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
         ]);
         if (active) {
           if (trkRes.data.success) setTrucks(trkRes.data.data);
-          if (crrRes.data.success) setCarriers(crrRes.data.data);
+          if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
         }
       } catch (err) {
         console.error(err);
@@ -80,14 +94,17 @@ export const TrucksPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isCarrier]);
 
   const handleEdit = (truck: Truck) => {
     setEditingId(truck.id);
     setValue('plate', truck.plate);
     setValue('type', truck.type);
     setValue('capacity', String(truck.capacity));
-    setValue('carrierId', String(truck.carrierId));
+    setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
+    setValue('insurancePolicy', truck.insurancePolicy || '');
+    setValue('insuranceCompany', truck.insuranceCompany || '');
+    setValue('insuranceExpiration', truck.insuranceExpiration ? new Date(truck.insuranceExpiration).toISOString().split('T')[0] : '');
     setShowForm(true);
   };
 
@@ -95,11 +112,19 @@ export const TrucksPage: React.FC = () => {
     setSubmitLoading(true);
     setError('');
     try {
-      const payload = {
-        ...data,
+      const payload: any = {
+        plate: data.plate,
+        type: data.type,
         capacity: Number(data.capacity),
-        carrierId: Number(data.carrierId)
+        insurancePolicy: data.insurancePolicy || undefined,
+        insuranceCompany: data.insuranceCompany || undefined,
+        insuranceExpiration: data.insuranceExpiration ? new Date(data.insuranceExpiration).toISOString() : undefined
       };
+
+      if (!isCarrier) {
+        payload.carrierId = Number(data.carrierId);
+      }
+
       const res = editingId
         ? await truckService.updateTruck(editingId, payload)
         : await truckService.createTruck(payload);
@@ -143,7 +168,10 @@ export const TrucksPage: React.FC = () => {
       plate: '',
       type: '',
       capacity: '',
-      carrierId: ''
+      carrierId: '',
+      insurancePolicy: '',
+      insuranceCompany: '',
+      insuranceExpiration: ''
     });
     setError('');
   };
@@ -170,31 +198,44 @@ export const TrucksPage: React.FC = () => {
         </span>
       )
     },
+    ...(!isCarrier ? [
+      {
+        header: 'Transportista',
+        render: (t: Truck) => (
+          <span className="text-slate-600 dark:text-zinc-400 flex items-center gap-1.5 font-semibold">
+            <Building2 size={14} className="opacity-60" />
+            {t.carrier?.name || 'Desconocido'}
+          </span>
+        )
+      }
+    ] : []),
     {
-      header: 'Transportista',
-      render: (t: Truck) => (
-        <span className="text-slate-600 dark:text-zinc-400 flex items-center gap-1.5 font-semibold">
-          <Building2 size={14} className="opacity-60" />
-          {t.carrier?.name || 'Desconocido'}
-        </span>
-      )
-    },
-    {
-      header: 'Acciones',
-      className: 'w-24 text-right',
-      render: (t: Truck) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={Trash2}
-            iconClassName="text-rose-500"
-            onClick={() => askDelete(t.id)}
-            title="Eliminar"
-          />
+      header: 'Seguro / Póliza',
+      render: (t: Truck) => t.insurancePolicy ? (
+        <div className="text-xs">
+          <p className="font-bold text-slate-800 dark:text-zinc-200">{t.insuranceCompany} ({t.insurancePolicy})</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-0.5">Vence: {t.insuranceExpiration ? new Date(t.insuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}</p>
         </div>
-      )
-    }
+      ) : <span className="text-slate-400 text-xs italic">No declarado</span>
+    },
+    ...(canWriteTrucks ? [
+      {
+        header: 'Acciones',
+        className: 'w-24 text-right',
+        render: (t: Truck) => (
+          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Trash2}
+              iconClassName="text-rose-500"
+              onClick={() => askDelete(t.id)}
+              title="Eliminar"
+            />
+          </div>
+        )
+      }
+    ] : [])
   ];
 
   return (
@@ -218,19 +259,21 @@ export const TrucksPage: React.FC = () => {
           description={showForm ? 'Completa los datos del camión.' : 'Flota de camiones registrados para el transporte y la logística.'}
         />
 
-        <div>
-          <Button
-            variant={showForm ? 'outline' : 'primary'}
-            onClick={() => {
-              if (showForm) handleBack();
-              else setShowForm(true);
-            }}
-            icon={showForm ? ChevronLeft : Plus}
-            className="w-full md:w-fit px-8"
-          >
-            {showForm ? 'Volver al Listado' : 'Nuevo Camión'}
-          </Button>
-        </div>
+        {canWriteTrucks && (
+          <div>
+            <Button
+              variant={showForm ? 'outline' : 'primary'}
+              onClick={() => {
+                if (showForm) handleBack();
+                else setShowForm(true);
+              }}
+              icon={showForm ? ChevronLeft : Plus}
+              className="w-full md:w-fit px-8"
+            >
+              {showForm ? 'Volver al Listado' : 'Nuevo Camión'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <ErrorMessage message={error} className="mb-6" />
@@ -241,37 +284,76 @@ export const TrucksPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Patente / Dominio"
-                placeholder="Ej: ABC 123 o AD 123 CD"
-                icon={FileText}
+                placeholder="Ej: AA123BB o ABC123"
+                icon={TruckIcon}
                 {...register('plate')}
                 error={errors.plate?.message}
-                className="uppercase"
               />
               <Input
-                label="Tipo de Camión / Acoplado"
-                placeholder="Ej: Semirremolque / Chasis"
-                icon={TruckIcon}
+                label="Tipo de Acoplado / Camión"
+                placeholder="Ej: Chasis, Semirremolque"
+                icon={FileText}
                 {...register('type')}
                 error={errors.type?.message}
               />
               <Input
-                label="Capacidad de Carga (kg)"
-                type="number"
-                placeholder="Ej: 30000"
+                label="Capacidad Útil (kg)"
+                placeholder="Ej: 28000"
                 icon={Scale}
                 {...register('capacity')}
                 error={errors.capacity?.message}
               />
-              <Select
-                label="Empresa Transportista"
-                icon={Building2}
-                options={[
-                  { value: '', label: 'Seleccione un transportista' },
-                  ...carriers.map((c) => ({ value: String(c.id), label: c.name }))
-                ]}
-                {...register('carrierId')}
-                error={errors.carrierId?.message}
-              />
+              {!isCarrier && (
+                <Select
+                  label="Empresa Transportista"
+                  icon={Building2}
+                  options={[
+                    { value: '', label: 'Seleccione un transportista' },
+                    ...carriers.map((c) => ({ value: String(c.id), label: c.name }))
+                  ]}
+                  {...register('carrierId')}
+                  error={errors.carrierId?.message}
+                />
+              )}
+            </div>
+
+            {/* Insurance Info Section */}
+            <div className="border-t border-slate-100 dark:border-zinc-800 pt-6">
+              <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+                Seguro Obligatorio del Camión (Opcional)
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Input
+                  label="Póliza de seguro"
+                  placeholder="Ej: POL-123456"
+                  icon={FileText}
+                  {...register('insurancePolicy')}
+                  error={errors.insurancePolicy?.message}
+                />
+                <Input
+                  label="Compañía aseguradora"
+                  placeholder="Ej: La Segunda"
+                  icon={Building2}
+                  {...register('insuranceCompany')}
+                  error={errors.insuranceCompany?.message}
+                />
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+                    Fecha de vencimiento
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                      {...register('insuranceExpiration')}
+                    />
+                  </div>
+                  {errors.insuranceExpiration && (
+                    <p className="text-xs text-rose-500 mt-1">{errors.insuranceExpiration.message}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
@@ -289,7 +371,7 @@ export const TrucksPage: React.FC = () => {
           columns={columns}
           data={trucks}
           isLoading={loading}
-          onRowClick={handleEdit}
+          onRowClick={canWriteTrucks ? handleEdit : undefined}
         />
       )}
     </div>

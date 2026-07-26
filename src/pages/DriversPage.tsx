@@ -15,6 +15,7 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
+import { useAuthStore } from '../store/useAuthStore';
 import { Plus, ChevronLeft, Save, Trash2, User, Phone, FileText, Building2 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
@@ -29,6 +30,10 @@ export const DriversPage: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
 
+  const user = useAuthStore((state) => state.user);
+  const isCarrier = user?.role === 'CARRIER';
+  const canWriteDrivers = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.user?.role === 'CARRIER');
+
   const {
     register,
     handleSubmit,
@@ -37,18 +42,24 @@ export const DriversPage: React.FC = () => {
     formState: { errors, isValid }
   } = useForm<DriverFormValues>({
     resolver: zodResolver(driverSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      dni: '',
+      phone: '',
+      carrierId: ''
+    }
   });
 
   const fetchData = async () => {
     try {
       const [drvRes, crrRes] = await Promise.all([
         driverService.getDrivers(),
-        carrierService.getCarriers()
+        isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
       ]);
 
       if (drvRes.data.success) setDrivers(drvRes.data.data);
-      if (crrRes.data.success) setCarriers(crrRes.data.data);
+      if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
     } catch (err) {
       console.error(err);
       setError('Error al cargar choferes o transportistas.');
@@ -63,11 +74,11 @@ export const DriversPage: React.FC = () => {
       try {
         const [drvRes, crrRes] = await Promise.all([
           driverService.getDrivers(),
-          carrierService.getCarriers()
+          isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
         ]);
         if (active) {
           if (drvRes.data.success) setDrivers(drvRes.data.data);
-          if (crrRes.data.success) setCarriers(crrRes.data.data);
+          if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
         }
       } catch (err) {
         console.error(err);
@@ -80,14 +91,14 @@ export const DriversPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isCarrier]);
 
   const handleEdit = (driver: Driver) => {
     setEditingId(driver.id);
     setValue('name', driver.name);
     setValue('dni', driver.dni);
     setValue('phone', driver.phone);
-    setValue('carrierId', String(driver.carrierId));
+    setValue('carrierId', driver.carrierId ? String(driver.carrierId) : '');
     setShowForm(true);
   };
 
@@ -95,10 +106,16 @@ export const DriversPage: React.FC = () => {
     setSubmitLoading(true);
     setError('');
     try {
-      const payload = {
-        ...data,
-        carrierId: Number(data.carrierId)
+      const payload: any = {
+        name: data.name,
+        dni: data.dni,
+        phone: data.phone
       };
+
+      if (!isCarrier) {
+        payload.carrierId = Number(data.carrierId);
+      }
+
       const res = editingId
         ? await driverService.updateDriver(editingId, payload)
         : await driverService.createDriver(payload);
@@ -169,31 +186,35 @@ export const DriversPage: React.FC = () => {
         </span>
       )
     },
-    {
-      header: 'Transportista',
-      render: (d: Driver) => (
-        <span className="text-slate-600 dark:text-zinc-400 flex items-center gap-1.5 font-semibold">
-          <Building2 size={14} className="opacity-60" />
-          {d.carrier?.name || 'Desconocido'}
-        </span>
-      )
-    },
-    {
-      header: 'Acciones',
-      className: 'w-24 text-right',
-      render: (d: Driver) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={Trash2}
-            iconClassName="text-rose-500"
-            onClick={() => askDelete(d.id)}
-            title="Eliminar"
-          />
-        </div>
-      )
-    }
+    ...(!isCarrier ? [
+      {
+        header: 'Transportista',
+        render: (d: Driver) => (
+          <span className="text-slate-600 dark:text-zinc-400 flex items-center gap-1.5 font-semibold">
+            <Building2 size={14} className="opacity-60" />
+            {d.carrier?.name || 'Desconocido'}
+          </span>
+        )
+      }
+    ] : []),
+    ...(canWriteDrivers ? [
+      {
+        header: 'Acciones',
+        className: 'w-24 text-right',
+        render: (d: Driver) => (
+          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Trash2}
+              iconClassName="text-rose-500"
+              onClick={() => askDelete(d.id)}
+              title="Eliminar"
+            />
+          </div>
+        )
+      }
+    ] : [])
   ];
 
   return (
@@ -217,19 +238,21 @@ export const DriversPage: React.FC = () => {
           description={showForm ? 'Completa los datos personales del chofer.' : 'Lista completa de choferes habilitados para realizar viajes.'}
         />
 
-        <div>
-          <Button
-            variant={showForm ? 'outline' : 'primary'}
-            onClick={() => {
-              if (showForm) handleBack();
-              else setShowForm(true);
-            }}
-            icon={showForm ? ChevronLeft : Plus}
-            className="w-full md:w-fit px-8"
-          >
-            {showForm ? 'Volver al Listado' : 'Nuevo Chofer'}
-          </Button>
-        </div>
+        {canWriteDrivers && (
+          <div>
+            <Button
+              variant={showForm ? 'outline' : 'primary'}
+              onClick={() => {
+                if (showForm) handleBack();
+                else setShowForm(true);
+              }}
+              icon={showForm ? ChevronLeft : Plus}
+              className="w-full md:w-fit px-8"
+            >
+              {showForm ? 'Volver al Listado' : 'Nuevo Chofer'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <ErrorMessage message={error} className="mb-6" />
@@ -259,16 +282,18 @@ export const DriversPage: React.FC = () => {
                 {...register('phone')}
                 error={errors.phone?.message}
               />
-              <Select
-                label="Empresa Transportista"
-                icon={Building2}
-                options={[
-                  { value: '', label: 'Seleccione un transportista' },
-                  ...carriers.map((c) => ({ value: String(c.id), label: c.name }))
-                ]}
-                {...register('carrierId')}
-                error={errors.carrierId?.message}
-              />
+              {!isCarrier && (
+                <Select
+                  label="Empresa Transportista"
+                  icon={Building2}
+                  options={[
+                    { value: '', label: 'Seleccione un transportista' },
+                    ...carriers.map((c) => ({ value: String(c.id), label: c.name }))
+                  ]}
+                  {...register('carrierId')}
+                  error={errors.carrierId?.message}
+                />
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
@@ -286,7 +311,7 @@ export const DriversPage: React.FC = () => {
           columns={columns}
           data={drivers}
           isLoading={loading}
-          onRowClick={handleEdit}
+          onRowClick={canWriteDrivers ? handleEdit : undefined}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'CARRIER';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER';
 
 export interface User {
   id: number;
@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: UserRole;
   carrierId?: number | null;
+  mustChangePassword?: boolean;
 }
 
 export interface Carrier {
@@ -14,6 +15,10 @@ export interface Carrier {
   cuit: string;
   contactEmail: string;
   contactPhone: string;
+  user?: User;
+  drivers?: Driver[];
+  trucks?: Truck[];
+  users?: User[];
 }
 
 export interface Driver {
@@ -32,6 +37,9 @@ export interface Truck {
   capacity: number;
   carrierId: number;
   carrier?: Carrier;
+  insurancePolicy?: string;
+  insuranceCompany?: string;
+  insuranceExpiration?: string;
 }
 
 export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -64,6 +72,9 @@ export interface Load {
   carrierId?: number | null;
   driverId?: number | null;
   truckId?: number | null;
+  carrier?: Carrier;
+  driver?: Driver;
+  truck?: Truck;
   applications?: Application[];
   contingencies?: Contingency[];
 }
@@ -84,20 +95,24 @@ export interface CreateCarrierPayload {
   cuit: string;
   contactEmail: string;
   contactPhone: string;
+  password?: string;
 }
 
 export interface CreateDriverPayload {
   name: string;
   dni: string;
   phone: string;
-  carrierId: number;
+  carrierId?: number;
 }
 
 export interface CreateTruckPayload {
   plate: string;
   type: string;
   capacity: number;
-  carrierId: number;
+  carrierId?: number;
+  insurancePolicy?: string;
+  insuranceCompany?: string;
+  insuranceExpiration?: string;
 }
 
 export interface CreateLoadPayload {
@@ -124,4 +139,16 @@ export interface ReportArrivalResponse {
   arrivedTrucks: number;
   hayFaltantes: boolean;
   faltantes: number;
+}
+
+export interface CarrierDocument {
+  id: number;
+  carrierId: number;
+  carrier?: Carrier;
+  type: 'SEGURO_CARGA';
+  fileUrl: string;
+  expirationDate: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  createdAt: string;
+  updatedAt: string;
 }

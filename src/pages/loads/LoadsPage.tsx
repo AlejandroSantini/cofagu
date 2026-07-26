@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
@@ -20,8 +21,10 @@ import { LoadDetails } from './LoadDetails';
 import { Plus, ChevronLeft } from 'lucide-react';
 
 export const LoadsPage: React.FC = () => {
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isCarrier = user?.role === 'CARRIER';
+  const canWrite = useAuthStore((state) => state.canWrite());
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ export const LoadsPage: React.FC = () => {
   // Filtering & Selection for Assignment
   const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED'>('ALL');
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
-  const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(null);
+  const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(() => isCarrier ? user?.carrierId || null : null);
   const [carrierDrivers, setCarrierDrivers] = useState<Driver[]>([]);
   const [carrierTrucks, setCarrierTrucks] = useState<Truck[]>([]);
   const [assignDriverId, setAssignDriverId] = useState('');
@@ -106,9 +109,11 @@ export const LoadsPage: React.FC = () => {
   const handleRowClick = async (load: Load) => {
     setSelectedLoad(load);
     setSelectedAppId(null);
-    setSelectedCarrierId(null);
-    setCarrierDrivers([]);
-    setCarrierTrucks([]);
+    if (!isCarrier) {
+      setSelectedCarrierId(null);
+      setCarrierDrivers([]);
+      setCarrierTrucks([]);
+    }
     setAssignDriverId('');
     setAssignTruckId('');
   };
@@ -171,8 +176,14 @@ export const LoadsPage: React.FC = () => {
         triggerRefresh();
         return true;
       }
-    } catch (err) {
-      showToast(getErrorMessage(err, 'Error al enviar postulación'), 'error');
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || 'Error al enviar postulación';
+      showToast(errMsg, 'error');
+      if (err.response?.status === 400 && (errMsg.toLowerCase().includes('seguro') || errMsg.toLowerCase().includes('póliza'))) {
+        setTimeout(() => {
+          navigate('/documents');
+        }, 3000);
+      }
     }
     return false;
   };
@@ -321,7 +332,7 @@ export const LoadsPage: React.FC = () => {
               Volver al Listado
             </Button>
           ) : (
-            isAdmin && (
+            canWrite && (
               <Button 
                 variant="primary" 
                 icon={Plus} 
@@ -339,7 +350,6 @@ export const LoadsPage: React.FC = () => {
       {selectedLoad ? (
         <LoadDetails
           load={selectedLoad}
-          isAdmin={isAdmin}
           user={user}
           onCancelLoad={askDelete}
           onApply={handleApply}
@@ -356,6 +366,22 @@ export const LoadsPage: React.FC = () => {
           assignTruckId={assignTruckId}
           setAssignTruckId={setAssignTruckId}
           onAssign={handleAssign}
+          onAssignResources={async (driverId, truckId) => {
+            if (!selectedLoad) return;
+            setSubmitLoading(true);
+            try {
+              const res = await loadService.assignResources(selectedLoad.id, { driverId, truckId });
+              if (res.data.success) {
+                showToast('Recursos de viaje asignados con éxito', 'success');
+                await refreshDetails();
+                triggerRefresh();
+              }
+            } catch (err) {
+              showToast(getErrorMessage(err, 'Error al asignar recursos.'), 'error');
+            } finally {
+              setSubmitLoading(false);
+            }
+          }}
           submitLoading={submitLoading}
         />
       ) : showForm ? (

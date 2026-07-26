@@ -9,6 +9,9 @@ interface AuthState {
   logout: () => void;
   isAdmin: () => boolean;
   isEmployee: () => boolean;
+  isOperator: () => boolean;
+  isStaff: () => boolean;
+  canWrite: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,6 +24,15 @@ export const useAuthStore = create<AuthState>()(
       
       isAdmin: () => get().user?.role === 'ADMIN',
       isEmployee: () => get().user?.role === 'EMPLOYEE',
+      isOperator: () => get().user?.role === 'OPERATOR',
+      isStaff: () => {
+        const r = get().user?.role;
+        return r === 'ADMIN' || r === 'OPERATOR' || r === 'EMPLOYEE';
+      },
+      canWrite: () => {
+        const r = get().user?.role;
+        return r === 'ADMIN' || r === 'OPERATOR';
+      },
     }),
     {
       name: 'auth-storage',

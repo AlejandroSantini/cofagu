@@ -12,9 +12,12 @@ import { useAuthStore } from './store/useAuthStore';
 import { useThemeStore } from './store/useThemeStore';
 import { RoleGate } from './components/RoleGate';
 import { useEffect } from 'react';
+import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
+import { ChangePasswordPage } from './pages/ChangePasswordPage';
 
 function App() {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   useEffect(() => {
@@ -24,6 +27,11 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Block navigation if the user is forced to change password
+  if (token && user?.mustChangePassword) {
+    return <ChangePasswordPage />;
+  }
 
   return (
     <BrowserRouter>
@@ -48,7 +56,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE']}>
                   <CarriersPage />
                 </RoleGate>
               </AppLayout>
@@ -61,7 +69,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER']}>
                   <DriversPage />
                 </RoleGate>
               </AppLayout>
@@ -74,7 +82,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER']}>
                   <TrucksPage />
                 </RoleGate>
               </AppLayout>
@@ -93,6 +101,11 @@ function App() {
               </AppLayout>
             ) : <Navigate to="/login" />
           }
+        />
+
+        <Route
+          path="/documents"
+          element={token ? <AppLayout><CarrierDocumentsPage /></AppLayout> : <Navigate to="/login" />}
         />
         
         <Route

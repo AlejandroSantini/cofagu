@@ -9,7 +9,8 @@ import {
   ChevronRight, 
   Settings, 
   Users,
-  Briefcase
+  Briefcase,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -23,17 +24,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isStaff = useAuthStore((state) => state.isStaff());
+  const isCarrier = user?.role === 'CARRIER';
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
     { label: 'Panel de Control', icon: Home, path: '/' },
     { label: 'Cargas y Viajes', icon: Briefcase, path: '/loads' },
-    ...(isAdmin ? [
+    ...(isStaff ? [
       { label: 'Transportistas', icon: Truck, path: '/carriers' },
+    ] : []),
+    ...(isCarrier ? [
       { label: 'Choferes', icon: Users, path: '/drivers' },
       { label: 'Camiones', icon: Truck, path: '/trucks' },
+    ] : []),
+    ...(isAdmin ? [
       { label: 'Personal', icon: Users, path: '/users' }
     ] : []),
+    { label: 'Documentación', icon: FileText, path: '/documents' },
     { label: 'Configuración', icon: Settings, path: '/settings' },
   ];
 
