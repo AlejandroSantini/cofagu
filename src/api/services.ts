@@ -11,7 +11,6 @@ import {
   type CreateTruckPayload,
   type CreateLoadPayload,
   type AssignLoadResponse,
-  type ReportArrivalResponse,
   type CarrierDocument
 } from '../types';
 
@@ -100,8 +99,6 @@ export const loadService = {
     api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
   reportContingency: (id: number, data: { description: string; reportedBy: string }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
-  reportArrival: (id: number, data: { arrivedTrucks: number; notes?: string }) =>
-    api.patch<ApiResponse<ReportArrivalResponse>>(`/loads/${id}/arrival`, data),
   postCompletionData: (id: number, data: unknown) =>
     api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
 };

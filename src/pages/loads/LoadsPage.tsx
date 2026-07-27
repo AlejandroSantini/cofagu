@@ -259,26 +259,31 @@ export const LoadsPage: React.FC = () => {
     return false;
   };
 
-  const handleReportArrival = async (arrivedTrucks: number, notes?: string): Promise<boolean> => {
+
+
+  const handleCompleteLoad = async (data: { 
+    unloadedWeight: number; 
+    fuelConsumption?: number; 
+    mileage?: number;
+    arrivedTrucks?: number;
+    notes?: string;
+    invoiceUrl?: string;
+    waybillUrl?: string;
+  }): Promise<boolean> => {
     if (!selectedLoad) return false;
+    setSubmitLoading(true);
     try {
-      const res = await loadService.reportArrival(selectedLoad.id, {
-        arrivedTrucks,
-        notes
-      });
+      const res = await loadService.postCompletionData(selectedLoad.id, data);
       if (res.data.success) {
-        const arrivalData = res.data.data;
-        if (arrivalData.hayFaltantes) {
-          showToast(`Llegada parcial: llegaron ${arrivalData.arrivedTrucks} de ${arrivalData.maxTrucks} camiones. Se reabrió el cupo faltante y se registró una contingencia automáticamente.`, 'error');
-        } else {
-          showToast('Llegada registrada correctamente.', 'success');
-        }
+        showToast('Viaje finalizado con éxito', 'success');
         refreshDetails();
         triggerRefresh();
         return true;
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al reportar la llegada a planta.'), 'error');
+      showToast(getErrorMessage(err, 'Error al finalizar el viaje.'), 'error');
+    } finally {
+      setSubmitLoading(false);
     }
     return false;
   };
@@ -356,7 +361,7 @@ export const LoadsPage: React.FC = () => {
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
-          onReportArrival={handleReportArrival}
+          onCompleteLoad={handleCompleteLoad}
           selectedAppId={selectedAppId}
           setSelectedAppId={setSelectedAppId}
           setSelectedCarrierId={setSelectedCarrierId}

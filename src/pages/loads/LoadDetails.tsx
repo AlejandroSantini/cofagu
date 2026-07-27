@@ -5,10 +5,69 @@ import { Badge } from '../../components/ui/Badge';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 import { 
   Trash2, Calendar, DollarSign, Send, 
-  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building 
+  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2
 } from 'lucide-react';
+import { api } from '../../api/axios';
+
+const SecureImagePreview: React.FC<{ src: string; alt?: string; className?: string }> = ({ src, alt, className = "max-h-48 rounded-lg object-contain" }) => {
+  const [blobUrl, setBlobUrl] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!src || typeof src !== 'string' || src.startsWith('data:') || src.startsWith('blob:')) {
+      return;
+    }
+
+    let active = true;
+    let currentBlobUrl = '';
+    const fetchSecureImage = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get(src, { responseType: 'blob' });
+        if (active && response.data) {
+          currentBlobUrl = URL.createObjectURL(response.data);
+          setBlobUrl(currentBlobUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching secure image preview:', error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    fetchSecureImage();
+
+    return () => {
+      active = false;
+      if (currentBlobUrl) {
+        try {
+          URL.revokeObjectURL(currentBlobUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [src]);
+
+  const displayUrl = (src && typeof src === 'string' && (src.startsWith('data:') || src.startsWith('blob:'))) ? src : blobUrl;
+
+  if (loading) {
+    return <Loader2 className="animate-spin text-slate-400" size={24} />;
+  }
+
+  if (!displayUrl) {
+    return <span className="text-xs text-rose-500 font-bold">Error al cargar vista previa</span>;
+  }
+
+  return (
+    <a href={displayUrl} target="_blank" rel="noopener noreferrer" className="cursor-zoom-in block">
+      <img src={displayUrl} alt={alt || "Adjunto"} className={className} />
+    </a>
+  );
+};
 
 interface LoadDetailsProps {
   load: Load;
@@ -17,7 +76,15 @@ interface LoadDetailsProps {
   onApply: (notes: string, driverId: number, truckId: number) => Promise<boolean>;
   onStatusChange: (newStatus: string) => void;
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
-  onReportArrival: (arrivedTrucks: number, notes?: string) => Promise<boolean>;
+  onCompleteLoad: (data: { 
+    unloadedWeight: number; 
+    fuelConsumption?: number; 
+    mileage?: number;
+    arrivedTrucks?: number;
+    notes?: string;
+    invoiceUrl?: string;
+    waybillUrl?: string;
+  }) => Promise<boolean>;
   
   // Assignment resources props
   selectedAppId: number | null;
@@ -37,7 +104,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onApply,
   onStatusChange,
   onReportContingency,
-  onReportArrival,
+  onCompleteLoad,
   
   selectedAppId,
   setSelectedAppId,
@@ -51,7 +118,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   // Local modal states
   const [showPostulateModal, setShowPostulateModal] = useState(false);
   const [showContingencyModal, setShowContingencyModal] = useState(false);
-  const [showArrivalModal, setShowArrivalModal] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   
   // Local input states
   const [postulateNotes, setPostulateNotes] = useState('');
@@ -60,21 +127,25 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [contingencyDesc, setContingencyDesc] = useState('');
   const [contingencyReporter, setContingencyReporter] = useState('');
   const [arrivedTrucksInput, setArrivedTrucksInput] = useState(load.maxTrucks || 1);
-  const [arrivalNotes, setArrivalNotes] = useState('');
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [unloadedWeight, setUnloadedWeight] = useState('');
+  const [fuelConsumption, setFuelConsumption] = useState('');
+  const [mileage, setMileage] = useState('');
+  const [invoiceUrl, setInvoiceUrl] = useState('');
+  const [waybillUrl, setWaybillUrl] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
 
   // Carrier local resource assignment states
+  const [prevLoadId, setPrevLoadId] = useState(load.id);
   const [localDriverId, setLocalDriverId] = useState(load.driverId ? String(load.driverId) : '');
   const [localTruckId, setLocalTruckId] = useState(load.truckId ? String(load.truckId) : '');
 
-  // Keep local driver/truck state in sync with updated load properties
-  React.useEffect(() => {
-    const targetDriverId = load.driverId ? String(load.driverId) : '';
-    const targetTruckId = load.truckId ? String(load.truckId) : '';
-
-    setLocalDriverId(prev => prev !== targetDriverId ? targetDriverId : prev);
-    setLocalTruckId(prev => prev !== targetTruckId ? targetTruckId : prev);
-  }, [load.driverId, load.truckId]);
+  // Adjust state during render phase if the active load changes
+  if (load.id !== prevLoadId) {
+    setPrevLoadId(load.id);
+    setLocalDriverId(load.driverId ? String(load.driverId) : '');
+    setLocalTruckId(load.truckId ? String(load.truckId) : '');
+  }
 
   const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
   const maxCapacity = load.maxTrucks || 1;
@@ -120,12 +191,30 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     }
   };
 
-  const handleLocalReportArrival = async () => {
+  const handleLocalComplete = async () => {
+    if (!unloadedWeight || Number(unloadedWeight) <= 0) return;
     setLocalSubmitLoading(true);
-    const success = await onReportArrival(arrivedTrucksInput, arrivalNotes);
+    const data = {
+      unloadedWeight: Number(unloadedWeight),
+      arrivedTrucks: arrivedTrucksInput ? Number(arrivedTrucksInput) : undefined,
+      notes: completionNotes || undefined,
+      fuelConsumption: fuelConsumption ? Number(fuelConsumption) : undefined,
+      mileage: mileage ? Number(mileage) : undefined,
+      invoiceUrl: invoiceUrl || undefined,
+      waybillUrl: waybillUrl || undefined,
+    };
+
+    const success = await onCompleteLoad(data);
     setLocalSubmitLoading(false);
     if (success) {
-      setShowArrivalModal(false);
+      setShowCompletionModal(false);
+      setUnloadedWeight('');
+      setArrivedTrucksInput(load.maxTrucks || 1);
+      setCompletionNotes('');
+      setFuelConsumption('');
+      setMileage('');
+      setInvoiceUrl('');
+      setWaybillUrl('');
     }
   };
 
@@ -136,7 +225,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         isOpen={showPostulateModal}
         onClose={() => setShowPostulateModal(false)}
         title="Postularse a Viaje"
-        confirmText="Confirmar Postulación"
+        confirmText="Confirmar"
         onConfirm={handleLocalApply}
         isLoading={localSubmitLoading}
         isConfirmDisabled={!postulateDriverId || !postulateTruckId}
@@ -197,33 +286,77 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         </div>
       </Modal>
 
-      {/* Arrival Modal */}
+      {/* Completion Modal */}
       <Modal
-        isOpen={showArrivalModal}
-        onClose={() => setShowArrivalModal(false)}
-        title="Registrar Llegada a Planta"
-        confirmText="Registrar Llegada"
-        onConfirm={handleLocalReportArrival}
+        isOpen={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
+        title="Finalizar Viaje"
+        confirmText="Confirmar y Finalizar"
+        onConfirm={handleLocalComplete}
         isLoading={localSubmitLoading}
+        isConfirmDisabled={!unloadedWeight || Number(unloadedWeight) <= 0}
       >
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-1">
+          <p className="text-sm text-slate-500">
+            Por favor, ingrese los kilos descargados en planta y de forma opcional los datos de consumo, kilometraje y fotos de remitos para finalizar el viaje:
+          </p>
           <Input
-            label="Cantidad de Camiones Arribados"
+            label="Kilos Descargados (Obligatorio)"
+            type="number"
+            step="any"
+            placeholder="Ej: 29500.5"
+            value={unloadedWeight}
+            onChange={(e) => setUnloadedWeight(e.target.value)}
+            required
+            className="py-2.5"
+          />
+          <Input
+            label="Cantidad de Camiones Arribados (Opcional)"
             type="number"
             min={1}
             max={load.maxTrucks || 10}
             value={arrivedTrucksInput}
             onChange={(e) => setArrivedTrucksInput(Number(e.target.value))}
-            required
             className="py-2.5"
           />
           <Input
-            label="Observaciones"
-            placeholder="Ej: Llegada de primer convoy sin novedades."
-            value={arrivalNotes}
-            onChange={(e) => setArrivalNotes(e.target.value)}
+            label="Consumo de Combustible (Lts - Opcional)"
+            type="number"
+            step="any"
+            placeholder="Ej: 120"
+            value={fuelConsumption}
+            onChange={(e) => setFuelConsumption(e.target.value)}
             className="py-2.5"
           />
+          <Input
+            label="Kilometraje Recorrido (Km - Opcional)"
+            type="number"
+            step="any"
+            placeholder="Ej: 450"
+            value={mileage}
+            onChange={(e) => setMileage(e.target.value)}
+            className="py-2.5"
+          />
+          <Input
+            label="Observaciones de Llegada (Opcional)"
+            placeholder="Ej: Llegó todo en orden, sin novedades."
+            value={completionNotes}
+            onChange={(e) => setCompletionNotes(e.target.value)}
+            className="py-2.5"
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ImageUpload 
+              label="Factura/Remito (Opcional)"
+              value={invoiceUrl}
+              onChange={setInvoiceUrl}
+            />
+            <ImageUpload 
+              label="Carta de Porte (Opcional)"
+              value={waybillUrl}
+              onChange={setWaybillUrl}
+            />
+          </div>
         </div>
       </Modal>
 
@@ -245,7 +378,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
                   <Calendar size={20} />
@@ -281,6 +414,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </span>
                 </div>
               </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                  <Send size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Código CTG</span>
+                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                    {load.ctg || 'No especificado'}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {load.notes && (
@@ -290,30 +435,68 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </div>
             )}
 
+            {load.status === 'COMPLETED' && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 p-6 rounded-xl border border-emerald-100/30 dark:border-emerald-900/30 space-y-4">
+                <h3 className="text-lg font-black text-emerald-900 dark:text-emerald-400 flex items-center gap-2">
+                  <CheckCircle size={20} />
+                  Datos de Finalización de Viaje
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilos Descargados</span>
+                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                      {load.unloadedWeight ? `${load.unloadedWeight.toLocaleString('es-AR')} kg` : 'No registrado'}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Consumo de Combustible</span>
+                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                      {load.fuelConsumption ? `${load.fuelConsumption} Lts` : 'No registrado'}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilometraje Recorrido</span>
+                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                      {load.mileage ? `${load.mileage} km` : 'No registrado'}
+                    </span>
+                  </div>
+                </div>
+
+                {(load.invoiceUrl || load.waybillUrl) && (
+                  <div className="pt-4 border-t border-emerald-100/50 dark:border-emerald-900/20 space-y-4">
+                    <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Documentación Adjunta</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {load.invoiceUrl && (
+                        <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-xl border border-slate-100 dark:border-zinc-800">
+                          <span className="text-xs font-bold text-slate-500">Factura / Remito</span>
+                          <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
+                            <SecureImagePreview src={load.invoiceUrl} />
+                          </div>
+                        </div>
+                      )}
+                      {load.waybillUrl && (
+                        <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-xl border border-slate-100 dark:border-zinc-800">
+                          <span className="text-xs font-bold text-slate-500">Carta de Porte</span>
+                          <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
+                            <SecureImagePreview src={load.waybillUrl} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Actions Triggers */}
             <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
-              {canUserWrite && (
-                <>
-                  {load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && (
-                    <Button variant="danger" icon={Trash2} onClick={() => onCancelLoad(load.id)}>
-                      Cancelar Carga
-                    </Button>
-                  )}
-                  {(load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS') && (
-                    <Button 
-                      variant="primary" 
-                      icon={CheckCircle} 
-                      onClick={() => {
-                        setArrivedTrucksInput(load.maxTrucks || 1);
-                        setArrivalNotes('');
-                        setShowArrivalModal(true);
-                      }}
-                    >
-                      Reportar Llegada
-                    </Button>
-                  )}
-                </>
+              {canUserWrite && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && (
+                <Button variant="danger" icon={Trash2} onClick={() => onCancelLoad(load.id)}>
+                  Cancelar Carga
+                </Button>
               )}
+
+
 
               {isCarrier && (
                 <>
@@ -328,7 +511,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     </Button>
                   )}
                   {load.status === 'IN_PROGRESS' && (
-                    <Button variant="primary" icon={CheckCircle} onClick={() => onStatusChange('COMPLETED')}>
+                    <Button variant="primary" icon={CheckCircle} onClick={() => {
+                      setUnloadedWeight('');
+                      setFuelConsumption('');
+                      setMileage('');
+                      setShowCompletionModal(true);
+                    }}>
                       Finalizar Viaje
                     </Button>
                   )}

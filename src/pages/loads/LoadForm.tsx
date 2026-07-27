@@ -58,17 +58,21 @@ export const LoadForm: React.FC<LoadFormProps> = ({ onSubmit, onCancel, isLoadin
             {...register('rate')}
             error={errors.rate?.message}
           />
-          <div className="md:col-span-2">
-            <Input
-              label="Cantidad de camiones necesarios"
-              type="number"
-              min="1"
-              placeholder="Ej: 1"
-              icon={Truck}
-              {...register('maxTrucks')}
-              error={errors.maxTrucks?.message}
-            />
-          </div>
+          <Input
+            label="Cantidad de camiones necesarios"
+            type="number"
+            min="1"
+            placeholder="Ej: 1"
+            icon={Truck}
+            {...register('maxTrucks')}
+            error={errors.maxTrucks?.message}
+          />
+          <Input
+            label="Código de Trazabilidad (CTG - Opcional)"
+            placeholder="Ej: 12345XYZ"
+            {...register('ctg')}
+            error={errors.ctg?.message}
+          />
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">Observaciones</label>
             <textarea

@@ -81,6 +81,12 @@ export interface Load {
   truck?: Truck;
   applications?: Application[];
   contingencies?: Contingency[];
+  ctg?: string;
+  unloadedWeight?: number;
+  fuelConsumption?: number;
+  mileage?: number;
+  invoiceUrl?: string;
+  waybillUrl?: string;
 }
 
 export interface ApiResponse<T> {
@@ -126,6 +132,7 @@ export interface CreateLoadPayload {
   rate: number;
   maxTrucks?: number;
   notes?: string;
+  ctg?: string;
 }
 
 export interface AssignLoadResponse {
