@@ -29,11 +29,49 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ImageUpload } from "../components/ui/ImageUpload";
+import { api } from "../api/axios";
 
 const CURRENT_TIME = Date.now();
 
 export const CarrierDocumentsPage: React.FC = () => {
   const isAdmin = useAuthStore((state) => state.isAdmin());
+
+  const handleSecureView = async (fileUrl: string, shouldDownload = false) => {
+    if (!fileUrl || typeof fileUrl !== "string") {
+      showToast("El archivo no es válido o no existe.", "error");
+      return;
+    }
+    try {
+      const response = await api.get(fileUrl, { responseType: "blob" });
+      if (!response.data) {
+        showToast("No se pudo descargar el archivo.", "error");
+        return;
+      }
+      const blob = new Blob([response.data], { type: (response.headers["content-type"] as string) || "application/octet-stream" });
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      const filename = fileUrl.split("/").pop() || "archivo";
+      
+      if (shouldDownload) {
+        link.setAttribute("download", filename);
+      } else {
+        link.target = "_blank";
+      }
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error("Error fetching secure file:", err);
+      showToast("Error al cargar el archivo de forma segura.", "error");
+    }
+  };
 
   const [documents, setDocuments] = useState<CarrierDocument[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
@@ -254,15 +292,13 @@ export const CarrierDocumentsPage: React.FC = () => {
     {
       header: "Documento",
       render: (doc: CarrierDocument) => (
-        <a
-          href={doc.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold"
+        <button
+          onClick={() => handleSecureView(doc.fileUrl)}
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold cursor-pointer"
         >
           <Download size={14} />
           Ver Archivo
-        </a>
+        </button>
       ),
     },
     {
@@ -346,15 +382,13 @@ export const CarrierDocumentsPage: React.FC = () => {
     {
       header: "Archivo",
       render: (doc: CarrierDocument) => (
-        <a
-          href={doc.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold"
+        <button
+          onClick={() => handleSecureView(doc.fileUrl, true)}
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold cursor-pointer"
         >
           <Download size={14} />
           Descargar
-        </a>
+        </button>
       ),
     },
   ];
@@ -368,15 +402,17 @@ export const CarrierDocumentsPage: React.FC = () => {
         type={toast.type}
       />
 
-      <PageHeader
-        title={isAdmin ? "Auditoría de Seguros" : "Seguro de Carga"}
-        description={
-          isAdmin
-            ? "Revisa y audita las pólizas de seguro de carga presentadas por las empresas transportistas."
-            : "Administra y actualiza la póliza de seguro de tu empresa para mantener habilitadas tus postulaciones."
-        }
-        icon={FileText}
-      />
+      <div className="flex flex-col gap-6 mb-8">
+        <PageHeader
+          title={isAdmin ? "Auditoría de Seguros" : "Seguro de Carga"}
+          description={
+            isAdmin
+              ? "Revisa y audita las pólizas de seguro de carga presentadas por las empresas transportistas."
+              : "Administra y actualiza la póliza de seguro de tu empresa para mantener habilitadas tus postulaciones."
+          }
+          icon={FileText}
+        />
+      </div>
 
       <ErrorMessage message={error} className="mb-4" />
 

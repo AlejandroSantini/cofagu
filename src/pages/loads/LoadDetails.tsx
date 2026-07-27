@@ -14,7 +14,7 @@ interface LoadDetailsProps {
   load: Load;
   user: UserType | null;
   onCancelLoad: (id: number) => void;
-  onApply: (notes: string) => Promise<boolean>;
+  onApply: (notes: string, driverId: number, truckId: number) => Promise<boolean>;
   onStatusChange: (newStatus: string) => void;
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
   onReportArrival: (arrivedTrucks: number, notes?: string) => Promise<boolean>;
@@ -25,10 +25,6 @@ interface LoadDetailsProps {
   setSelectedCarrierId: (id: number | null) => void;
   carrierDrivers: Driver[];
   carrierTrucks: Truck[];
-  assignDriverId: string;
-  setAssignDriverId: (id: string) => void;
-  assignTruckId: string;
-  setAssignTruckId: (id: string) => void;
   onAssign: () => void;
   onAssignResources?: (driverId: number, truckId: number) => Promise<void>;
   submitLoading: boolean;
@@ -48,10 +44,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   setSelectedCarrierId,
   carrierDrivers,
   carrierTrucks,
-  assignDriverId,
-  setAssignDriverId,
-  assignTruckId,
-  setAssignTruckId,
   onAssign,
   onAssignResources,
   submitLoading
@@ -63,6 +55,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   
   // Local input states
   const [postulateNotes, setPostulateNotes] = useState('');
+  const [postulateDriverId, setPostulateDriverId] = useState('');
+  const [postulateTruckId, setPostulateTruckId] = useState('');
   const [contingencyDesc, setContingencyDesc] = useState('');
   const [contingencyReporter, setContingencyReporter] = useState('');
   const [arrivedTrucksInput, setArrivedTrucksInput] = useState(load.maxTrucks || 1);
@@ -75,8 +69,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
   // Keep local driver/truck state in sync with updated load properties
   React.useEffect(() => {
-      setLocalDriverId(load.driverId ? String(load.driverId) : '');
-      setLocalTruckId(load.truckId ? String(load.truckId) : '');
+    const targetDriverId = load.driverId ? String(load.driverId) : '';
+    const targetTruckId = load.truckId ? String(load.truckId) : '';
+
+    setLocalDriverId(prev => prev !== targetDriverId ? targetDriverId : prev);
+    setLocalTruckId(prev => prev !== targetTruckId ? targetTruckId : prev);
   }, [load.driverId, load.truckId]);
 
   const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
@@ -100,12 +97,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const handleLocalApply = async () => {
+    if (!postulateDriverId || !postulateTruckId) return;
     setLocalSubmitLoading(true);
-    const success = await onApply(postulateNotes);
+    const success = await onApply(postulateNotes, Number(postulateDriverId), Number(postulateTruckId));
     setLocalSubmitLoading(false);
     if (success) {
       setShowPostulateModal(false);
       setPostulateNotes('');
+      setPostulateDriverId('');
+      setPostulateTruckId('');
     }
   };
 
@@ -139,11 +139,26 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         confirmText="Confirmar Postulación"
         onConfirm={handleLocalApply}
         isLoading={localSubmitLoading}
+        isConfirmDisabled={!postulateDriverId || !postulateTruckId}
       >
         <div className="space-y-4 pt-2">
           <p className="text-sm text-slate-500">
-            ¿Deseas postularte a esta solicitud de carga? Puedes añadir un comentario u observaciones opcionales:
+            ¿Deseas postularte a esta solicitud de carga? Por favor selecciona el chofer y camión que realizarán el viaje:
           </p>
+          <Select
+            label="Chofer Habilitado"
+            icon={User}
+            options={carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))}
+            value={postulateDriverId}
+            onChange={(e) => setPostulateDriverId(e.target.value)}
+          />
+          <Select
+            label="Camión Flota"
+            icon={TruckIcon}
+            options={carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))}
+            value={postulateTruckId}
+            onChange={(e) => setPostulateTruckId(e.target.value)}
+          />
           <Input
             label="Comentarios / Notas (Opcional)"
             placeholder="Ej: Contamos con flota disponible para salida inmediata."
@@ -376,8 +391,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         onClick={() => {
                           setSelectedAppId(app.id);
                           setSelectedCarrierId(app.carrierId);
-                          setAssignDriverId('');
-                          setAssignTruckId('');
                         }}
                         className={`p-4 border rounded-xl cursor-pointer transition-all ${
                           selectedAppId === app.id
@@ -400,7 +413,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {/* Assignment Form */}
                 {selectedAppId && (
                   <div className="border-t border-slate-100 dark:border-zinc-800 pt-4 space-y-4 animate-in fade-in duration-200">
-                    <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Asignar Recursos</span>
+                    <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Recursos Propuestos</span>
                     
                     {selectedApp?.status === 'ACCEPTED' ? (
                       <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-sm font-semibold">
@@ -408,41 +421,35 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       </div>
                     ) : canUserWrite ? (
                       <>
-                        <Select
-                          label="Chofer Habilitado"
-                          icon={User}
-                          options={[
-                            { value: '', label: 'Seleccione un chofer' },
-                            ...carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))
-                          ]}
-                          value={assignDriverId}
-                          onChange={(e) => setAssignDriverId(e.target.value)}
-                        />
-                        <Select
-                          label="Camión Flota"
-                          icon={TruckIcon}
-                          options={[
-                            { value: '', label: 'Seleccione un camión' },
-                            ...carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))
-                          ]}
-                          value={assignTruckId}
-                          onChange={(e) => setAssignTruckId(e.target.value)}
-                        />
+                        <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 uppercase font-bold">Chofer:</span>
+                            <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                              {carrierDrivers.find(d => d.id === selectedApp?.driverId)?.name || selectedApp?.driver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 uppercase font-bold">Camión:</span>
+                            <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                              {carrierTrucks.find(t => t.id === selectedApp?.truckId)?.plate || selectedApp?.truck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
+                            </span>
+                          </div>
+                        </div>
 
                         <Button
                           variant="primary"
                           icon={CheckCircle}
                           onClick={onAssign}
-                          disabled={!assignDriverId || !assignTruckId || acceptedCount >= maxCapacity}
+                          disabled={!selectedApp?.driverId || !selectedApp?.truckId || acceptedCount >= maxCapacity}
                           isLoading={submitLoading}
                           className="w-full"
                         >
-                          {acceptedCount >= maxCapacity ? 'Cupo completo' : 'Confirmar Asignación'}
+                          {acceptedCount >= maxCapacity ? 'Cupo completo' : 'Aprobar Postulación'}
                         </Button>
                       </>
                     ) : (
                       <div className="p-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 rounded-xl text-xs italic">
-                        Solo los administradores y operadores pueden asignar recursos.
+                        Solo los administradores y operadores pueden aprobar postulaciones.
                       </div>
                     )}
                   </div>
@@ -535,20 +542,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       <Select
                         label="Chofer Habilitado"
                         icon={User}
-                        options={[
-                          { value: '', label: 'Seleccione un chofer' },
-                          ...carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))
-                        ]}
+                        options={carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))}
                         value={localDriverId}
                         onChange={(e) => setLocalDriverId(e.target.value)}
                       />
                       <Select
                         label="Camión Flota"
                         icon={TruckIcon}
-                        options={[
-                          { value: '', label: 'Seleccione un camión' },
-                          ...carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))
-                        ]}
+                        options={carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))}
                         value={localTruckId}
                         onChange={(e) => setLocalTruckId(e.target.value)}
                       />

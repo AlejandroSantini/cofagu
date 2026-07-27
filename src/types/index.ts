@@ -50,6 +50,10 @@ export interface Application {
   carrierId: number;
   carrier?: Carrier;
   notes?: string;
+  driverId?: number;
+  truckId?: number;
+  driver?: Driver;
+  truck?: Truck;
 }
 
 export interface Contingency {

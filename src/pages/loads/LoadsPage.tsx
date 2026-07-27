@@ -38,8 +38,6 @@ export const LoadsPage: React.FC = () => {
   const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(() => isCarrier ? user?.carrierId || null : null);
   const [carrierDrivers, setCarrierDrivers] = useState<Driver[]>([]);
   const [carrierTrucks, setCarrierTrucks] = useState<Truck[]>([]);
-  const [assignDriverId, setAssignDriverId] = useState('');
-  const [assignTruckId, setAssignTruckId] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const [error, setError] = useState('');
@@ -114,8 +112,6 @@ export const LoadsPage: React.FC = () => {
       setCarrierDrivers([]);
       setCarrierTrucks([]);
     }
-    setAssignDriverId('');
-    setAssignTruckId('');
   };
 
   const onSubmit = async (data: LoadFormValues) => {
@@ -159,7 +155,7 @@ export const LoadsPage: React.FC = () => {
     }
   };
 
-  const handleApply = async (notes: string): Promise<boolean> => {
+  const handleApply = async (notes: string, driverId: number, truckId: number): Promise<boolean> => {
     if (!selectedLoad) return false;
     if (!user?.carrierId) {
       showToast('Tu cuenta no está asociada a ninguna empresa transportista.', 'error');
@@ -168,7 +164,9 @@ export const LoadsPage: React.FC = () => {
     try {
       const res = await loadService.applyToLoad(selectedLoad.id, {
         carrierId: user.carrierId,
-        notes
+        notes,
+        driverId,
+        truckId
       });
       if (res.data.success) {
         showToast('Postulación enviada correctamente');
@@ -189,16 +187,21 @@ export const LoadsPage: React.FC = () => {
   };
 
   const handleAssign = async () => {
-    if (!selectedLoad || !selectedAppId || !assignDriverId || !assignTruckId) {
-      showToast('Por favor, selecciona chofer y camión.', 'error');
+    if (!selectedLoad || !selectedAppId) {
+      showToast('Por favor, selecciona una postulación.', 'error');
+      return;
+    }
+    const selectedApp = selectedLoad.applications?.find(a => a.id === selectedAppId);
+    if (!selectedApp || !selectedApp.driverId || !selectedApp.truckId) {
+      showToast('La postulación no cuenta con chofer o camión propuesto.', 'error');
       return;
     }
     setSubmitLoading(true);
     try {
       const res = await loadService.assignLoad(selectedLoad.id, {
         applicationId: selectedAppId,
-        driverId: Number(assignDriverId),
-        truckId: Number(assignTruckId)
+        driverId: Number(selectedApp.driverId),
+        truckId: Number(selectedApp.truckId)
       });
       if (res.data.success) {
         if (res.data.data.cupoCompleto) {
@@ -210,8 +213,6 @@ export const LoadsPage: React.FC = () => {
         setSelectedCarrierId(null);
         setCarrierDrivers([]);
         setCarrierTrucks([]);
-        setAssignDriverId('');
-        setAssignTruckId('');
         refreshDetails();
         triggerRefresh();
       }
@@ -361,10 +362,6 @@ export const LoadsPage: React.FC = () => {
           setSelectedCarrierId={setSelectedCarrierId}
           carrierDrivers={carrierDrivers}
           carrierTrucks={carrierTrucks}
-          assignDriverId={assignDriverId}
-          setAssignDriverId={setAssignDriverId}
-          assignTruckId={assignTruckId}
-          setAssignTruckId={setAssignTruckId}
           onAssign={handleAssign}
           onAssignResources={async (driverId, truckId) => {
             if (!selectedLoad) return;

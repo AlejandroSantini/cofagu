@@ -92,7 +92,7 @@ export const loadService = {
     api.delete<ApiResponse<void>>(`/loads/${id}`),
   patchLoadStatus: (id: number, status: string) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
-  applyToLoad: (id: number, data: { carrierId: number; notes?: string }) =>
+  applyToLoad: (id: number, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
   assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
     api.post<ApiResponse<AssignLoadResponse>>(`/loads/${id}/assign`, data),
@@ -119,3 +119,27 @@ export const carrierDocumentService = {
   deleteDocument: (id: number) =>
     api.delete<ApiResponse<void>>(`/carrier-documents/${id}`),
 };
+
+// --- FILE UPLOADS ---
+export interface UploadResponse {
+  success: boolean;
+  data: {
+    fileUrl: string;
+    filename: string;
+    originalName: string;
+    size: number;
+  };
+}
+
+export const uploadService = {
+  uploadFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<UploadResponse>('/uploads', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+

@@ -13,6 +13,7 @@ interface ModalProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
+  isConfirmDisabled?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -25,7 +26,8 @@ export const Modal: React.FC<ModalProps> = ({
   type = 'info',
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  isLoading = false
+  isLoading = false,
+  isConfirmDisabled = false
 }) => {
   const [isRendered, setIsRendered] = React.useState(isOpen);
   const [isVisible, setIsVisible] = React.useState(false);
@@ -137,6 +139,7 @@ export const Modal: React.FC<ModalProps> = ({
               onClick={onConfirm} 
               className="flex-1 order-1 sm:order-2"
               isLoading={isLoading}
+              disabled={isConfirmDisabled}
             >
               {confirmText}
             </Button>
