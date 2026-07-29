@@ -8,9 +8,10 @@ interface LoadsTableProps {
   isLoading: boolean;
   onRowClick: (load: Load) => void;
   statusFilter?: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED';
+  isCarrier?: boolean;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter }) => {
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'warning';
@@ -31,7 +32,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Fecha',
       render: (l: Load) => (
         <span className="font-bold text-slate-900 dark:text-white">
-          {new Date(l.date).toLocaleDateString('es-AR')}
+          {new Date(l.loadingDate || l.date).toLocaleDateString('es-AR')}
         </span>
       )
     },
@@ -62,26 +63,46 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         </Badge>
       )
     },
-    {
-      header: 'Cupo (Aprobados)',
-      render: (l: Load) => {
-        const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
-        const maxCapacity = l.maxTrucks || 1;
-        return (
-          <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-md">
-            {acceptedCount} / {maxCapacity}
-          </span>
-        );
-      }
-    },
-    {
-      header: 'Postulantes',
-      render: (l: Load) => (
-        <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-md">
-          {l.applications?.filter(a => a.status === 'PENDING').length || 0}
-        </span>
-      )
-    }
+    ...(isCarrier 
+      ? [
+          {
+            header: 'Cupos Disponibles',
+            render: (l: Load) => {
+              const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+              const cupos = l.cuposPendientes !== undefined 
+                ? l.cuposPendientes 
+                : (l.maxTrucks || 1) - acceptedCount;
+              return (
+                <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-md">
+                  {cupos} libres
+                </span>
+              );
+            }
+          }
+        ]
+      : [
+          {
+            header: 'Cupo (Aprobados)',
+            render: (l: Load) => {
+              const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+              const maxCapacity = l.maxTrucks || 1;
+              return (
+                <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-md">
+                  {acceptedCount} / {maxCapacity}
+                </span>
+              );
+            }
+          },
+          {
+            header: 'Postulantes',
+            render: (l: Load) => (
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-md">
+                {l.applications?.filter(a => a.status === 'PENDING').length || 0}
+              </span>
+            )
+          }
+        ]
+    )
   ];
 
   return (

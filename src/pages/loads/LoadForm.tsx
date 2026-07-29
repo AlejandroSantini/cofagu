@@ -47,8 +47,33 @@ export const LoadForm: React.FC<LoadFormProps> = ({ onSubmit, onCancel, isLoadin
             label="Fecha de Carga"
             type="date"
             icon={Calendar}
-            {...register('date')}
-            error={errors.date?.message}
+            {...register('loadingDate')}
+            error={errors.loadingDate?.message}
+          />
+          <Input
+            label="Fecha de Cupo"
+            type="date"
+            icon={Calendar}
+            {...register('quotaDate')}
+            error={errors.quotaDate?.message}
+          />
+          <Input
+            label="Horario Inicio Carga"
+            type="time"
+            {...register('loadingTimeStart')}
+            error={errors.loadingTimeStart?.message}
+          />
+          <Input
+            label="Horario Límite Carga"
+            type="time"
+            {...register('loadingTimeEnd')}
+            error={errors.loadingTimeEnd?.message}
+          />
+          <Input
+            label="Cereal / Producto"
+            placeholder="Ej: Soja, Maíz"
+            {...register('cereal')}
+            error={errors.cereal?.message}
           />
           <Input
             label="Tarifa ($)"
@@ -58,21 +83,17 @@ export const LoadForm: React.FC<LoadFormProps> = ({ onSubmit, onCancel, isLoadin
             {...register('rate')}
             error={errors.rate?.message}
           />
-          <Input
-            label="Cantidad de camiones necesarios"
-            type="number"
-            min="1"
-            placeholder="Ej: 1"
-            icon={Truck}
-            {...register('maxTrucks')}
-            error={errors.maxTrucks?.message}
-          />
-          <Input
-            label="Código de Trazabilidad (CTG - Opcional)"
-            placeholder="Ej: 12345XYZ"
-            {...register('ctg')}
-            error={errors.ctg?.message}
-          />
+          <div className="md:col-span-2">
+            <Input
+              label="Cantidad de camiones necesarios"
+              type="number"
+              min="1"
+              placeholder="Ej: 1"
+              icon={Truck}
+              {...register('maxTrucks')}
+              error={errors.maxTrucks?.message}
+            />
+          </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">Observaciones</label>
             <textarea

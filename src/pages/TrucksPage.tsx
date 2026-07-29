@@ -17,6 +17,7 @@ import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAuthStore } from '../store/useAuthStore';
 import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2, ShieldCheck } from 'lucide-react';
+import { ImageUpload } from '../components/ui/ImageUpload';
 
 export const TrucksPage: React.FC = () => {
   const [trucks, setTrucks] = useState<Truck[]>([]);
@@ -39,18 +40,21 @@ export const TrucksPage: React.FC = () => {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isValid }
   } = useForm<TruckFormValues>({
     resolver: zodResolver(truckSchema),
     mode: 'onChange',
     defaultValues: {
-      plate: '',
+      chassisPlate: '',
+      trailerPlate: '',
       type: '',
       capacity: '',
       carrierId: '',
       insurancePolicy: '',
       insuranceCompany: '',
-      insuranceExpiration: ''
+      insuranceExpiration: '',
+      insurancePolicyPhotoUrl: ''
     }
   });
 
@@ -98,13 +102,15 @@ export const TrucksPage: React.FC = () => {
 
   const handleEdit = (truck: Truck) => {
     setEditingId(truck.id);
-    setValue('plate', truck.plate);
-    setValue('type', truck.type);
+    setValue('chassisPlate', truck.chassisPlate || truck.plate || '');
+    setValue('trailerPlate', truck.trailerPlate || '');
+    setValue('type', truck.type as any);
     setValue('capacity', String(truck.capacity));
     setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
     setValue('insurancePolicy', truck.insurancePolicy || '');
     setValue('insuranceCompany', truck.insuranceCompany || '');
     setValue('insuranceExpiration', truck.insuranceExpiration ? new Date(truck.insuranceExpiration).toISOString().split('T')[0] : '');
+    setValue('insurancePolicyPhotoUrl', truck.insurancePolicyPhotoUrl || '');
     setShowForm(true);
   };
 
@@ -113,12 +119,15 @@ export const TrucksPage: React.FC = () => {
     setError('');
     try {
       const payload: any = {
-        plate: data.plate,
+        chassisPlate: data.chassisPlate,
+        trailerPlate: data.trailerPlate,
+        plate: data.chassisPlate, // Fallback/mapping for plate in backend
         type: data.type,
         capacity: Number(data.capacity),
-        insurancePolicy: data.insurancePolicy || undefined,
+        insurancePolicy: data.insurancePolicy,
         insuranceCompany: data.insuranceCompany || undefined,
-        insuranceExpiration: data.insuranceExpiration ? new Date(data.insuranceExpiration).toISOString() : undefined
+        insuranceExpiration: new Date(data.insuranceExpiration).toISOString(),
+        insurancePolicyPhotoUrl: data.insurancePolicyPhotoUrl
       };
 
       if (!isCarrier) {
@@ -165,28 +174,49 @@ export const TrucksPage: React.FC = () => {
     setShowForm(false);
     setEditingId(null);
     reset({
-      plate: '',
+      chassisPlate: '',
+      trailerPlate: '',
       type: '',
       capacity: '',
       carrierId: '',
       insurancePolicy: '',
       insuranceCompany: '',
-      insuranceExpiration: ''
+      insuranceExpiration: '',
+      insurancePolicyPhotoUrl: ''
     });
     setError('');
   };
 
+  const TYPE_LABELS: Record<string, string> = {
+    BATEA: 'Bateas',
+    TOLVA: 'Tolvas',
+    CHASIS_Y_ACOPLADO: 'Chasis y Acoplados',
+    SEMI: 'Semis',
+    SEMI_TOLVA: 'Semi Tolva'
+  };
+
+  const isInsuranceExpired = (expirationDate?: string) => {
+    if (!expirationDate) return true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiration = new Date(expirationDate);
+    return expiration < today;
+  };
+
   const columns = [
     {
-      header: 'Patente / Dominio',
+      header: 'Patentes (Chasis / Acoplado)',
       render: (t: Truck) => (
-        <span className="font-bold font-mono text-slate-900 dark:text-white uppercase">{t.plate}</span>
+        <div className="flex flex-col">
+          <span className="font-bold font-mono text-slate-900 dark:text-white uppercase">Chasis: {t.chassisPlate || t.plate || 'N/D'}</span>
+          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 uppercase">Acoplado: {t.trailerPlate || 'N/D'}</span>
+        </div>
       )
     },
     {
-      header: 'Tipo de Acoplado / Camión',
+      header: 'Tipo de Camión',
       render: (t: Truck) => (
-        <span className="text-slate-600 dark:text-zinc-400">{t.type}</span>
+        <span className="text-slate-600 dark:text-zinc-400 font-semibold">{TYPE_LABELS[t.type] || t.type}</span>
       )
     },
     {
@@ -211,12 +241,30 @@ export const TrucksPage: React.FC = () => {
     ] : []),
     {
       header: 'Seguro / Póliza',
-      render: (t: Truck) => t.insurancePolicy ? (
-        <div className="text-xs">
-          <p className="font-bold text-slate-800 dark:text-zinc-200">{t.insuranceCompany} ({t.insurancePolicy})</p>
-          <p className="text-slate-500 dark:text-slate-400 mt-0.5">Vence: {t.insuranceExpiration ? new Date(t.insuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}</p>
-        </div>
-      ) : <span className="text-slate-400 text-xs italic">No declarado</span>
+      render: (t: Truck) => {
+        const expired = isInsuranceExpired(t.insuranceExpiration);
+        const incomplete = !t.insurancePolicy || !t.insurancePolicyPhotoUrl;
+
+        return (
+          <div className="text-xs space-y-1">
+            {incomplete ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
+                Seguro Incompleto - Bloqueado
+              </span>
+            ) : expired ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
+                Seguro Vencido - Bloqueado
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                Seguro Vigente
+              </span>
+            )}
+            <p className="font-bold text-slate-800 dark:text-zinc-200 mt-1">Póliza: {t.insurancePolicy || 'N/D'}</p>
+            <p className="text-slate-500 dark:text-slate-400">Vence: {t.insuranceExpiration ? new Date(t.insuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}</p>
+          </div>
+        );
+      }
     },
     ...(canWriteTrucks ? [
       {
@@ -283,21 +331,35 @@ export const TrucksPage: React.FC = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
-                label="Patente / Dominio"
+                label="Patente del Chasis (Tractor) *"
                 placeholder="Ej: AA123BB o ABC123"
                 icon={TruckIcon}
-                {...register('plate')}
-                error={errors.plate?.message}
+                {...register('chassisPlate')}
+                error={errors.chassisPlate?.message}
               />
               <Input
-                label="Tipo de Acoplado / Camión"
-                placeholder="Ej: Chasis, Semirremolque"
+                label="Patente del Acoplado *"
+                placeholder="Ej: AB456CD o XYZ789"
+                icon={TruckIcon}
+                {...register('trailerPlate')}
+                error={errors.trailerPlate?.message}
+              />
+              <Select
+                label="Tipo de Camión *"
                 icon={FileText}
+                options={[
+                  { value: '', label: 'Seleccione un tipo' },
+                  { value: 'BATEA', label: 'Bateas' },
+                  { value: 'TOLVA', label: 'Tolvas' },
+                  { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplados' },
+                  { value: 'SEMI', label: 'Semis' },
+                  { value: 'SEMI_TOLVA', label: 'Semi Tolva' }
+                ]}
                 {...register('type')}
                 error={errors.type?.message}
               />
               <Input
-                label="Capacidad Útil (kg)"
+                label="Capacidad Útil (Kilos Netos) *"
                 placeholder="Ej: 28000"
                 icon={Scale}
                 {...register('capacity')}
@@ -318,21 +380,21 @@ export const TrucksPage: React.FC = () => {
             </div>
 
             {/* Insurance Info Section */}
-            <div className="border-t border-slate-100 dark:border-zinc-800 pt-6">
-              <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
+            <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-6">
+              <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                 <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-                Seguro Obligatorio del Camión (Opcional)
+                Seguro Obligatorio del Camión *
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Input
-                  label="Póliza de seguro"
+                  label="Póliza de seguro *"
                   placeholder="Ej: POL-123456"
                   icon={FileText}
                   {...register('insurancePolicy')}
                   error={errors.insurancePolicy?.message}
                 />
                 <Input
-                  label="Compañía aseguradora"
+                  label="Compañía aseguradora (Opcional)"
                   placeholder="Ej: La Segunda"
                   icon={Building2}
                   {...register('insuranceCompany')}
@@ -340,7 +402,7 @@ export const TrucksPage: React.FC = () => {
                 />
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
-                    Fecha de vencimiento
+                    Fecha de vencimiento *
                   </label>
                   <div className="relative">
                     <input
@@ -353,6 +415,17 @@ export const TrucksPage: React.FC = () => {
                     <p className="text-xs text-rose-500 mt-1">{errors.insuranceExpiration.message}</p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <ImageUpload
+                  label="Foto/Copia de la Póliza de Seguro *"
+                  value={watch('insurancePolicyPhotoUrl') || ''}
+                  onChange={(url) => setValue('insurancePolicyPhotoUrl', url, { shouldValidate: true })}
+                />
+                {errors.insurancePolicyPhotoUrl && (
+                  <p className="text-xs text-rose-500 mt-1">{errors.insurancePolicyPhotoUrl.message}</p>
+                )}
               </div>
             </div>
 

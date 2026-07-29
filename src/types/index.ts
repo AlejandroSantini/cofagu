@@ -32,7 +32,9 @@ export interface Driver {
 
 export interface Truck {
   id: number;
-  plate: string;
+  plate?: string;
+  chassisPlate?: string;
+  trailerPlate?: string;
   type: string;
   capacity: number;
   carrierId: number;
@@ -40,6 +42,7 @@ export interface Truck {
   insurancePolicy?: string;
   insuranceCompany?: string;
   insuranceExpiration?: string;
+  insurancePolicyPhotoUrl?: string;
 }
 
 export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -87,6 +90,12 @@ export interface Load {
   mileage?: number;
   invoiceUrl?: string;
   waybillUrl?: string;
+  loadingDate?: string;
+  loadingTimeStart?: string;
+  loadingTimeEnd?: string;
+  quotaDate?: string;
+  cereal?: string;
+  cuposPendientes?: number;
 }
 
 export interface ApiResponse<T> {
@@ -116,13 +125,16 @@ export interface CreateDriverPayload {
 }
 
 export interface CreateTruckPayload {
-  plate: string;
+  plate?: string;
+  chassisPlate?: string;
+  trailerPlate?: string;
   type: string;
   capacity: number;
   carrierId?: number;
   insurancePolicy?: string;
   insuranceCompany?: string;
   insuranceExpiration?: string;
+  insurancePolicyPhotoUrl?: string;
 }
 
 export interface CreateLoadPayload {
@@ -132,6 +144,11 @@ export interface CreateLoadPayload {
   rate: number;
   maxTrucks?: number;
   notes?: string;
+  loadingDate: string;
+  loadingTimeStart: string;
+  loadingTimeEnd: string;
+  quotaDate: string;
+  cereal: string;
   ctg?: string;
 }
 

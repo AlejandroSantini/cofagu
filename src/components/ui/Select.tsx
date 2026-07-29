@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   icon?: LucideIcon;
-  options: { value: string | number; label: string }[];
+  options: { value: string | number; label: string; disabled?: boolean }[];
   error?: string;
 }
 
@@ -35,7 +35,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({ label,
         >
           <option value="">Seleccione una opción</option>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} disabled={opt.disabled}>
               {opt.label}
             </option>
           ))}

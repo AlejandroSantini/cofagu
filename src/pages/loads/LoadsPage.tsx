@@ -122,7 +122,9 @@ export const LoadsPage: React.FC = () => {
         ...data,
         rate: Number(data.rate),
         maxTrucks: Number(data.maxTrucks),
-        date: new Date(data.date).toISOString()
+        loadingDate: new Date(data.loadingDate).toISOString(),
+        quotaDate: new Date(data.quotaDate).toISOString(),
+        date: new Date(data.loadingDate).toISOString()
       });
       if (res.data.success) {
         showToast('Carga publicada con éxito');
@@ -422,6 +424,7 @@ export const LoadsPage: React.FC = () => {
             isLoading={loading}
             onRowClick={handleRowClick}
             statusFilter={activeTab !== 'ALL' ? activeTab : undefined}
+            isCarrier={isCarrier}
           />
         </div>
       )}

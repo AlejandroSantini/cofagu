@@ -167,8 +167,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     }
   };
 
+  const isTruckInsuranceValid = (t: Truck) => {
+    if (!t.insurancePolicy || !t.insurancePolicyPhotoUrl || !t.insuranceExpiration) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiration = new Date(t.insuranceExpiration);
+    return expiration >= today;
+  };
+
   const handleLocalApply = async () => {
     if (!postulateDriverId || !postulateTruckId) return;
+    const selectedTruck = carrierTrucks.find(t => String(t.id) === postulateTruckId);
+    if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
+      alert("El seguro del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
+      return;
+    }
     setLocalSubmitLoading(true);
     const success = await onApply(postulateNotes, Number(postulateDriverId), Number(postulateTruckId));
     setLocalSubmitLoading(false);
@@ -244,7 +257,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           <Select
             label="Camión Flota"
             icon={TruckIcon}
-            options={carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))}
+            options={carrierTrucks.map((t) => {
+              const plateText = t.chassisPlate || t.plate || 'S/P';
+              const valid = isTruckInsuranceValid(t);
+              const expired = t.insuranceExpiration ? new Date(t.insuranceExpiration) < new Date() : true;
+              const suffix = !valid ? (expired ? ' - ⚠️ Seguro Vencido (Bloqueado)' : ' - ⚠️ Seguro Incompleto (Bloqueado)') : '';
+              return {
+                value: String(t.id),
+                label: `${plateText} (${t.type})${suffix}`,
+                disabled: !valid
+              };
+            })}
             value={postulateTruckId}
             onChange={(e) => setPostulateTruckId(e.target.value)}
           />
@@ -378,7 +401,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
                   <Calendar size={20} />
@@ -386,7 +409,45 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 <div>
                   <span className="text-xs font-bold text-slate-400 block uppercase">Fecha de Carga</span>
                   <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                    {new Date(load.date).toLocaleDateString('es-AR')}
+                    {new Date(load.loadingDate || load.date).toLocaleDateString('es-AR')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Fecha de Cupo</span>
+                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                    {load.quotaDate ? new Date(load.quotaDate).toLocaleDateString('es-AR') : 'No especificada'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Horario de Carga</span>
+                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                    {load.loadingTimeStart && load.loadingTimeEnd 
+                      ? `${load.loadingTimeStart} - ${load.loadingTimeEnd} hs` 
+                      : 'No especificado'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                  <Building size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Cereal / Producto</span>
+                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                    {load.cereal || 'No especificado'}
                   </span>
                 </div>
               </div>
@@ -408,24 +469,28 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <TruckIcon size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase">Cupo Requerido</span>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">Cupos Disponibles</span>
                   <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                    {acceptedCount} / {load.maxTrucks || 1} Camiones
+                    {load.cuposPendientes !== undefined 
+                      ? `${load.cuposPendientes} libres` 
+                      : `${load.maxTrucks ? load.maxTrucks - acceptedCount : 1} libres`}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
-                  <Send size={20} />
+              {load.ctg && (
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                    <Send size={20} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase">Código CTG</span>
+                    <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                      {load.ctg}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase">Código CTG</span>
-                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                    {load.ctg || 'No especificado'}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
             {load.notes && (
@@ -609,31 +674,47 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       </div>
                     ) : canUserWrite ? (
                       <>
-                        <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 uppercase font-bold">Chofer:</span>
-                            <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                              {carrierDrivers.find(d => d.id === selectedApp?.driverId)?.name || selectedApp?.driver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 uppercase font-bold">Camión:</span>
-                            <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                              {carrierTrucks.find(t => t.id === selectedApp?.truckId)?.plate || selectedApp?.truck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
-                            </span>
-                          </div>
-                        </div>
+                        {(() => {
+                          const proposedTruck = selectedApp?.truck || carrierTrucks.find(t => t.id === selectedApp?.truckId);
+                          const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
 
-                        <Button
-                          variant="primary"
-                          icon={CheckCircle}
-                          onClick={onAssign}
-                          disabled={!selectedApp?.driverId || !selectedApp?.truckId || acceptedCount >= maxCapacity}
-                          isLoading={submitLoading}
-                          className="w-full"
-                        >
-                          {acceptedCount >= maxCapacity ? 'Cupo completo' : 'Aprobar Postulación'}
-                        </Button>
+                          return (
+                            <>
+                              <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-400 uppercase font-bold">Chofer:</span>
+                                  <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                    {carrierDrivers.find(d => d.id === selectedApp?.driverId)?.name || selectedApp?.driver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-400 uppercase font-bold">Camión:</span>
+                                  <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                    {carrierTrucks.find(t => t.id === selectedApp?.truckId)?.plate || selectedApp?.truck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {isProposedTruckInvalid && (
+                                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
+                                  <p className="font-bold">⚠️ Seguro de camión propuesto inválido</p>
+                                  <p className="opacity-90">El seguro del camión seleccionado está vencido o incompleto. El transportista debe actualizar los datos.</p>
+                                </div>
+                              )}
+
+                              <Button
+                                variant="primary"
+                                icon={CheckCircle}
+                                onClick={onAssign}
+                                disabled={!selectedApp?.driverId || !selectedApp?.truckId || acceptedCount >= maxCapacity || isProposedTruckInvalid}
+                                isLoading={submitLoading}
+                                className="w-full"
+                              >
+                                {acceptedCount >= maxCapacity ? 'Cupo completo' : isProposedTruckInvalid ? 'Seguro Vencido / Incompleto' : 'Aprobar Postulación'}
+                              </Button>
+                            </>
+                          );
+                        })()}
                       </>
                     ) : (
                       <div className="p-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 rounded-xl text-xs italic">
@@ -737,7 +818,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       <Select
                         label="Camión Flota"
                         icon={TruckIcon}
-                        options={carrierTrucks.map((t) => ({ value: String(t.id), label: `${t.plate} (${t.type})` }))}
+                        options={carrierTrucks.map((t) => {
+                          const plateText = t.chassisPlate || t.plate || 'S/P';
+                          const valid = isTruckInsuranceValid(t);
+                          const expired = t.insuranceExpiration ? new Date(t.insuranceExpiration) < new Date() : true;
+                          const suffix = !valid ? (expired ? ' - ⚠️ Seguro Vencido (Bloqueado)' : ' - ⚠️ Seguro Incompleto (Bloqueado)') : '';
+                          return {
+                            value: String(t.id),
+                            label: `${plateText} (${t.type})${suffix}`,
+                            disabled: !valid
+                          };
+                        })}
                         value={localTruckId}
                         onChange={(e) => setLocalTruckId(e.target.value)}
                       />
@@ -745,7 +836,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       <Button
                         variant="primary"
                         icon={CheckCircle}
-                        onClick={() => onAssignResources?.(Number(localDriverId), Number(localTruckId))}
+                        onClick={() => {
+                          const selectedTruck = carrierTrucks.find(t => String(t.id) === localTruckId);
+                          if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
+                            alert("El seguro del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
+                            return;
+                          }
+                          onAssignResources?.(Number(localDriverId), Number(localTruckId));
+                        }}
                         disabled={!localDriverId || !localTruckId}
                         isLoading={submitLoading}
                         className="w-full"
