@@ -126,7 +126,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ label, value, onChange
         </label>
       )}
       <div className="flex gap-4">
-        <div className="flex-1 border-2 border-dashed border-slate-100 dark:border-zinc-800 rounded-xl p-3 text-center relative hover:bg-slate-50 dark:hover:bg-zinc-800/30 transition-all">
+        <div className={`
+          flex-1 border-2 border-dashed rounded-xl p-4 text-center relative transition-all duration-300
+          ${error 
+            ? 'border-rose-300 bg-rose-500/5 dark:border-rose-900/50' 
+            : 'border-slate-200 dark:border-zinc-700 hover:border-emerald-500 hover:bg-emerald-50/10 dark:hover:bg-zinc-800/30'
+          }
+        `}>
           {isUploading ? (
             <div className="flex flex-col items-center justify-center py-2">
               <Loader2 className="animate-spin text-emerald-500 mb-1" size={24} />

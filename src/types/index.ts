@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER' | 'PLAYERO' | 'GAS_STATION';
 
 export interface User {
   id: number;
@@ -43,6 +43,10 @@ export interface Truck {
   insuranceCompany?: string;
   insuranceExpiration?: string;
   insurancePolicyPhotoUrl?: string;
+  cargoInsurancePolicy?: string;
+  cargoInsuranceCompany?: string;
+  cargoInsuranceExpiration?: string;
+  cargoInsurancePhotoUrl?: string;
 }
 
 export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -85,6 +89,7 @@ export interface Load {
   applications?: Application[];
   contingencies?: Contingency[];
   ctg?: string;
+  loadedWeight?: number;
   unloadedWeight?: number;
   fuelConsumption?: number;
   mileage?: number;
@@ -96,6 +101,7 @@ export interface Load {
   quotaDate?: string;
   cereal?: string;
   cuposPendientes?: number;
+  invoiceId?: number | null;
 }
 
 export interface ApiResponse<T> {
@@ -135,6 +141,10 @@ export interface CreateTruckPayload {
   insuranceCompany?: string;
   insuranceExpiration?: string;
   insurancePolicyPhotoUrl?: string;
+  cargoInsurancePolicy?: string;
+  cargoInsuranceCompany?: string;
+  cargoInsuranceExpiration?: string;
+  cargoInsurancePhotoUrl?: string;
 }
 
 export interface CreateLoadPayload {
@@ -150,6 +160,14 @@ export interface CreateLoadPayload {
   quotaDate: string;
   cereal: string;
   ctg?: string;
+  loadedWeight?: number;
+  unloadedWeight?: number;
+  fuelConsumption?: number;
+  mileage?: number;
+  invoiceUrl?: string;
+  waybillUrl?: string;
+  status?: string;
+  targetGroups?: { groupId: number; rate: number }[];
 }
 
 export interface AssignLoadResponse {
@@ -179,4 +197,19 @@ export interface CarrierDocument {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CarrierGroup {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Invoice {
+  id: number;
+  invoiceNumber?: string;
+  invoicePhotoUrl: string;
+  loadIds: number[];
+  carrierId: number;
+  createdAt: string;
 }

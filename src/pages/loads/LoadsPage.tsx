@@ -275,7 +275,15 @@ export const LoadsPage: React.FC = () => {
     if (!selectedLoad) return false;
     setSubmitLoading(true);
     try {
-      const res = await loadService.postCompletionData(selectedLoad.id, data);
+      const res = await loadService.postCompletionData(selectedLoad.id, {
+        unloadedWeight: data.unloadedWeight,
+        fuelConsumption: data.fuelConsumption,
+        mileage: data.mileage,
+        invoiceUrl: data.invoiceUrl,
+        waybillUrl: data.waybillUrl,
+        notes: data.notes,
+        arrivedTrucks: data.arrivedTrucks
+      });
       if (res.data.success) {
         showToast('Viaje finalizado con éxito', 'success');
         refreshDetails();
@@ -385,6 +393,23 @@ export const LoadsPage: React.FC = () => {
             } finally {
               setSubmitLoading(false);
             }
+          }}
+          onUpdateLoad={async (id, data) => {
+            setSubmitLoading(true);
+            try {
+              const res = await loadService.updateLoad(id, data);
+              if (res.data.success) {
+                showToast('Viaje actualizado con éxito', 'success');
+                await refreshDetails();
+                triggerRefresh();
+                return true;
+              }
+            } catch (err) {
+              showToast(getErrorMessage(err, 'Error al actualizar el viaje.'), 'error');
+            } finally {
+              setSubmitLoading(false);
+            }
+            return false;
           }}
           submitLoading={submitLoading}
         />

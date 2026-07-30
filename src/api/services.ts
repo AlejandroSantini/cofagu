@@ -11,7 +11,9 @@ import {
   type CreateTruckPayload,
   type CreateLoadPayload,
   type AssignLoadResponse,
-  type CarrierDocument
+  type CarrierDocument,
+  type CarrierGroup,
+  type Invoice
 } from '../types';
 
 // --- AUTH & USERS ---
@@ -138,5 +140,17 @@ export const uploadService = {
       },
     });
   },
+};
+
+export const groupService = {
+  getGroups: () =>
+    api.get<ApiResponse<CarrierGroup[]>>('/carrier-groups'),
+};
+
+export const invoiceService = {
+  createInvoice: (data: { invoiceNumber?: string; invoicePhotoUrl: string; loadIds: number[] }) =>
+    api.post<ApiResponse<Invoice>>('/invoices', data),
+  getInvoices: () =>
+    api.get<ApiResponse<Invoice[]>>('/invoices'),
 };
 

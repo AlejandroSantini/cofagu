@@ -37,6 +37,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     ...(isCarrier ? [
       { label: 'Choferes', icon: Users, path: '/drivers' },
       { label: 'Camiones', icon: Truck, path: '/trucks' },
+      { label: 'Facturación', icon: FileText, path: '/invoices' },
     ] : []),
     ...(isAdmin ? [
       { label: 'Personal', icon: Users, path: '/users' }

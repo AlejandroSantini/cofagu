@@ -10,6 +10,8 @@ interface AuthState {
   isAdmin: () => boolean;
   isEmployee: () => boolean;
   isOperator: () => boolean;
+  isPlayero: () => boolean;
+  isGasStation: () => boolean;
   isStaff: () => boolean;
   canWrite: () => boolean;
 }
@@ -25,9 +27,11 @@ export const useAuthStore = create<AuthState>()(
       isAdmin: () => get().user?.role === 'ADMIN',
       isEmployee: () => get().user?.role === 'EMPLOYEE',
       isOperator: () => get().user?.role === 'OPERATOR',
+      isPlayero: () => get().user?.role === 'PLAYERO',
+      isGasStation: () => get().user?.role === 'GAS_STATION',
       isStaff: () => {
         const r = get().user?.role;
-        return r === 'ADMIN' || r === 'OPERATOR' || r === 'EMPLOYEE';
+        return r === 'ADMIN' || r === 'OPERATOR' || r === 'EMPLOYEE' || r === 'PLAYERO' || r === 'GAS_STATION';
       },
       canWrite: () => {
         const r = get().user?.role;

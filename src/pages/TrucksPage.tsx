@@ -51,10 +51,10 @@ export const TrucksPage: React.FC = () => {
       type: '',
       capacity: '',
       carrierId: '',
-      insurancePolicy: '',
-      insuranceCompany: '',
-      insuranceExpiration: '',
-      insurancePolicyPhotoUrl: ''
+      cargoInsurancePolicy: '',
+      cargoInsuranceCompany: '',
+      cargoInsuranceExpiration: '',
+      cargoInsurancePhotoUrl: ''
     }
   });
 
@@ -107,10 +107,10 @@ export const TrucksPage: React.FC = () => {
     setValue('type', truck.type as any);
     setValue('capacity', String(truck.capacity));
     setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
-    setValue('insurancePolicy', truck.insurancePolicy || '');
-    setValue('insuranceCompany', truck.insuranceCompany || '');
-    setValue('insuranceExpiration', truck.insuranceExpiration ? new Date(truck.insuranceExpiration).toISOString().split('T')[0] : '');
-    setValue('insurancePolicyPhotoUrl', truck.insurancePolicyPhotoUrl || '');
+    setValue('cargoInsurancePolicy', truck.cargoInsurancePolicy || '');
+    setValue('cargoInsuranceCompany', truck.cargoInsuranceCompany || '');
+    setValue('cargoInsuranceExpiration', truck.cargoInsuranceExpiration ? new Date(truck.cargoInsuranceExpiration).toISOString().split('T')[0] : '');
+    setValue('cargoInsurancePhotoUrl', truck.cargoInsurancePhotoUrl || '');
     setShowForm(true);
   };
 
@@ -124,10 +124,10 @@ export const TrucksPage: React.FC = () => {
         plate: data.chassisPlate, // Fallback/mapping for plate in backend
         type: data.type,
         capacity: Number(data.capacity),
-        insurancePolicy: data.insurancePolicy,
-        insuranceCompany: data.insuranceCompany || undefined,
-        insuranceExpiration: new Date(data.insuranceExpiration).toISOString(),
-        insurancePolicyPhotoUrl: data.insurancePolicyPhotoUrl
+        cargoInsurancePolicy: data.cargoInsurancePolicy,
+        cargoInsuranceCompany: data.cargoInsuranceCompany || undefined,
+        cargoInsuranceExpiration: new Date(data.cargoInsuranceExpiration).toISOString(),
+        cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl
       };
 
       if (!isCarrier) {
@@ -179,10 +179,10 @@ export const TrucksPage: React.FC = () => {
       type: '',
       capacity: '',
       carrierId: '',
-      insurancePolicy: '',
-      insuranceCompany: '',
-      insuranceExpiration: '',
-      insurancePolicyPhotoUrl: ''
+      cargoInsurancePolicy: '',
+      cargoInsuranceCompany: '',
+      cargoInsuranceExpiration: '',
+      cargoInsurancePhotoUrl: ''
     });
     setError('');
   };
@@ -240,28 +240,44 @@ export const TrucksPage: React.FC = () => {
       }
     ] : []),
     {
-      header: 'Seguro / Póliza',
+      header: 'Seguro de Carga',
       render: (t: Truck) => {
-        const expired = isInsuranceExpired(t.insuranceExpiration);
-        const incomplete = !t.insurancePolicy || !t.insurancePolicyPhotoUrl;
+        const expired = isInsuranceExpired(t.cargoInsuranceExpiration);
+        const incomplete = !t.cargoInsurancePolicy || !t.cargoInsurancePhotoUrl;
 
         return (
-          <div className="text-xs space-y-1">
-            {incomplete ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
-                Seguro Incompleto - Bloqueado
-              </span>
-            ) : expired ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
-                Seguro Vencido - Bloqueado
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-                Seguro Vigente
-              </span>
-            )}
-            <p className="font-bold text-slate-800 dark:text-zinc-200 mt-1">Póliza: {t.insurancePolicy || 'N/D'}</p>
-            <p className="text-slate-500 dark:text-slate-400">Vence: {t.insuranceExpiration ? new Date(t.insuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}</p>
+          <div className="flex flex-col gap-1.5 py-1">
+            <div className="flex items-center gap-1.5">
+              {incomplete ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  Incompleto - Bloqueado
+                </span>
+              ) : expired ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  Vencido - Bloqueado
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/55 dark:bg-emerald-950/20 dark:text-emerald-450 dark:border-emerald-900/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-550" />
+                  Vigente
+                </span>
+              )}
+            </div>
+
+            <div className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-0.5 font-medium pl-1">
+              <p className="flex items-center gap-1.5">
+                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider w-10">Póliza:</span> 
+                <span className="font-mono text-slate-700 dark:text-zinc-300">{t.cargoInsurancePolicy || 'N/D'}</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider w-10">Vence:</span>
+                <span className="font-mono text-slate-700 dark:text-zinc-300">
+                  {t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}
+                </span>
+              </p>
+            </div>
           </div>
         );
       }
@@ -379,55 +395,45 @@ export const TrucksPage: React.FC = () => {
               )}
             </div>
 
-            {/* Insurance Info Section */}
+            {/* Cargo Insurance Info Section (Required) */}
             <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-6">
               <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                 <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-                Seguro Obligatorio del Camión *
+                Seguro Obligatorio de la Carga (Requerido) *
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                 <Input
-                  label="Póliza de seguro *"
-                  placeholder="Ej: POL-123456"
+                  label="Nro. de Póliza *"
+                  placeholder="Ej: CAR-123456"
                   icon={FileText}
-                  {...register('insurancePolicy')}
-                  error={errors.insurancePolicy?.message}
+                  {...register('cargoInsurancePolicy')}
+                  error={errors.cargoInsurancePolicy?.message}
                 />
                 <Input
-                  label="Compañía aseguradora (Opcional)"
+                  label="Aseguradora (Opcional)"
                   placeholder="Ej: La Segunda"
                   icon={Building2}
-                  {...register('insuranceCompany')}
-                  error={errors.insuranceCompany?.message}
+                  {...register('cargoInsuranceCompany')}
+                  error={errors.cargoInsuranceCompany?.message}
                 />
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
-                    Fecha de vencimiento *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
-                      {...register('insuranceExpiration')}
-                    />
-                  </div>
-                  {errors.insuranceExpiration && (
-                    <p className="text-xs text-rose-500 mt-1">{errors.insuranceExpiration.message}</p>
-                  )}
-                </div>
+                <Input
+                  label="Fecha de vencimiento *"
+                  type="date"
+                  {...register('cargoInsuranceExpiration')}
+                  error={errors.cargoInsuranceExpiration?.message}
+                />
               </div>
 
-              <div>
+              <div className="pt-2">
                 <ImageUpload
-                  label="Foto/Copia de la Póliza de Seguro *"
-                  value={watch('insurancePolicyPhotoUrl') || ''}
-                  onChange={(url) => setValue('insurancePolicyPhotoUrl', url, { shouldValidate: true })}
+                  label="Foto/Copia de la Póliza del Seguro de Carga *"
+                  value={watch('cargoInsurancePhotoUrl') || ''}
+                  onChange={(url) => setValue('cargoInsurancePhotoUrl', url, { shouldValidate: true })}
+                  error={errors.cargoInsurancePhotoUrl?.message}
                 />
-                {errors.insurancePolicyPhotoUrl && (
-                  <p className="text-xs text-rose-500 mt-1">{errors.insurancePolicyPhotoUrl.message}</p>
-                )}
               </div>
             </div>
+
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
               <Button type="button" variant="secondary" onClick={handleBack}>

@@ -6,10 +6,11 @@ export const truckSchema = z.object({
   type: z.string().min(1, 'Seleccione un tipo de camión válido'),
   capacity: z.string().min(1, 'La capacidad es obligatoria').refine((val) => !isNaN(Number(val)) && Number(val) > 0, 'La capacidad debe ser un número positivo'),
   carrierId: z.string().optional(),
-  insurancePolicy: z.string().min(1, 'El número de póliza es obligatorio'),
-  insuranceCompany: z.string().optional(),
-  insuranceExpiration: z.string().min(1, 'La fecha de vencimiento del seguro es obligatoria'),
-  insurancePolicyPhotoUrl: z.string().min(1, 'La foto de la póliza de seguro es obligatoria'),
+  // Cargo insurance - now required
+  cargoInsurancePolicy: z.string().min(1, 'El número de póliza del seguro de carga es obligatorio'),
+  cargoInsuranceCompany: z.string().optional(),
+  cargoInsuranceExpiration: z.string().min(1, 'La fecha de vencimiento del seguro de carga es obligatoria'),
+  cargoInsurancePhotoUrl: z.string().min(1, 'La foto de la póliza del seguro de carga es obligatoria'),
 });
 
 export type TruckFormValues = z.infer<typeof truckSchema>;

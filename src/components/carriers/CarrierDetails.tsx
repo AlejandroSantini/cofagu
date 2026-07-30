@@ -141,13 +141,13 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
                   { header: 'Patente', render: (t: Truck) => <span className="font-bold font-mono text-slate-900 dark:text-white">{t.plate}</span> },
                   { header: 'Tipo', render: (t: Truck) => <span className="text-slate-700 dark:text-zinc-300 font-semibold">{t.type}</span> },
                   { header: 'Capacidad', render: (t: Truck) => <span className="text-slate-600 dark:text-zinc-400 font-semibold">{Number(t.capacity).toLocaleString('es-AR')} kg</span> },
-                  { header: 'Compañía Seguro', render: (t: Truck) => <span className="text-slate-600 dark:text-zinc-400">{t.insuranceCompany || 'N/D'}</span> },
-                  { header: 'Póliza', render: (t: Truck) => <span className="text-slate-600 dark:text-zinc-400 font-mono">{t.insurancePolicy || 'N/D'}</span> },
+                  { header: 'Compañía Seguro Carga', render: (t: Truck) => <span className="text-slate-600 dark:text-zinc-400">{t.cargoInsuranceCompany || 'N/D'}</span> },
+                  { header: 'Póliza Carga', render: (t: Truck) => <span className="text-slate-600 dark:text-zinc-400 font-mono">{t.cargoInsurancePolicy || 'N/D'}</span> },
                   {
-                    header: 'Vencimiento Seguro',
-                    render: (t: Truck) => t.insuranceExpiration ? (
+                    header: 'Vencimiento Carga',
+                    render: (t: Truck) => t.cargoInsuranceExpiration ? (
                       <span className="text-slate-600 dark:text-zinc-400">
-                        {new Date(t.insuranceExpiration).toLocaleDateString('es-AR')}
+                        {new Date(t.cargoInsuranceExpiration).toLocaleDateString('es-AR')}
                       </span>
                     ) : 'N/D'
                   },

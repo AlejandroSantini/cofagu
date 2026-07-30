@@ -11,7 +11,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, ic
   return (
     <div className={`flex flex-col w-full ${label ? 'gap-2' : ''}`}>
       {label && (
-        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
+        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1 whitespace-nowrap">
           {label}
         </label>
       )}

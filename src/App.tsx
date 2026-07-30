@@ -14,6 +14,7 @@ import { RoleGate } from './components/RoleGate';
 import { useEffect } from 'react';
 import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
+import { InvoicesPage } from './pages/InvoicesPage';
 
 function App() {
   const token = useAuthStore((state) => state.token);
@@ -106,6 +107,19 @@ function App() {
         <Route
           path="/documents"
           element={token ? <AppLayout><CarrierDocumentsPage /></AppLayout> : <Navigate to="/login" />}
+        />
+
+        <Route
+          path="/invoices"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER']}>
+                  <InvoicesPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
         />
         
         <Route

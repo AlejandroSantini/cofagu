@@ -8,7 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { 
   Trash2, Calendar, DollarSign, Send, 
-  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2
+  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale
 } from 'lucide-react';
 import { api } from '../../api/axios';
 
@@ -85,6 +85,7 @@ interface LoadDetailsProps {
     invoiceUrl?: string;
     waybillUrl?: string;
   }) => Promise<boolean>;
+  onUpdateLoad?: (id: number, data: Partial<Load>) => Promise<boolean>;
   
   // Assignment resources props
   selectedAppId: number | null;
@@ -105,6 +106,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onStatusChange,
   onReportContingency,
   onCompleteLoad,
+  onUpdateLoad,
   
   selectedAppId,
   setSelectedAppId,
@@ -131,9 +133,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [unloadedWeight, setUnloadedWeight] = useState('');
   const [fuelConsumption, setFuelConsumption] = useState('');
   const [mileage, setMileage] = useState('');
-  const [invoiceUrl, setInvoiceUrl] = useState('');
   const [waybillUrl, setWaybillUrl] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
+  const [showPlantModal, setShowPlantModal] = useState(false);
+  const [plantCtg, setPlantCtg] = useState('');
+  const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
 
   // Carrier local resource assignment states
   const [prevLoadId, setPrevLoadId] = useState(load.id);
@@ -153,7 +157,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
   const canUserWrite = user?.role === 'ADMIN' || user?.role === 'OPERATOR';
   const isCarrier = user?.role === 'CARRIER';
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'OPERATOR' || user?.role === 'EMPLOYEE';
+  const isStaff = user?.role === 'ADMIN' || user?.role === 'OPERATOR' || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
   const hasApplied = load.applications?.some(app => app.carrierId === user?.carrierId);
 
   const getStatusBadgeVariant = (status: string) => {
@@ -168,10 +172,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const isTruckInsuranceValid = (t: Truck) => {
-    if (!t.insurancePolicy || !t.insurancePolicyPhotoUrl || !t.insuranceExpiration) return false;
+    if (!t.cargoInsurancePolicy || !t.cargoInsurancePhotoUrl || !t.cargoInsuranceExpiration) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const expiration = new Date(t.insuranceExpiration);
+    const expiration = new Date(t.cargoInsuranceExpiration);
     return expiration >= today;
   };
 
@@ -179,7 +183,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     if (!postulateDriverId || !postulateTruckId) return;
     const selectedTruck = carrierTrucks.find(t => String(t.id) === postulateTruckId);
     if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
-      alert("El seguro del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
+      alert("El seguro de carga del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
       return;
     }
     setLocalSubmitLoading(true);
@@ -190,6 +194,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       setPostulateNotes('');
       setPostulateDriverId('');
       setPostulateTruckId('');
+    }
+  };
+
+  const handleLocalPlantSave = async () => {
+    if (!plantCtg || !plantLoadedWeight) return;
+    setLocalSubmitLoading(true);
+    const success = await onUpdateLoad?.(load.id, {
+      ctg: plantCtg,
+      loadedWeight: Number(plantLoadedWeight),
+      status: 'IN_PROGRESS'
+    });
+    setLocalSubmitLoading(false);
+    if (success) {
+      setShowPlantModal(false);
     }
   };
 
@@ -213,7 +231,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       notes: completionNotes || undefined,
       fuelConsumption: fuelConsumption ? Number(fuelConsumption) : undefined,
       mileage: mileage ? Number(mileage) : undefined,
-      invoiceUrl: invoiceUrl || undefined,
       waybillUrl: waybillUrl || undefined,
     };
 
@@ -226,7 +243,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       setCompletionNotes('');
       setFuelConsumption('');
       setMileage('');
-      setInvoiceUrl('');
       setWaybillUrl('');
     }
   };
@@ -260,8 +276,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             options={carrierTrucks.map((t) => {
               const plateText = t.chassisPlate || t.plate || 'S/P';
               const valid = isTruckInsuranceValid(t);
-              const expired = t.insuranceExpiration ? new Date(t.insuranceExpiration) < new Date() : true;
-              const suffix = !valid ? (expired ? ' - ⚠️ Seguro Vencido (Bloqueado)' : ' - ⚠️ Seguro Incompleto (Bloqueado)') : '';
+              const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
+              const suffix = !valid ? (expired ? ' - ⚠️ Seguro Carga Vencido (Bloqueado)' : ' - ⚠️ Seguro Carga Incompleto (Bloqueado)') : '';
               return {
                 value: String(t.id),
                 label: `${plateText} (${t.type})${suffix}`,
@@ -304,6 +320,39 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             placeholder="Ej: Pedro Chofer"
             value={contingencyReporter}
             onChange={(e) => setContingencyReporter(e.target.value)}
+            className="py-2.5"
+          />
+        </div>
+      </Modal>
+
+      {/* Balancera / Plant Modal */}
+      <Modal
+        isOpen={showPlantModal}
+        onClose={() => setShowPlantModal(false)}
+        title="Registrar Pesaje de Carga (Planta)"
+        confirmText="Guardar Datos"
+        onConfirm={handleLocalPlantSave}
+        isLoading={localSubmitLoading}
+        isConfirmDisabled={!plantCtg || !plantLoadedWeight}
+      >
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-slate-500">
+            Ingrese el Código de Carta de Porte (CTG) y el pesaje cargado en báscula:
+          </p>
+          <Input
+            label="Código CTG / Carta de Porte *"
+            placeholder="Ej: 12345XYZ"
+            value={plantCtg}
+            onChange={(e) => setPlantCtg(e.target.value)}
+            className="py-2.5"
+          />
+          <Input
+            label="Kilos Cargados *"
+            type="number"
+            step="any"
+            placeholder="Ej: 30000"
+            value={plantLoadedWeight}
+            onChange={(e) => setPlantLoadedWeight(e.target.value)}
             className="py-2.5"
           />
         </div>
@@ -367,15 +416,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             onChange={(e) => setCompletionNotes(e.target.value)}
             className="py-2.5"
           />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="pt-2">
             <ImageUpload 
-              label="Factura/Remito (Opcional)"
-              value={invoiceUrl}
-              onChange={setInvoiceUrl}
-            />
-            <ImageUpload 
-              label="Carta de Porte (Opcional)"
+              label="Carta de Porte / Remito de entrega (Opcional)"
               value={waybillUrl}
               onChange={setWaybillUrl}
             />
@@ -491,6 +534,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </div>
                 </div>
               )}
+
+              {load.loadedWeight !== undefined && load.loadedWeight !== null && (
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                    <Scale size={20} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase">Kilos Cargados</span>
+                    <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                      {load.loadedWeight.toLocaleString('es-AR')} kg
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {load.notes && (
@@ -560,9 +617,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   Cancelar Carga
                 </Button>
               )}
-
-
-
+              {isStaff && (load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS') && (
+                <Button 
+                  variant="primary" 
+                  icon={CheckCircle} 
+                  onClick={() => {
+                    setPlantCtg(load.ctg || '');
+                    setPlantLoadedWeight(load.loadedWeight ? String(load.loadedWeight) : '');
+                    setShowPlantModal(true);
+                  }}
+                >
+                  Registrar Pesaje de Carga (Balancera)
+                </Button>
+              )}
               {isCarrier && (
                 <>
                   {load.status === 'PUBLISHED' && !hasApplied && (
@@ -821,8 +888,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         options={carrierTrucks.map((t) => {
                           const plateText = t.chassisPlate || t.plate || 'S/P';
                           const valid = isTruckInsuranceValid(t);
-                          const expired = t.insuranceExpiration ? new Date(t.insuranceExpiration) < new Date() : true;
-                          const suffix = !valid ? (expired ? ' - ⚠️ Seguro Vencido (Bloqueado)' : ' - ⚠️ Seguro Incompleto (Bloqueado)') : '';
+                          const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
+                          const suffix = !valid ? (expired ? ' - ⚠️ Seguro Carga Vencido (Bloqueado)' : ' - ⚠️ Seguro Carga Incompleto (Bloqueado)') : '';
                           return {
                             value: String(t.id),
                             label: `${plateText} (${t.type})${suffix}`,
@@ -839,7 +906,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         onClick={() => {
                           const selectedTruck = carrierTrucks.find(t => String(t.id) === localTruckId);
                           if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
-                            alert("El seguro del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
+                            alert("El seguro de carga del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
                             return;
                           }
                           onAssignResources?.(Number(localDriverId), Number(localTruckId));
