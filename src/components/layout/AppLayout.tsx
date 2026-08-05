@@ -10,7 +10,8 @@ import {
   Settings, 
   Users,
   Briefcase,
-  FileText
+  FileText,
+  Layers
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -40,6 +41,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       { label: 'Facturación', icon: FileText, path: '/invoices' },
     ] : []),
     ...(isAdmin ? [
+      { label: 'Grupos', icon: Layers, path: '/groups' },
       { label: 'Personal', icon: Users, path: '/users' }
     ] : []),
     { label: 'Documentación', icon: FileText, path: '/documents' },

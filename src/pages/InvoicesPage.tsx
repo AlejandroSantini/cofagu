@@ -46,6 +46,7 @@ export const InvoicesPage: React.FC = () => {
         setInvoices(invoicesRes.data.data);
       }
     } catch (err) {
+      console.error(err);
       showToast('Error al cargar datos de facturación', 'error');
     } finally {
       setLoading(false);
@@ -72,6 +73,7 @@ export const InvoicesPage: React.FC = () => {
         }
       } catch (err) {
         if (active) {
+          console.log(err);
           showToast('Error al cargar datos de facturación', 'error');
         }
       } finally {

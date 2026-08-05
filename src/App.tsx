@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { GroupsPage } from './pages/GroupsPage';
 
 function App() {
   const token = useAuthStore((state) => state.token);
@@ -98,6 +99,19 @@ function App() {
               <AppLayout>
                 <RoleGate allowedRoles={['ADMIN']}>
                   <UsersPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
+        />
+
+        <Route
+          path="/groups"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN']}>
+                  <GroupsPage />
                 </RoleGate>
               </AppLayout>
             ) : <Navigate to="/login" />

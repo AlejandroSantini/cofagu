@@ -102,6 +102,7 @@ export interface Load {
   cereal?: string;
   cuposPendientes?: number;
   invoiceId?: number | null;
+  targetGroups?: { groupId: number; rate: number; group?: CarrierGroup }[];
 }
 
 export interface ApiResponse<T> {
@@ -199,10 +200,28 @@ export interface CarrierDocument {
   updatedAt: string;
 }
 
+export interface CarrierGroupMember {
+  carrierId: number;
+  groupId: number;
+  carrier: {
+    id: number;
+    name: string;
+    cuit: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  };
+}
+
 export interface CarrierGroup {
   id: number;
   name: string;
   description?: string;
+  createdAt?: string;
+  _count?: {
+    carriers: number;
+    loads: number;
+  };
+  carriers?: CarrierGroupMember[];
 }
 
 export interface Invoice {

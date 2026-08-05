@@ -144,7 +144,19 @@ export const uploadService = {
 
 export const groupService = {
   getGroups: () =>
-    api.get<ApiResponse<CarrierGroup[]>>('/carrier-groups'),
+    api.get<ApiResponse<CarrierGroup[]>>('/groups'),
+  getGroup: (id: number) =>
+    api.get<ApiResponse<CarrierGroup>>(`/groups/${id}`),
+  createGroup: (data: { name: string; description?: string }) =>
+    api.post<ApiResponse<CarrierGroup>>('/groups', data),
+  updateGroup: (id: number, data: { name: string; description?: string }) =>
+    api.put<ApiResponse<CarrierGroup>>(`/groups/${id}`, data),
+  deleteGroup: (id: number) =>
+    api.delete<ApiResponse<void>>(`/groups/${id}`),
+  addCarrierToGroup: (groupId: number, carrierId: number) =>
+    api.post<ApiResponse<void>>(`/groups/${groupId}/carriers`, { carrierId }),
+  removeCarrierFromGroup: (groupId: number, carrierId: number) =>
+    api.delete<ApiResponse<{ success: boolean; message: string }>>(`/groups/${groupId}/carriers/${carrierId}`),
 };
 
 export const invoiceService = {

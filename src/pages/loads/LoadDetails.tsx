@@ -8,7 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { 
   Trash2, Calendar, DollarSign, Send, 
-  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale
+  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale, Layers
 } from 'lucide-react';
 import { api } from '../../api/axios';
 
@@ -554,6 +554,29 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <div className="bg-slate-50 dark:bg-zinc-800/30 p-4 rounded-xl border border-slate-100 dark:border-zinc-800/50">
                 <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Notas Adicionales</span>
                 <p className="text-sm text-slate-700 dark:text-zinc-300 font-medium">{load.notes}</p>
+              </div>
+            )}
+
+            {load.targetGroups && load.targetGroups.length > 0 && (
+              <div className="bg-emerald-500/5 dark:bg-zinc-800/40 p-4 rounded-xl border border-emerald-500/20 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Layers size={18} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                    Publicación Dirigida a Grupos
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {load.targetGroups.map((tg, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-750 text-xs">
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {tg.group?.name || `Grupo ID: ${tg.groupId}`}
+                      </span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                        ${Number(tg.rate).toLocaleString('es-AR')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
