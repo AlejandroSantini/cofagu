@@ -168,13 +168,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const isTruckInsuranceValid = (t: Truck) => {
-    // Si viene la propiedad 'habilitado' en el camión, se evalúa directamente
+    // Si viene la propiedad 'habilitado' en el objeto del camión, se evalúa directamente
     if (typeof t.habilitado === 'boolean') {
       return t.habilitado;
     }
-    // De lo contrario, se verifica que el estado del seguro de carga esté APROBADO
-    return t.cargoInsuranceStatus === 'APPROVED';
+    // Si viene el estado explícito del seguro de carga
+    if (t.cargoInsuranceStatus) {
+      return t.cargoInsuranceStatus === 'APPROVED';
+    }
+    // Si no viene el status pero sí viene el objeto simple dentro de la postulación
+    return true;
   };
+
 
 
 
@@ -876,7 +881,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     ) : canUserWrite ? (
                       <>
                         {(() => {
-                          const proposedTruck = selectedApp?.truck || carrierTrucks.find(t => t.id === selectedApp?.truckId);
+                          const proposedDriver = selectedApp?.driver;
+                          const proposedTruck = selectedApp?.truck;
                           const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
 
                           return (
@@ -885,16 +891,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 <div className="flex justify-between items-center">
                                   <span className="text-slate-400 uppercase font-bold">Chofer:</span>
                                   <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                    {carrierDrivers.find(d => d.id === selectedApp?.driverId)?.name || selectedApp?.driver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
+                                    {proposedDriver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-slate-400 uppercase font-bold">Camión:</span>
                                   <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                    {carrierTrucks.find(t => t.id === selectedApp?.truckId)?.plate || selectedApp?.truck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
+                                    {proposedTruck?.chassisPlate || proposedTruck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
                                   </span>
                                 </div>
                               </div>
+
 
                               {isProposedTruckInvalid && (
                                 <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
