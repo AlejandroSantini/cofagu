@@ -168,12 +168,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const isTruckInsuranceValid = (t: Truck) => {
-    if (!t.cargoInsurancePolicy || !t.cargoInsurancePhotoUrl || !t.cargoInsuranceExpiration) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiration = new Date(t.cargoInsuranceExpiration);
-    return expiration >= today;
+    // Si viene la propiedad 'habilitado' en el camión, se evalúa directamente
+    if (typeof t.habilitado === 'boolean') {
+      return t.habilitado;
+    }
+    // De lo contrario, se verifica que el estado del seguro de carga esté APROBADO
+    return t.cargoInsuranceStatus === 'APPROVED';
   };
+
+
 
   const handleLocalApply = async () => {
     if (!postulateDriverId || !postulateTruckId) return;
