@@ -64,6 +64,7 @@ export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 
 export interface Application {
   id: number;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  tripStatus?: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   carrierId: number;
   carrier?: Carrier;
   notes?: string;
@@ -71,7 +72,14 @@ export interface Application {
   truckId?: number;
   driver?: Driver;
   truck?: Truck;
+  ctg?: string;
+  loadedWeight?: number;
+  unloadedWeight?: number;
+  waybillUrl?: string;
+  fuelConsumption?: number;
+  mileage?: number;
 }
+
 
 export interface Contingency {
   id: number;

@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { ImageUpload } from '../../components/ui/ImageUpload';
+
 import { 
   Trash2, Calendar, DollarSign, Send, 
   CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale, Layers, Clock, XCircle
@@ -77,6 +77,8 @@ interface LoadDetailsProps {
   onApply: (notes: string, driverId: number, truckId: number) => Promise<boolean>;
   onStatusChange: (newStatus: string) => void;
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
+  onConfirmDepartureByApp?: (appId: number, ctg: string, loadedWeight: number) => Promise<boolean>;
+  onCompleteLoadByApp?: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) => Promise<boolean>;
   onCompleteLoad: (data: { 
     unloadedWeight: number; 
     fuelConsumption?: number; 
@@ -106,8 +108,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onApply,
   onStatusChange,
   onReportContingency,
+  onConfirmDepartureByApp,
+  onCompleteLoadByApp,
   onCompleteLoad,
   onUpdateLoad,
+
   
   selectedAppId,
   setSelectedAppId,
@@ -115,9 +120,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   carrierDrivers,
   carrierTrucks,
   onAssign,
-  onAssignResources,
   submitLoading
 }) => {
+
   // Local modal states
   const [showPostulateModal, setShowPostulateModal] = useState(false);
   const [showContingencyModal, setShowContingencyModal] = useState(false);
@@ -131,11 +136,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [contingencyReporter, setContingencyReporter] = useState('');
   const [arrivedTrucksInput, setArrivedTrucksInput] = useState(load.maxTrucks || 1);
   const [completionNotes, setCompletionNotes] = useState('');
-  const [unloadedWeight, setUnloadedWeight] = useState('');
-  const [fuelConsumption, setFuelConsumption] = useState('');
-  const [mileage, setMileage] = useState('');
-  const [waybillUrl, setWaybillUrl] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
+
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [plantCtg, setPlantCtg] = useState('');
   const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
@@ -143,17 +145,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [showRejectedModal, setShowRejectedModal] = useState(false);
 
 
-  // Carrier local resource assignment states
-  const [prevLoadId, setPrevLoadId] = useState(load.id);
-  const [localDriverId, setLocalDriverId] = useState(load.driverId ? String(load.driverId) : '');
-  const [localTruckId, setLocalTruckId] = useState(load.truckId ? String(load.truckId) : '');
 
-  // Adjust state during render phase if the active load changes
-  if (load.id !== prevLoadId) {
-    setPrevLoadId(load.id);
-    setLocalDriverId(load.driverId ? String(load.driverId) : '');
-    setLocalTruckId(load.truckId ? String(load.truckId) : '');
-  }
 
   const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
   const maxCapacity = load.maxTrucks || 1;
@@ -201,17 +193,27 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     }
   };
 
+  const [activeAppId, setActiveAppId] = useState<number | null>(null);
+
   const handleLocalPlantSave = async () => {
     if (!plantCtg || !plantLoadedWeight) return;
     setLocalSubmitLoading(true);
-    const success = await onUpdateLoad?.(load.id, {
-      ctg: plantCtg,
-      loadedWeight: Number(plantLoadedWeight),
-      status: 'IN_PROGRESS'
-    });
+    let success = false;
+    if (activeAppId && onConfirmDepartureByApp) {
+      success = await onConfirmDepartureByApp(activeAppId, plantCtg, Number(plantLoadedWeight));
+    } else if (onUpdateLoad) {
+      success = await onUpdateLoad(load.id, {
+        ctg: plantCtg,
+        loadedWeight: Number(plantLoadedWeight),
+        status: 'IN_PROGRESS'
+      });
+    }
     setLocalSubmitLoading(false);
     if (success) {
       setShowPlantModal(false);
+      setActiveAppId(null);
+      setPlantCtg('');
+      setPlantLoadedWeight('');
     }
   };
 
@@ -227,29 +229,31 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const handleLocalComplete = async () => {
-    if (!unloadedWeight || Number(unloadedWeight) <= 0) return;
     setLocalSubmitLoading(true);
-    const data = {
-      unloadedWeight: Number(unloadedWeight),
-      arrivedTrucks: arrivedTrucksInput ? Number(arrivedTrucksInput) : undefined,
-      notes: completionNotes || undefined,
-      fuelConsumption: fuelConsumption ? Number(fuelConsumption) : undefined,
-      mileage: mileage ? Number(mileage) : undefined,
-      waybillUrl: waybillUrl || undefined,
-    };
+    let success = false;
+    if (activeAppId && onCompleteLoadByApp) {
+      success = await onCompleteLoadByApp(activeAppId, {
+        unloadedWeight: 1,
+      });
+    } else {
+      const data = {
+        unloadedWeight: 1,
+        arrivedTrucks: arrivedTrucksInput ? Number(arrivedTrucksInput) : undefined,
+        notes: completionNotes || undefined,
+      };
+      success = await onCompleteLoad(data);
+    }
 
-    const success = await onCompleteLoad(data);
     setLocalSubmitLoading(false);
     if (success) {
       setShowCompletionModal(false);
-      setUnloadedWeight('');
+      setActiveAppId(null);
       setArrivedTrucksInput(load.maxTrucks || 1);
       setCompletionNotes('');
-      setFuelConsumption('');
-      setMileage('');
-      setWaybillUrl('');
     }
   };
+
+
 
   return (
     <div className="space-y-6">
@@ -265,8 +269,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         }}
         title="Reportar Viaje Demorado"
         description="Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal). ¿Deseas confirmar?"
-        type="warning"
+        type="danger"
         confirmText="Confirmar Reporte"
+
         isLoading={localSubmitLoading}
       />
 
@@ -417,73 +422,30 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         </div>
       </Modal>
 
-      {/* Completion Modal */}
+      {/* Completion Modal - simple confirmation only */}
       <Modal
         isOpen={showCompletionModal}
-        onClose={() => setShowCompletionModal(false)}
+        onClose={() => {
+          setShowCompletionModal(false);
+          setActiveAppId(null);
+        }}
         title="Finalizar Viaje"
-        confirmText="Confirmar y Finalizar"
+        confirmText="Confirmar Llegada"
         onConfirm={handleLocalComplete}
         isLoading={localSubmitLoading}
-        isConfirmDisabled={!unloadedWeight || Number(unloadedWeight) <= 0}
-      >
-        <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-1">
-          <p className="text-sm text-slate-500">
-            Por favor, ingrese los kilos descargados en planta y de forma opcional los datos de consumo, kilometraje y fotos de remitos para finalizar el viaje:
-          </p>
-          <Input
-            label="Kilos Descargados (Obligatorio)"
-            type="number"
-            step="any"
-            placeholder="Ej: 29500.5"
-            value={unloadedWeight}
-            onChange={(e) => setUnloadedWeight(e.target.value)}
-            required
-            className="py-2.5"
-          />
-          <Input
-            label="Cantidad de Camiones Arribados (Opcional)"
-            type="number"
-            min={1}
-            max={load.maxTrucks || 10}
-            value={arrivedTrucksInput}
-            onChange={(e) => setArrivedTrucksInput(Number(e.target.value))}
-            className="py-2.5"
-          />
-          <Input
-            label="Consumo de Combustible (Lts - Opcional)"
-            type="number"
-            step="any"
-            placeholder="Ej: 120"
-            value={fuelConsumption}
-            onChange={(e) => setFuelConsumption(e.target.value)}
-            className="py-2.5"
-          />
-          <Input
-            label="Kilometraje Recorrido (Km - Opcional)"
-            type="number"
-            step="any"
-            placeholder="Ej: 450"
-            value={mileage}
-            onChange={(e) => setMileage(e.target.value)}
-            className="py-2.5"
-          />
-          <Input
-            label="Observaciones de Llegada (Opcional)"
-            placeholder="Ej: Llegó todo en orden, sin novedades."
-            value={completionNotes}
-            onChange={(e) => setCompletionNotes(e.target.value)}
-            className="py-2.5"
-          />
-          <div className="pt-2">
-            <ImageUpload 
-              label="Carta de Porte / Remito de entrega (Opcional)"
-              value={waybillUrl}
-              onChange={setWaybillUrl}
-            />
-          </div>
-        </div>
-      </Modal>
+        type="success"
+        description={(() => {
+          const activeTrip = (load.applications || []).find(a => a.id === activeAppId);
+          const plate = activeTrip?.truck?.chassisPlate || activeTrip?.truck?.plate || load.truck?.plate;
+          const driver = activeTrip?.driver?.name || load.driver?.name;
+          
+          if (plate || driver) {
+            return `¿Confirmás la llegada a destino del camión ${plate ? `[${plate}]` : ''} ${driver ? `(Chofer: ${driver})` : ''}? Esta acción marcará su viaje como finalizado.`;
+          }
+          return "¿Confirmás que el camión llegó al destino y completó la descarga? Esta acción marcará el viaje como finalizado.";
+        })()}
+      />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -580,6 +542,22 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </div>
               </div>
 
+              {/* Progress metric for arrived/completed trucks */}
+              {acceptedCount > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                    <CheckCircle size={20} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase">Camiones Arribados</span>
+                    <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                      {load.applications?.filter(a => a.status === 'ACCEPTED' && (a.tripStatus === 'COMPLETED' || load.status === 'COMPLETED')).length || 0} / {acceptedCount} en destino
+                    </span>
+                  </div>
+                </div>
+              )}
+
+
               {load.ctg && (
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
@@ -646,24 +624,38 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   Datos de Finalización de Viaje
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
-                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilos Descargados</span>
-                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
-                      {load.unloadedWeight != null ? `${Number(load.unloadedWeight).toLocaleString('es-AR')} kg` : 'No registrado'}
-                    </span>
-                  </div>
-                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
-                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Consumo de Combustible</span>
-                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
-                      {load.fuelConsumption ? `${load.fuelConsumption} Lts` : 'No registrado'}
-                    </span>
-                  </div>
-                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
-                    <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilometraje Recorrido</span>
-                    <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
-                      {load.mileage ? `${load.mileage} km` : 'No registrado'}
-                    </span>
-                  </div>
+                  {load.unloadedWeight != null && Number(load.unloadedWeight) > 0 && (
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                      <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilos Descargados</span>
+                      <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                        {Number(load.unloadedWeight).toLocaleString('es-AR')} kg
+                      </span>
+                    </div>
+                  )}
+                  {load.fuelConsumption ? (
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                      <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Consumo de Combustible</span>
+                      <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                        {load.fuelConsumption} Lts
+                      </span>
+                    </div>
+                  ) : null}
+                  {load.mileage ? (
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
+                      <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilometraje Recorrido</span>
+                      <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
+                        {load.mileage} km
+                      </span>
+                    </div>
+                  ) : null}
+                  {(!load.unloadedWeight || Number(load.unloadedWeight) === 0) && !load.fuelConsumption && !load.mileage && (
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800 col-span-full">
+                      <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                        Todos los camiones arribaron a destino correctamente. Viaje finalizado.
+                      </span>
+                    </div>
+                  )}
+
                 </div>
 
                 {(load.invoiceUrl || load.waybillUrl) && (
@@ -720,22 +712,13 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     </Button>
                   )}
                   {load.status === 'ASSIGNED' && (
-                    <Button variant="primary" icon={CheckCircle} onClick={() => onStatusChange('IN_PROGRESS')}>
+                    <Button variant="primary" icon={Send} onClick={() => onStatusChange('IN_PROGRESS')}>
                       Iniciar Traslado
-                    </Button>
-                  )}
-                  {load.status === 'IN_PROGRESS' && (
-                    <Button variant="primary" icon={CheckCircle} onClick={() => {
-                      setUnloadedWeight('');
-                      setFuelConsumption('');
-                      setMileage('');
-                      setShowCompletionModal(true);
-                    }}>
-                      Finalizar Viaje
                     </Button>
                   )}
                 </>
               )}
+
 
               {(isCarrier || canUserWrite) && load.status === 'IN_PROGRESS' && (
                 <>
@@ -754,11 +737,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         variant="outline"
                         icon={Clock}
                         className="border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold"
-                        onClick={async () => {
-                          if (window.confirm("Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal). ¿Confirmar?")) {
-                            onStatusChange('DELAYED');
-                          }
-                        }}
+                        onClick={() => setShowDelayedModal(true)}
                       >
                         Reportar Demorado
                       </Button>
@@ -766,14 +745,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         variant="outline"
                         icon={XCircle}
                         className="border-rose-500/50 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold"
-                        onClick={async () => {
-                          if (window.confirm("Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal) notificando el rechazo en destino. ¿Confirmar?")) {
-                            onStatusChange('REJECTED');
-                          }
-                        }}
+                        onClick={() => setShowRejectedModal(true)}
                       >
                         Reportar Rechazado
                       </Button>
+
 
                     </>
                   )}
@@ -947,137 +923,256 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 )}
               </div>
             ) : (
-              // Assigned resources card (Admin view after assign)
+              // Assigned resources card (trips per truck manager)
               <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
                 <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                  Recursos Asignados
+                  Recursos y Viajes Asignados ({load.applications?.filter(a => a.status === 'ACCEPTED').length || 0})
                 </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                      <Building size={20} />
+                
+                {(() => {
+                  const acceptedTrips = load.applications?.filter(a => a.status === 'ACCEPTED') || [];
+                  if (acceptedTrips.length === 0) {
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
+                            <Building size={20} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-400 block uppercase">Transportista</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.carrier?.name || 'Sin asignar'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
+                            <User size={20} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-400 block uppercase">Chofer</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.driver?.name || 'Sin asignar'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
+                            <TruckIcon size={20} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-400 block uppercase">Camión</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.truck?.plate || 'Sin asignar'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {acceptedTrips.map((trip) => {
+                        const tripStatus = trip.tripStatus || (load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED');
+                        const tripCtg = trip.ctg || load.ctg || '';
+                        const loadedW = trip.loadedWeight ?? load.loadedWeight;
+                        const unloadedW = trip.unloadedWeight ?? load.unloadedWeight;
+
+                        return (
+                          <div key={trip.id} className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-slate-200 dark:border-zinc-700/60 space-y-3">
+                            <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
+                              <span className="font-bold text-sm text-slate-900 dark:text-white">
+                                {trip.carrier?.name || load.carrier?.name || 'Transportista'}
+                              </span>
+                              <Badge variant={tripStatus === 'COMPLETED' ? 'success' : tripStatus === 'IN_PROGRESS' ? 'primary' : 'warning'}>
+                                {tripStatus === 'COMPLETED' ? 'COMPLETADO' : tripStatus === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">Camión</span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
+                                  {trip.truck?.chassisPlate || trip.truck?.plate || load.truck?.plate || 'S/P'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">Chofer</span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200">
+                                  {trip.driver?.name || load.driver?.name || 'N/D'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {tripCtg && (
+                              <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2 rounded border border-slate-200 dark:border-zinc-800 flex justify-between">
+                                <span>CTG: <strong>{tripCtg}</strong></span>
+                                {loadedW != null && <span>Cargado: <strong>{Number(loadedW).toLocaleString('es-AR')} kg</strong></span>}
+                              </div>
+                            )}
+
+                            {unloadedW != null && (
+                              <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                Kilos Descargados: {Number(unloadedW).toLocaleString('es-AR')} kg
+                              </div>
+                            )}
+
+                            {/* Actions for Balancero (EMPLOYEE/ADMIN) to confirm departure per trip */}
+                            {isStaff && tripStatus === 'ASSIGNED' && (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                icon={CheckCircle}
+                                className="w-full text-xs font-bold mt-2"
+                                onClick={() => {
+                                  setActiveAppId(trip.id);
+                                  setPlantCtg(tripCtg);
+                                  setPlantLoadedWeight(loadedW ? String(loadedW) : '');
+                                  setShowPlantModal(true);
+                                }}
+                              >
+                                Confirmar Salida de Balanza
+                              </Button>
+                            )}
+
+                            {/* Solo el staff puede finalizar viajes desde esta vista global */}
+                            {isStaff && tripStatus === 'IN_PROGRESS' && (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                icon={CheckCircle}
+                                className="w-full text-xs font-bold mt-2"
+                                onClick={() => {
+                                  setActiveAppId(trip.id);
+                                  setShowCompletionModal(true);
+                                }}
+                              >
+                                Registrar Descarga en Destino
+                              </Button>
+                            )}
+
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 block uppercase">Transportista</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.carrier?.name || 'Asignado'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 block uppercase">Chofer</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.driver?.name || 'Asignado'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                      <TruckIcon size={20} />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 block uppercase">Camión</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.truck?.plate || 'Asignado'}</span>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )
+
           ) : (() => {
-            const myApp = load.applications?.find(app => app.carrierId === user?.carrierId);
-            
+            // Carrier view: show all their accepted trips (one per truck)
+            const myTrips = (load.applications || []).filter(app => app.carrierId === user?.carrierId);
+            const myAcceptedTrips = myTrips.filter(app => app.status === 'ACCEPTED');
+            const myPendingApp = myTrips.find(app => app.status === 'PENDING');
+
             return (
               <div className="space-y-6">
-                <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                    Tu Postulación
-                  </h3>
-                  {myApp ? (
-                    <div className="p-4 rounded-xl flex items-center justify-between border bg-slate-50/50 dark:bg-zinc-800/30 border-slate-100 dark:border-zinc-850">
-                      <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
-                        {myApp.status === 'PENDING' ? 'Postulado (En revisión)' :
-                         myApp.status === 'ACCEPTED' ? 'Aprobada y Asignada' :
-                         'No Seleccionada / Rechazada'}
-                      </span>
-                      <Badge variant={myApp.status === 'PENDING' ? 'warning' : myApp.status === 'ACCEPTED' ? 'success' : 'error'}>
-                        {myApp.status === 'PENDING' ? 'PENDIENTE' : myApp.status === 'ACCEPTED' ? 'APROBADA' : 'RECHAZADA'}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500 italic">Aún no te has postulado a esta carga.</p>
-                  )}
-                </div>
 
-                {/* Show resource assignment if accepted */}
-                {myApp?.status === 'ACCEPTED' && (
+                {/* If no applications at all */}
+                {myTrips.length === 0 && (
+                  <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2 mb-4">Tu Postulación</h3>
+                    <p className="text-sm text-slate-500 italic">Aún no te has postulado a esta carga.</p>
+                  </div>
+                )}
+
+                {/* Pending application badge */}
+                {myPendingApp && (
+                  <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">Tu Postulación</h3>
+                    <div className="p-4 rounded-xl flex items-center justify-between border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
+                      <span className="text-sm font-bold text-amber-700 dark:text-amber-300">Postulado — en revisión por el operador</span>
+                      <Badge variant="warning">PENDIENTE</Badge>
+                    </div>
+                  </div>
+                )}
+
+                {/* Accepted trips: one card per truck */}
+                {myAcceptedTrips.length > 0 && (
                   <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                      Tripulación Asignada
+                      Mis Camiones en este Viaje ({myAcceptedTrips.length})
                     </h3>
-                    
-                    {/* Display current assignment */}
-                    <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 mb-4 text-xs font-semibold">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 uppercase font-bold">Chofer:</span>
-                        <span className="text-slate-800 dark:text-zinc-200 font-bold">{load.driver?.name || 'No asignado'}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 uppercase font-bold">Patente Camión:</span>
-                        <span className="text-slate-800 dark:text-zinc-200 font-bold">{load.truck?.plate || 'No asignado'}</span>
-                      </div>
+                    <div className="space-y-4">
+                      {myAcceptedTrips.map((trip) => {
+                        const effectiveTripStatus = trip.tripStatus || (load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED');
+                        const isTripInProgress = effectiveTripStatus === 'IN_PROGRESS' || load.status === 'IN_PROGRESS';
+                        const isTripCompleted = effectiveTripStatus === 'COMPLETED' || load.status === 'COMPLETED';
+                        const tripCtg = trip.ctg || load.ctg || '';
+                        const loadedW = trip.loadedWeight ?? load.loadedWeight;
+
+
+                        return (
+                          <div key={trip.id} className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-slate-200 dark:border-zinc-700/60 space-y-3">
+                            {/* Header */}
+                            <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
+                              <span className="font-bold text-sm text-slate-900 dark:text-white">
+                                {trip.driver?.name || load.driver?.name || 'Chofer Asignado'}
+                              </span>
+                              <Badge variant={isTripCompleted ? 'success' : isTripInProgress ? 'primary' : 'warning'}>
+                                {isTripCompleted ? 'COMPLETADO' : isTripInProgress ? 'EN VIAJE' : 'ASIGNADO'}
+                              </Badge>
+                            </div>
+
+                            {/* Truck info */}
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">Patente</span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
+                                  {trip.truck?.chassisPlate || trip.truck?.plate || load.truck?.plate || 'S/P'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">Tipo</span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200">
+                                  {trip.truck?.type || load.truck?.type || 'N/D'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* CTG & loaded weight (set by balancero) */}
+                            {(!isTripCompleted && isTripInProgress) || tripCtg ? (
+                              <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2.5 rounded border border-slate-200 dark:border-zinc-800 space-y-1">
+                                {tripCtg && <div>CTG: <strong>{tripCtg}</strong></div>}
+                                {loadedW != null && <div>Kilos cargados: <strong>{Number(loadedW).toLocaleString('es-AR')} kg</strong></div>}
+                              </div>
+                            ) : null}
+
+                            {/* Unloaded weight if completed */}
+                            {isTripCompleted && (
+                              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                                Llegada confirmada — en destino
+                              </div>
+                            )}
+
+                            {/* Assigned: waiting for balancero */}
+                            {!isTripInProgress && !isTripCompleted && (
+                              <p className="text-xs text-slate-400 italic">Esperando confirmación de salida en balanza por el operador.</p>
+                            )}
+
+                            {/* In progress: carrier can finalize */}
+                            {isTripInProgress && !isTripCompleted && isCarrier && (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                icon={CheckCircle}
+                                className="w-full font-bold mt-1"
+                                onClick={() => {
+                                  setActiveAppId(trip.id);
+                                  setShowCompletionModal(true);
+                                }}
+                              >
+                                Confirmar Llegada a Destino
+                              </Button>
+                            )}
+                          </div>
+                        );
+
+                      })}
                     </div>
 
-                    <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Asignar / Cambiar Tripulación</span>
-                    
-                    <div className="space-y-4 pt-2">
-                      <Select
-                        label="Chofer Habilitado"
-                        icon={User}
-                        options={carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))}
-                        value={localDriverId}
-                        onChange={(e) => setLocalDriverId(e.target.value)}
-                      />
-                      <Select
-                        label="Camión Flota"
-                        icon={TruckIcon}
-                        options={carrierTrucks.map((t) => {
-                          const plateText = t.chassisPlate || t.plate || 'S/P';
-                          const valid = isTruckInsuranceValid(t);
-                          const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
-                          const suffix = !valid ? (expired ? ' - ⚠️ Seguro Carga Vencido (Bloqueado)' : ' - ⚠️ Seguro Carga Incompleto (Bloqueado)') : '';
-                          return {
-                            value: String(t.id),
-                            label: `${plateText} (${t.type})${suffix}`,
-                            disabled: !valid
-                          };
-                        })}
-                        value={localTruckId}
-                        onChange={(e) => setLocalTruckId(e.target.value)}
-                      />
-
-                      <Button
-                        variant="primary"
-                        icon={CheckCircle}
-                        onClick={() => {
-                          const selectedTruck = carrierTrucks.find(t => String(t.id) === localTruckId);
-                          if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
-                            alert("El seguro de carga del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.");
-                            return;
-                          }
-                          onAssignResources?.(Number(localDriverId), Number(localTruckId));
-                        }}
-                        disabled={!localDriverId || !localTruckId}
-                        isLoading={submitLoading}
-                        className="w-full"
-                      >
-                        Guardar Tripulación
-                      </Button>
-                    </div>
                   </div>
                 )}
               </div>
             );
           })()}
+
         </div>
       </div>
     </div>

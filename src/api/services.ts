@@ -13,8 +13,10 @@ import {
   type AssignLoadResponse,
   type CarrierDocument,
   type CarrierGroup,
+  type Application,
   type Invoice
 } from '../types';
+
 
 
 
@@ -97,6 +99,8 @@ export const loadService = {
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
   confirmDeparture: (id: number, data: { ctg: string; loadedWeight: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
+  confirmDepartureByApp: (appId: number, data: { ctg: string; loadedWeight: number }) =>
+    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/confirm-departure`, data),
   applyToLoad: (id: number, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
   assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
@@ -107,9 +111,12 @@ export const loadService = {
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
   postCompletionData: (id: number, data: unknown) =>
     api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
+  postCompletionDataByApp: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) =>
+    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/complete-data`, data),
   reportNoShow: (id: number, payload?: { applicationId?: number }) =>
     api.post<ApiResponse<Load>>(`/loads/${id}/no-show`, payload || {}),
 };
+
 
 
 // --- CARRIER DOCUMENTS ---

@@ -271,6 +271,41 @@ export const LoadsPage: React.FC = () => {
   };
 
 
+  const handleConfirmDepartureByApp = async (appId: number, ctg: string, loadedWeight: number): Promise<boolean> => {
+
+    try {
+      const res = await loadService.confirmDepartureByApp(appId, { ctg, loadedWeight });
+      if (res.data.success) {
+        showToast('Salida de balanza confirmada con éxito', 'success');
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al confirmar salida de balanza.'), 'error');
+    }
+    return false;
+  };
+
+  const handleCompleteLoadByApp = async (appId: number, data: {
+    unloadedWeight: number;
+    waybillUrl?: string;
+    fuelConsumption?: number;
+    mileage?: number;
+  }): Promise<boolean> => {
+    try {
+      const res = await loadService.postCompletionDataByApp(appId, data);
+      if (res.data.success) {
+        showToast('Descarga en destino confirmada con éxito', 'success');
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al registrar descarga en destino.'), 'error');
+    }
+    return false;
+  };
 
   const handleCompleteLoad = async (data: { 
     unloadedWeight: number; 
@@ -300,14 +335,16 @@ export const LoadsPage: React.FC = () => {
         return true;
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al finalizar el viaje.'), 'error');
+      showToast(getErrorMessage(err, 'Error al finalizar el viaje'), 'error');
     } finally {
       setSubmitLoading(false);
     }
     return false;
   };
 
+
   const handleBack = () => {
+
     setShowForm(false);
   };
 
@@ -531,7 +568,11 @@ export const LoadsPage: React.FC = () => {
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
+          onConfirmDepartureByApp={handleConfirmDepartureByApp}
+
+          onCompleteLoadByApp={handleCompleteLoadByApp}
           onCompleteLoad={handleCompleteLoad}
+
           selectedAppId={selectedAppId}
           setSelectedAppId={setSelectedAppId}
           setSelectedCarrierId={setSelectedCarrierId}
