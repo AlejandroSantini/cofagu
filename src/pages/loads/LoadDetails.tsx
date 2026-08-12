@@ -8,8 +8,9 @@ import { Modal } from '../../components/ui/Modal';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { 
   Trash2, Calendar, DollarSign, Send, 
-  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale, Layers
+  CheckCircle, AlertTriangle, User, Truck as TruckIcon, Building, Loader2, Scale, Layers, Clock, XCircle
 } from 'lucide-react';
+
 import { api } from '../../api/axios';
 
 const SecureImagePreview: React.FC<{ src: string; alt?: string; className?: string }> = ({ src, alt, className = "max-h-48 rounded-lg object-contain" }) => {
@@ -138,6 +139,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [plantCtg, setPlantCtg] = useState('');
   const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
+  const [showDelayedModal, setShowDelayedModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
+
 
   // Carrier local resource assignment states
   const [prevLoadId, setPrevLoadId] = useState(load.id);
@@ -249,7 +253,42 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Report Delayed Modal */}
+      <Modal
+        isOpen={showDelayedModal}
+        onClose={() => setShowDelayedModal(false)}
+        onConfirm={async () => {
+          setLocalSubmitLoading(true);
+          await onStatusChange('DELAYED');
+          setLocalSubmitLoading(false);
+          setShowDelayedModal(false);
+        }}
+        title="Reportar Viaje Demorado"
+        description="Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal). ¿Deseas confirmar?"
+        type="warning"
+        confirmText="Confirmar Reporte"
+        isLoading={localSubmitLoading}
+      />
+
+      {/* Report Rejected Modal */}
+      <Modal
+        isOpen={showRejectedModal}
+        onClose={() => setShowRejectedModal(false)}
+        onConfirm={async () => {
+          setLocalSubmitLoading(true);
+          await onStatusChange('REJECTED');
+          setLocalSubmitLoading(false);
+          setShowRejectedModal(false);
+        }}
+        title="Reportar Viaje Rechazado"
+        description="Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal) notificando el rechazo en destino. ¿Deseas confirmar?"
+        type="danger"
+        confirmText="Confirmar Rechazo"
+        isLoading={localSubmitLoading}
+      />
+
       {/* Postulate Modal */}
+
       <Modal
         isOpen={showPostulateModal}
         onClose={() => setShowPostulateModal(false)}
@@ -266,7 +305,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           <Select
             label="Chofer Habilitado"
             icon={User}
-            options={carrierDrivers.map((d) => ({ value: String(d.id), label: d.name }))}
+            options={carrierDrivers.map((d) => {
+              const isSuspended = d.isSuspended || (d.suspendedUntil ? new Date(d.suspendedUntil) > new Date() : false);
+              const suffix = isSuspended 
+                ? ` - Suspendido hasta ${d.suspendedUntil ? new Date(d.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}` 
+                : '';
+              return {
+                value: String(d.id),
+                label: `${d.name} (DNI: ${d.dni})${suffix}`,
+                disabled: isSuspended
+              };
+            })}
             value={postulateDriverId}
             onChange={(e) => setPostulateDriverId(e.target.value)}
           />
@@ -275,18 +324,28 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             icon={TruckIcon}
             options={carrierTrucks.map((t) => {
               const plateText = t.chassisPlate || t.plate || 'S/P';
-              const valid = isTruckInsuranceValid(t);
+              const validInsurance = isTruckInsuranceValid(t);
+              const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
               const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
-              const suffix = !valid ? (expired ? ' - ⚠️ Seguro Carga Vencido (Bloqueado)' : ' - ⚠️ Seguro Carga Incompleto (Bloqueado)') : '';
+              
+              let suffix = '';
+              if (isSuspended) {
+                suffix = ` - Suspendido hasta ${t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}`;
+              } else if (!validInsurance) {
+                suffix = expired ? ' - Seguro Carga Vencido (Bloqueado)' : ' - Seguro Carga Incompleto (Bloqueado)';
+              }
+
+              const disabled = isSuspended || !validInsurance;
               return {
                 value: String(t.id),
                 label: `${plateText} (${t.type})${suffix}`,
-                disabled: !valid
+                disabled
               };
             })}
             value={postulateTruckId}
             onChange={(e) => setPostulateTruckId(e.target.value)}
           />
+
           <Input
             label="Comentarios / Notas (Opcional)"
             placeholder="Ej: Contamos con flota disponible para salida inmediata."
@@ -535,7 +594,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </div>
               )}
 
-              {load.loadedWeight !== undefined && load.loadedWeight !== null && (
+              {load.loadedWeight != null && (
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
                     <Scale size={20} />
@@ -543,7 +602,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <div>
                     <span className="text-xs font-bold text-slate-400 block uppercase">Kilos Cargados</span>
                     <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {load.loadedWeight.toLocaleString('es-AR')} kg
+                      {Number(load.loadedWeight).toLocaleString('es-AR')} kg
                     </span>
                   </div>
                 </div>
@@ -590,7 +649,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
                     <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Kilos Descargados</span>
                     <span className="text-lg font-black text-slate-800 dark:text-zinc-200">
-                      {load.unloadedWeight ? `${load.unloadedWeight.toLocaleString('es-AR')} kg` : 'No registrado'}
+                      {load.unloadedWeight != null ? `${Number(load.unloadedWeight).toLocaleString('es-AR')} kg` : 'No registrado'}
                     </span>
                   </div>
                   <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-lg border border-emerald-100/50 dark:border-zinc-800">
@@ -679,16 +738,89 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               )}
 
               {(isCarrier || canUserWrite) && load.status === 'IN_PROGRESS' && (
-                <Button 
-                  variant="outline" 
-                  icon={AlertTriangle} 
-                  className="border-amber-500/30 text-amber-600" 
-                  onClick={() => setShowContingencyModal(true)}
-                >
-                  Reportar Contingencia
-                </Button>
+                <>
+                  <Button 
+                    variant="outline" 
+                    icon={AlertTriangle} 
+                    className="border-amber-500/30 text-amber-600 hover:bg-amber-50" 
+                    onClick={() => setShowContingencyModal(true)}
+                  >
+                    Reportar Contingencia
+                  </Button>
+                  
+                  {isCarrier && (
+                    <>
+                      <Button
+                        variant="outline"
+                        icon={Clock}
+                        className="border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold"
+                        onClick={async () => {
+                          if (window.confirm("Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal). ¿Confirmar?")) {
+                            onStatusChange('DELAYED');
+                          }
+                        }}
+                      >
+                        Reportar Demorado
+                      </Button>
+                      <Button
+                        variant="outline"
+                        icon={XCircle}
+                        className="border-rose-500/50 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold"
+                        onClick={async () => {
+                          if (window.confirm("Se enviará un aviso automático por WhatsApp al coordinador con los detalles del viaje (CTG, patente, chofer, cereal) notificando el rechazo en destino. ¿Confirmar?")) {
+                            onStatusChange('REJECTED');
+                          }
+                        }}
+                      >
+                        Reportar Rechazado
+                      </Button>
+
+                    </>
+                  )}
+                </>
               )}
             </div>
+
+            {/* Missing kilos warning & admin adjustment button */}
+            {load.unloadedWeight != null && load.loadedWeight != null && Number(load.unloadedWeight) < Number(load.loadedWeight) && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-5 rounded-xl border border-amber-200 dark:border-amber-900/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
+                    <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400" />
+                    <span>Diferencia de Kilos Faltantes Detectada en Destino: {(Number(load.loadedWeight) - Number(load.unloadedWeight)).toLocaleString('es-AR')} kg</span>
+                  </div>
+                  {load.differenceAdjusted ? (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md">
+                      Ajustado en Cta. Cte.
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-700 bg-rose-100 dark:bg-rose-950/40 px-2.5 py-1 rounded-md">
+                      Pendiente de Ajuste (Transportista Bloqueado)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  El peso descargado ({Number(load.unloadedWeight).toLocaleString('es-AR')} kg) es menor al cargado en origen ({Number(load.loadedWeight).toLocaleString('es-AR')} kg).
+                </p>
+
+                {canUserWrite && !load.differenceAdjusted && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-bold"
+                    onClick={async () => {
+                      if (onUpdateLoad) {
+                        const ok = await onUpdateLoad(load.id, { differenceAdjusted: true } as any);
+                        if (ok) alert("Diferencia de kilos marcada como ajustada en cuenta corriente. Se desmarcó el bloqueo de postulación.");
+                      }
+                    }}
+                  >
+                    Marcar como Ajustado / Facturado en Cuenta Corriente
+                  </Button>
+                )}
+              </div>
+            )}
+
           </div>
 
           {/* Contingencies Timeline */}

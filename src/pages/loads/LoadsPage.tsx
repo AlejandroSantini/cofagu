@@ -7,7 +7,12 @@ import { type LoadFormValues } from '../../schemas/load.schema';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { Table } from '../../components/ui/Table';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
+
+
+
+
 import { useToast } from '../../hooks/useToast';
 import { Toast } from '../../components/ui/Toast';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -24,7 +29,10 @@ export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
-  const canWrite = useAuthStore((state) => state.canWrite());
+  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const canWrite = useAuthStore((state) => state.canWrite()) && !isPlayero;
+
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,9 +189,10 @@ export const LoadsPage: React.FC = () => {
       showToast(errMsg, 'error');
       if (err.response?.status === 400 && (errMsg.toLowerCase().includes('seguro') || errMsg.toLowerCase().includes('póliza'))) {
         setTimeout(() => {
-          navigate('/documents');
+          navigate('/trucks');
         }, 3000);
       }
+
     }
     return false;
   };
@@ -307,9 +316,60 @@ export const LoadsPage: React.FC = () => {
     setActiveTab(tab);
   };
 
+  const [plateSearch, setPlateSearch] = useState('');
+
+
+  // Loads filtered for playero fuel search (search input only)
+  const fuelFilteredLoads = isPlayero 
+    ? loads.filter(l => {
+        if (!plateSearch) return true;
+        const q = plateSearch.toLowerCase();
+        const chassis = l.truck?.chassisPlate?.toLowerCase() || '';
+        const trailer = l.truck?.trailerPlate?.toLowerCase() || '';
+        const plate = l.truck?.plate?.toLowerCase() || '';
+        const driver = l.driver?.name?.toLowerCase() || '';
+        const carrier = l.carrier?.name?.toLowerCase() || '';
+        return chassis.includes(q) || trailer.includes(q) || plate.includes(q) || driver.includes(q) || carrier.includes(q);
+      })
+    : loads;
+
+
+  const [noShowModalLoad, setNoShowModalLoad] = useState<{ loadId: number; appId?: number } | null>(null);
+
+  const handleConfirmNoShow = async () => {
+    if (!noShowModalLoad) return;
+    setSubmitLoading(true);
+    try {
+      const res = await loadService.reportNoShow(noShowModalLoad.loadId, { applicationId: noShowModalLoad.appId });
+      if (res.data.success) {
+        showToast('Inasistencia registrada correctamente. Se liberó el cupo y se acumuló falta.', 'success');
+        setNoShowModalLoad(null);
+        if (selectedLoad?.id === noShowModalLoad.loadId) {
+          setSelectedLoad(null);
+        }
+        triggerRefresh();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al registrar la inasistencia.'), 'error');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
+
+      <Modal
+        isOpen={!!noShowModalLoad}
+        onClose={() => setNoShowModalLoad(null)}
+        onConfirm={handleConfirmNoShow}
+        title="Confirmar Inasistencia ('No Llegó a Horario')"
+        description="¿Está seguro de marcar la inasistencia para este camión? Esto cancelará la reserva del turno actual, liberará el cupo para que se re-publique la carga, y acumulará una falta para el chofer y el camión (los cuales se suspenderán automáticamente si alcanzan 5 faltas)."
+        type="danger"
+        confirmText="Confirmar Inasistencia"
+        isLoading={submitLoading}
+      />
 
       <Modal
         isOpen={isDelOpen}
@@ -324,13 +384,27 @@ export const LoadsPage: React.FC = () => {
 
       <div className="flex flex-col gap-6 mb-8">
         <PageHeader
-          title={showForm ? 'Nueva Carga' : selectedLoad ? 'Detalle de Carga' : 'Gestión de Cargas'}
+          title={
+            isPlayero
+              ? 'Control de Combustible (Estación / Playero)'
+              : isEmployee
+                ? 'Control de Báscula y Planta'
+                : showForm
+                  ? 'Nueva Carga'
+                  : selectedLoad
+                    ? 'Detalle de Carga'
+                    : 'Gestión de Cargas'
+          }
           description={
-            showForm 
-              ? 'Publica una nueva solicitud de traslado.' 
-              : selectedLoad 
-                ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
-                : 'Consulta cargas disponibles, postulaciones y estado operativo.'
+            isPlayero
+              ? 'Consulta de camiones activos habilitados para carga de combustible.'
+              : isEmployee
+                ? 'Listado de cargas para ingreso/salida y registro de CTG.'
+                : showForm 
+                  ? 'Publica una nueva solicitud de traslado.' 
+                  : selectedLoad 
+                    ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
+                    : 'Consulta cargas disponibles, postulaciones y estado operativo.'
           }
         />
 
@@ -348,7 +422,7 @@ export const LoadsPage: React.FC = () => {
               Volver al Listado
             </Button>
           ) : (
-            canWrite && (
+            canWrite && !isEmployee && !isPlayero && (
               <Button 
                 variant="primary" 
                 icon={Plus} 
@@ -363,7 +437,93 @@ export const LoadsPage: React.FC = () => {
       </div>
 
       <ErrorMessage message={error} className="mb-6" />
-      {selectedLoad ? (
+
+      {/* Playero Fuel Authorization Dedicated View */}
+      {isPlayero && !selectedLoad ? (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+            <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
+              Buscador de Camiones Autorizados a Combustible
+            </h3>
+            <input
+              type="text"
+              placeholder="Buscar por Patente (Chasis/Acoplado), Chofer o Transportista..."
+              value={plateSearch}
+              onChange={(e) => setPlateSearch(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <Table
+              columns={[
+                {
+                  header: 'Patente (Chasis / Acoplado)',
+                  render: (loadItem: Load) => (
+                    <div className="flex flex-col">
+                      <span className="font-bold font-mono text-slate-900 dark:text-white uppercase">
+                        {loadItem.truck?.chassisPlate || loadItem.truck?.plate || 'S/P'}
+                      </span>
+                      {loadItem.truck?.trailerPlate && (
+                        <span className="text-xs font-mono text-slate-500 uppercase">
+                          Acoplado: {loadItem.truck.trailerPlate}
+                        </span>
+                      )}
+                    </div>
+                  )
+                },
+                {
+                  header: 'Chofer',
+                  render: (loadItem: Load) => (
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {loadItem.driver?.name || 'N/D'}
+                      </span>
+                      {loadItem.driver?.dni && (
+                        <span className="text-xs text-slate-500 font-mono">
+                          DNI: {loadItem.driver.dni}
+                        </span>
+                      )}
+                    </div>
+                  )
+                },
+                {
+                  header: 'Transportista',
+                  render: (loadItem: Load) => (
+                    <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                      {loadItem.carrier?.name || 'N/D'}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Franja Horaria',
+                  render: (loadItem: Load) => (
+                    <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      {loadItem.loadingTimeStart && loadItem.loadingTimeEnd 
+                        ? `${loadItem.loadingTimeStart} - ${loadItem.loadingTimeEnd} hs` 
+                        : '08:00 - 12:00'}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Cereal',
+                  render: (loadItem: Load) => (
+                    <span className="font-medium text-slate-600 dark:text-zinc-400">
+                      {loadItem.cereal || 'Soja'}
+                    </span>
+                  )
+                }
+              ]}
+              data={fuelFilteredLoads}
+              isLoading={loading}
+              emptyMessage="No se encontraron camiones autorizados para combustible."
+            />
+          </div>
+        </div>
+      ) : selectedLoad ? (
+
+
+
         <LoadDetails
           load={selectedLoad}
           user={user}
@@ -456,3 +616,4 @@ export const LoadsPage: React.FC = () => {
     </div>
   );
 };
+

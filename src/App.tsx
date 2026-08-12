@@ -5,17 +5,22 @@ import { LoadsPage } from './pages/loads/LoadsPage';
 import { CarriersPage } from './pages/CarriersPage';
 import { DriversPage } from './pages/DriversPage';
 import { TrucksPage } from './pages/TrucksPage';
-import { ConfigurationPage } from './pages/ConfigurationPage';
-import { UsersPage } from './pages/UsersPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { useAuthStore } from './store/useAuthStore';
+
 import { useThemeStore } from './store/useThemeStore';
 import { RoleGate } from './components/RoleGate';
 import { useEffect } from 'react';
-import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
+
+import { ConfigurationPage } from './pages/ConfigurationPage';
+
+import { UsersPage } from './pages/UsersPage';
+import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+
 import { GroupsPage } from './pages/GroupsPage';
+
 
 function App() {
   const token = useAuthStore((state) => state.token);
@@ -45,8 +50,19 @@ function App() {
         
         <Route
           path="/"
-          element={token ? <AppLayout><Dashboard /></AppLayout> : <Navigate to="/login" />}
+          element={
+            token ? (
+              user?.role === 'OPERATOR' || user?.role === 'PLAYERO' ? (
+                <Navigate to="/loads" replace />
+              ) : (
+                <AppLayout><Dashboard /></AppLayout>
+              )
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
+
         
         <Route
           path="/loads"
@@ -120,11 +136,22 @@ function App() {
 
         <Route
           path="/documents"
-          element={token ? <AppLayout><CarrierDocumentsPage /></AppLayout> : <Navigate to="/login" />}
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN']}>
+                  <CarrierDocumentsPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
         />
+
 
         <Route
           path="/invoices"
+
+
           element={
             token ? (
               <AppLayout>

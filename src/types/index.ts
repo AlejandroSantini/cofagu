@@ -28,6 +28,9 @@ export interface Driver {
   phone: string;
   carrierId: number;
   carrier?: Carrier;
+  suspendedUntil?: string | null;
+  absenceCount?: number;
+  isSuspended?: boolean;
 }
 
 export interface Truck {
@@ -39,17 +42,24 @@ export interface Truck {
   capacity: number;
   carrierId: number;
   carrier?: Carrier;
+  habilitado?: boolean;
   insurancePolicy?: string;
   insuranceCompany?: string;
   insuranceExpiration?: string;
   insurancePolicyPhotoUrl?: string;
+  insuranceStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   cargoInsurancePolicy?: string;
   cargoInsuranceCompany?: string;
   cargoInsuranceExpiration?: string;
   cargoInsurancePhotoUrl?: string;
+  cargoInsuranceStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  suspendedUntil?: string | null;
+  absenceCount?: number;
+  isSuspended?: boolean;
 }
 
-export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED';
 
 export interface Application {
   id: number;
@@ -103,6 +113,8 @@ export interface Load {
   cuposPendientes?: number;
   invoiceId?: number | null;
   targetGroups?: { groupId: number; rate: number; group?: CarrierGroup }[];
+  fuelAuthorized?: boolean;
+  differenceAdjusted?: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -142,10 +154,12 @@ export interface CreateTruckPayload {
   insuranceCompany?: string;
   insuranceExpiration?: string;
   insurancePolicyPhotoUrl?: string;
+  insuranceStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   cargoInsurancePolicy?: string;
   cargoInsuranceCompany?: string;
   cargoInsuranceExpiration?: string;
   cargoInsurancePhotoUrl?: string;
+  cargoInsuranceStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export interface CreateLoadPayload {
@@ -192,7 +206,8 @@ export interface CarrierDocument {
   id: number;
   carrierId: number;
   carrier?: Carrier;
-  type: 'SEGURO_CARGA';
+  truck?: Truck;
+  type: string;
   fileUrl: string;
   expirationDate: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
@@ -227,8 +242,17 @@ export interface CarrierGroup {
 export interface Invoice {
   id: number;
   invoiceNumber?: string;
-  invoicePhotoUrl: string;
+  invoicePhotoUrl?: string;
   loadIds: number[];
   carrierId: number;
   createdAt: string;
 }
+
+export interface CreateInvoicePayload {
+  number?: string;
+  fileUrl?: string;
+  invoiceNumber?: string;
+  invoicePhotoUrl?: string;
+  loadIds: number[];
+}
+

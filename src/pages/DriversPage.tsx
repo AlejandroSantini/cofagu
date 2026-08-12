@@ -186,6 +186,21 @@ export const DriversPage: React.FC = () => {
         </span>
       )
     },
+    {
+      header: 'Estado / Suspensión',
+      render: (d: Driver) => {
+        const isSuspended = d.isSuspended || (d.suspendedUntil ? new Date(d.suspendedUntil) > new Date() : false);
+        return isSuspended ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400">
+            Suspendido ({d.suspendedUntil ? new Date(d.suspendedUntil).toLocaleDateString('es-AR') : 'Inasistencias'})
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-400">
+            Habilitado
+          </span>
+        );
+      }
+    },
     ...(!isCarrier ? [
       {
         header: 'Transportista',
@@ -216,6 +231,7 @@ export const DriversPage: React.FC = () => {
       }
     ] : [])
   ];
+
 
   return (
     <div className="max-w-6xl mx-auto">

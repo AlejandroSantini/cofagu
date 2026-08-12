@@ -102,8 +102,8 @@ export const InvoicesPage: React.FC = () => {
       setError('Debe seleccionar al menos un viaje completado.');
       return;
     }
-    if (!invoicePhotoUrl) {
-      setError('La foto de la factura es obligatoria.');
+    if (!invoiceNumber && !invoicePhotoUrl) {
+      setError('Debe ingresar el número de factura o adjuntar la imagen del comprobante.');
       return;
     }
 
@@ -111,8 +111,10 @@ export const InvoicesPage: React.FC = () => {
     setError('');
     try {
       const res = await invoiceService.createInvoice({
+        number: invoiceNumber || undefined,
+        fileUrl: invoicePhotoUrl || undefined,
         invoiceNumber: invoiceNumber || undefined,
-        invoicePhotoUrl,
+        invoicePhotoUrl: invoicePhotoUrl || undefined,
         loadIds: selectedLoadIds
       });
 
@@ -130,6 +132,7 @@ export const InvoicesPage: React.FC = () => {
       setSubmitLoading(false);
     }
   };
+
 
   // Columns for unbilled loads
   const unbilledColumns = [

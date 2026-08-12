@@ -16,6 +16,8 @@ import {
   type Invoice
 } from '../types';
 
+
+
 // --- AUTH & USERS ---
 export const authService = {
   login: (email: string, password: string) => 
@@ -87,12 +89,14 @@ export const loadService = {
     api.get<ApiResponse<Load>>(`/loads/${id}`),
   createLoad: (data: CreateLoadPayload) =>
     api.post<ApiResponse<Load>>('/loads', data),
-  updateLoad: (id: number, data: Partial<CreateLoadPayload>) =>
+  updateLoad: (id: number, data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean }) =>
     api.put<ApiResponse<Load>>(`/loads/${id}`, data),
   deleteLoad: (id: number) =>
     api.delete<ApiResponse<void>>(`/loads/${id}`),
   patchLoadStatus: (id: number, status: string) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
+  confirmDeparture: (id: number, data: { ctg: string; loadedWeight: number }) =>
+    api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
   applyToLoad: (id: number, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
   assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
@@ -103,7 +107,10 @@ export const loadService = {
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
   postCompletionData: (id: number, data: unknown) =>
     api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
+  reportNoShow: (id: number, payload?: { applicationId?: number }) =>
+    api.post<ApiResponse<Load>>(`/loads/${id}/no-show`, payload || {}),
 };
+
 
 // --- CARRIER DOCUMENTS ---
 export const carrierDocumentService = {
@@ -120,6 +127,8 @@ export const carrierDocumentService = {
 };
 
 // --- FILE UPLOADS ---
+
+
 export interface UploadResponse {
   success: boolean;
   data: {
@@ -160,9 +169,10 @@ export const groupService = {
 };
 
 export const invoiceService = {
-  createInvoice: (data: { invoiceNumber?: string; invoicePhotoUrl: string; loadIds: number[] }) =>
+  createInvoice: (data: { number?: string; fileUrl?: string; invoiceNumber?: string; invoicePhotoUrl?: string; loadIds: number[] }) =>
     api.post<ApiResponse<Invoice>>('/invoices', data),
   getInvoices: () =>
     api.get<ApiResponse<Invoice[]>>('/invoices'),
 };
+
 

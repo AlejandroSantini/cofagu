@@ -1,4 +1,4 @@
- import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
@@ -16,8 +16,25 @@ import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAuthStore } from '../store/useAuthStore';
-import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2, ShieldCheck } from 'lucide-react';
+import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2, ShieldCheck, Download } from 'lucide-react';
+
 import { ImageUpload } from '../components/ui/ImageUpload';
+
+const TYPE_LABELS: Record<string, string> = {
+  BATEA: 'Bateas',
+  TOLVA: 'Tolvas',
+  CHASIS_Y_ACOPLADO: 'Chasis y Acoplados',
+  SEMI: 'Semis',
+  SEMI_TOLVA: 'Semi Tolva'
+};
+
+const isInsuranceExpired = (expirationDate?: string) => {
+  if (!expirationDate) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiration = new Date(expirationDate);
+  return expiration < today;
+};
 
 export const TrucksPage: React.FC = () => {
   const [trucks, setTrucks] = useState<Truck[]>([]);
@@ -100,6 +117,23 @@ export const TrucksPage: React.FC = () => {
     };
   }, [isCarrier]);
 
+  const handleBack = () => {
+    setShowForm(false);
+    setEditingId(null);
+    reset({
+      chassisPlate: '',
+      trailerPlate: '',
+      type: '',
+      capacity: '',
+      carrierId: '',
+      cargoInsurancePolicy: '',
+      cargoInsuranceCompany: '',
+      cargoInsuranceExpiration: '',
+      cargoInsurancePhotoUrl: ''
+    });
+    setError('');
+  };
+
   const handleEdit = (truck: Truck) => {
     setEditingId(truck.id);
     setValue('chassisPlate', truck.chassisPlate || truck.plate || '');
@@ -114,6 +148,25 @@ export const TrucksPage: React.FC = () => {
     setShowForm(true);
   };
 
+  const handleApproveInsurance = async (truck: Truck, status: 'APPROVED' | 'REJECTED') => {
+    setSubmitLoading(true);
+    try {
+      const res = await truckService.updateTruck(truck.id, {
+        insuranceStatus: status,
+        cargoInsuranceStatus: status
+      } as any);
+      if (res.data.success) {
+        showToast(status === 'APPROVED' ? 'Seguro aprobado y camión habilitado.' : 'Seguro rechazado.', status === 'APPROVED' ? 'success' : 'error');
+        setLoading(true);
+        fetchData();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al actualizar estado del seguro.'), 'error');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const onSubmit = async (data: TruckFormValues) => {
     setSubmitLoading(true);
     setError('');
@@ -121,7 +174,7 @@ export const TrucksPage: React.FC = () => {
       const payload: any = {
         chassisPlate: data.chassisPlate,
         trailerPlate: data.trailerPlate,
-        plate: data.chassisPlate, // Fallback/mapping for plate in backend
+        plate: data.chassisPlate,
         type: data.type,
         capacity: Number(data.capacity),
         cargoInsurancePolicy: data.cargoInsurancePolicy,
@@ -130,7 +183,9 @@ export const TrucksPage: React.FC = () => {
         cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl
       };
 
-      if (!isCarrier) {
+      if (isCarrier) {
+        payload.cargoInsuranceStatus = 'PENDING';
+      } else {
         payload.carrierId = Number(data.carrierId);
       }
 
@@ -139,7 +194,10 @@ export const TrucksPage: React.FC = () => {
         : await truckService.createTruck(payload);
 
       if (res.data.success) {
-        showToast(editingId ? 'Camión actualizado con éxito' : 'Camión creado con éxito');
+        const successMsg = isCarrier
+          ? 'Los datos del seguro se enviaron a revisión de la administración y el camión quedará temporalmente inhabilitado.'
+          : (editingId ? 'Camión actualizado con éxito' : 'Camión creado con éxito');
+        showToast(successMsg, 'success');
         handleBack();
         setLoading(true);
         fetchData();
@@ -170,40 +228,55 @@ export const TrucksPage: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    setShowForm(false);
-    setEditingId(null);
-    reset({
-      chassisPlate: '',
-      trailerPlate: '',
-      type: '',
-      capacity: '',
-      carrierId: '',
-      cargoInsurancePolicy: '',
-      cargoInsuranceCompany: '',
-      cargoInsuranceExpiration: '',
-      cargoInsurancePhotoUrl: ''
-    });
-    setError('');
-  };
-
-  const TYPE_LABELS: Record<string, string> = {
-    BATEA: 'Bateas',
-    TOLVA: 'Tolvas',
-    CHASIS_Y_ACOPLADO: 'Chasis y Acoplados',
-    SEMI: 'Semis',
-    SEMI_TOLVA: 'Semi Tolva'
-  };
-
-  const isInsuranceExpired = (expirationDate?: string) => {
-    if (!expirationDate) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiration = new Date(expirationDate);
-    return expiration < today;
-  };
-
   const columns = [
+    {
+      header: 'Estado Habilitación',
+      render: (t: Truck) => {
+        const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
+        const isHabilitado = !isSuspended && t.habilitado !== false && (t.cargoInsuranceStatus === 'APPROVED' || !isCarrier);
+        const isPending = t.cargoInsuranceStatus === 'PENDING';
+
+        return (
+          <div className="flex flex-col gap-1">
+            {isSuspended ? (
+              <span 
+                title={`Suspendido hasta el ${t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'} por inasistencias`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 w-fit"
+              >
+                Suspendido ({t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'Inasistencia'})
+              </span>
+            ) : isHabilitado ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/40 w-fit">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Habilitado
+              </span>
+            ) : isPending ? (
+              <span 
+                title="Requiere seguros vigentes y aprobados por la administración"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/40 cursor-help w-fit"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                En Revisión
+              </span>
+            ) : (
+              <span 
+                title="Requiere seguros vigentes y aprobados por la administración"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/40 cursor-help w-fit"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                Inhabilitado
+              </span>
+            )}
+            {isCarrier && !isHabilitado && !isSuspended && (
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 italic max-w-[160px]">
+                Requiere seguros vigentes y aprobados por la administración.
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+
     {
       header: 'Patentes (Chasis / Acoplado)',
       render: (t: Truck) => (
@@ -244,24 +317,25 @@ export const TrucksPage: React.FC = () => {
       render: (t: Truck) => {
         const expired = isInsuranceExpired(t.cargoInsuranceExpiration);
         const incomplete = !t.cargoInsurancePolicy || !t.cargoInsurancePhotoUrl;
+        const status = t.cargoInsuranceStatus || (incomplete ? 'REJECTED' : expired ? 'REJECTED' : 'APPROVED');
 
         return (
           <div className="flex flex-col gap-1.5 py-1">
             <div className="flex items-center gap-1.5">
-              {incomplete ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  Incompleto - Bloqueado
+              {status === 'PENDING' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/55 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Pendiente de Revisión
                 </span>
-              ) : expired ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  Vencido - Bloqueado
-                </span>
-              ) : (
+              ) : status === 'APPROVED' && !expired ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/55 dark:bg-emerald-950/20 dark:text-emerald-450 dark:border-emerald-900/50">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-550" />
-                  Vigente
+                  Aprobado / Vigente
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  {expired ? 'Vencido' : 'Rechazado / Incompleto'}
                 </span>
               )}
             </div>
@@ -269,15 +343,66 @@ export const TrucksPage: React.FC = () => {
             <div className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-0.5 font-medium pl-1">
               <p className="flex items-center gap-1.5">
                 <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider w-10">Póliza:</span> 
-                <span className="font-mono text-slate-700 dark:text-zinc-300">{t.cargoInsurancePolicy || 'N/D'}</span>
+                <span className="font-mono text-slate-700 dark:text-zinc-300">{t.cargoInsurancePolicy || t.insurancePolicy || 'N/D'}</span>
               </p>
               <p className="flex items-center gap-1.5">
                 <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider w-10">Vence:</span>
                 <span className="font-mono text-slate-700 dark:text-zinc-300">
-                  {t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}
+                  {t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).toLocaleDateString('es-AR') : t.insuranceExpiration ? new Date(t.insuranceExpiration).toLocaleDateString('es-AR') : 'N/D'}
                 </span>
               </p>
+              {(t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl) && (
+                <div className="flex gap-2 pt-1">
+                  {t.cargoInsurancePhotoUrl && (
+                    <a
+                      href={t.cargoInsurancePhotoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline text-[10px] flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download size={12} /> Foto Póliza Carga
+                    </a>
+                  )}
+                  {t.insurancePolicyPhotoUrl && (
+                    <a
+                      href={t.insurancePolicyPhotoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[10px] flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download size={12} /> Foto Seguro General
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Admin approval actions */}
+            {!isCarrier && (
+              <div className="flex gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px] py-0.5 px-2 h-6 border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
+                  onClick={() => handleApproveInsurance(t, 'APPROVED')}
+                  isLoading={submitLoading}
+                >
+                  Aprobar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px] py-0.5 px-2 h-6 border-rose-500/40 text-rose-600 hover:bg-rose-50"
+                  onClick={() => handleApproveInsurance(t, 'REJECTED')}
+                  isLoading={submitLoading}
+                >
+                  Rechazar
+                </Button>
+              </div>
+            )}
+
           </div>
         );
       }
@@ -433,7 +558,6 @@ export const TrucksPage: React.FC = () => {
                 />
               </div>
             </div>
-
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
               <Button type="button" variant="secondary" onClick={handleBack}>

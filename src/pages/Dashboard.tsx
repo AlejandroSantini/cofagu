@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { loadService, carrierDocumentService } from '../api/services';
+import { loadService, truckService } from '../api/services';
+
 import { type Load } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/StatCard';
@@ -34,27 +35,25 @@ export const Dashboard: React.FC = () => {
         console.error('Error fetching dashboard data:', err);
       }
       
-      // If user is a CARRIER, fetch their document status
+      // If user is a CARRIER, fetch their trucks to check insurance status
       if (user?.role === 'CARRIER') {
         try {
-          const docsRes = await carrierDocumentService.getDocuments();
-          if (active && docsRes.data.success) {
-            const carrierDocs = docsRes.data.data.filter(d => d.type === 'SEGURO_CARGA');
-            if (carrierDocs.length === 0) {
+          const trkRes = await truckService.getTrucks();
+          if (active && trkRes.data.success) {
+            const trucks = trkRes.data.data;
+            if (trucks.length === 0) {
               setCarrierDocStatus('MISSING');
             } else {
-              // Sort by creation date descending
-              const latest = [...carrierDocs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-              const isExpired = new Date(latest.expirationDate).getTime() <= Date.now();
-              if (isExpired) {
-                setCarrierDocStatus('EXPIRED');
+              const hasInvalid = trucks.some(t => t.cargoInsuranceStatus !== 'APPROVED' || (t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).getTime() <= Date.now() : true));
+              if (hasInvalid) {
+                setCarrierDocStatus('PENDING');
               } else {
-                setCarrierDocStatus(latest.status);
+                setCarrierDocStatus('APPROVED');
               }
             }
           }
         } catch (err) {
-          console.error('Error fetching carrier documents:', err);
+          console.error('Error fetching carrier trucks:', err);
         }
       }
       
@@ -67,6 +66,7 @@ export const Dashboard: React.FC = () => {
       active = false;
     };
   }, [user]);
+
 
   // Compute logistics metrics
   const pendingAssignments = loads.filter((l) => l.status === 'PUBLISHED' || l.status === 'PENDING').length;
@@ -166,10 +166,11 @@ export const Dashboard: React.FC = () => {
           <Button 
             variant="primary" 
             className="bg-rose-600 hover:bg-rose-700 text-white font-bold w-full md:w-fit shrink-0 border-none shadow-lg shadow-rose-600/20"
-            onClick={() => navigate('/documents')}
+            onClick={() => navigate('/trucks')}
           >
-            Cargar Nueva Póliza
+            Actualizar Camiones / Seguro
           </Button>
+
         </div>
       )}
 

@@ -5,8 +5,9 @@ import {
   carrierDocumentSchema,
   type CarrierDocumentFormValues,
 } from "../schemas/carrier-document.schema";
-import { carrierDocumentService, carrierService } from "../api/services";
+import { truckService, carrierService } from "../api/services";
 import { type CarrierDocument, type Carrier } from "../types";
+
 import { getErrorMessage } from "../api/errorUtils";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToast } from "../hooks/useToast";
@@ -84,10 +85,10 @@ export const CarrierDocumentsPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    reset,
     control,
     formState: { errors, isValid },
   } = useForm<CarrierDocumentFormValues>({
+
     resolver: zodResolver(carrierDocumentSchema),
     mode: "onChange",
     defaultValues: {
@@ -98,9 +99,26 @@ export const CarrierDocumentsPage: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const docsRes = await carrierDocumentService.getDocuments();
-      if (docsRes.data.success) {
-        setDocuments(docsRes.data.data);
+      const trucksRes = await truckService.getTrucks();
+      if (trucksRes.data.success) {
+        // Only map trucks that actually have a policy photo or insurance policy data uploaded
+        const trucksWithInsurance = trucksRes.data.data.filter(
+          (t) => t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || t.cargoInsurancePolicy || t.insurancePolicy
+        );
+        const mappedDocs: CarrierDocument[] = trucksWithInsurance.map((t) => ({
+          id: t.id,
+          carrierId: t.carrierId || 0,
+          carrier: t.carrier,
+          truck: t,
+          type: "SEGURO_CARGA",
+          fileUrl: t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || "",
+          expirationDate: t.cargoInsuranceExpiration || t.insuranceExpiration || new Date().toISOString(),
+          status: (t.cargoInsuranceStatus || t.insuranceStatus || "PENDING") as any,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null
+        }));
+        setDocuments(mappedDocs);
       }
       if (isAdmin) {
         const carriersRes = await carrierService.getCarriers();
@@ -120,9 +138,25 @@ export const CarrierDocumentsPage: React.FC = () => {
     let active = true;
     const load = async () => {
       try {
-        const docsRes = await carrierDocumentService.getDocuments();
-        if (active && docsRes.data.success) {
-          setDocuments(docsRes.data.data);
+        const trucksRes = await truckService.getTrucks();
+        if (active && trucksRes.data.success) {
+          const trucksWithInsurance = trucksRes.data.data.filter(
+            (t) => t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || t.cargoInsurancePolicy || t.insurancePolicy
+          );
+          const mappedDocs: CarrierDocument[] = trucksWithInsurance.map((t) => ({
+            id: t.id,
+            carrierId: t.carrierId || 0,
+            carrier: t.carrier,
+            truck: t,
+            type: "SEGURO_CARGA",
+            fileUrl: t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || "",
+            expirationDate: t.cargoInsuranceExpiration || t.insuranceExpiration || new Date().toISOString(),
+            status: (t.cargoInsuranceStatus || t.insuranceStatus || "PENDING") as any,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            deletedAt: null
+          }));
+          setDocuments(mappedDocs);
         }
         if (active && isAdmin) {
           const carriersRes = await carrierService.getCarriers();
@@ -138,6 +172,8 @@ export const CarrierDocumentsPage: React.FC = () => {
       }
     };
     load();
+
+
     return () => {
       active = false;
     };
@@ -145,25 +181,11 @@ export const CarrierDocumentsPage: React.FC = () => {
 
   // Handle load data effect
 
-  const onSubmit = async (data: CarrierDocumentFormValues) => {
+  const onSubmit = async (_data: CarrierDocumentFormValues) => {
     setSubmitLoading(true);
     setError("");
     try {
-      const res = await carrierDocumentService.createDocument({
-        type: "SEGURO_CARGA",
-        fileUrl: data.fileUrl,
-        expirationDate: new Date(data.expirationDate).toISOString(),
-      });
-
-      if (res.data.success) {
-        showToast(
-          "Póliza de seguro cargada correctamente. Queda pendiente de aprobación.",
-          "success",
-        );
-        reset();
-        setLoading(true);
-        loadData();
-      }
+      showToast("La carga de póliza se realiza a través de la sección de Camiones.", "error");
     } catch (err) {
       setError(getErrorMessage(err, "Error al subir el documento."));
     } finally {
@@ -171,9 +193,14 @@ export const CarrierDocumentsPage: React.FC = () => {
     }
   };
 
+
+
   const handleAudit = async (id: number, status: "APPROVED" | "REJECTED") => {
     try {
-      const res = await carrierDocumentService.updateDocument(id, { status });
+      const res = await truckService.updateTruck(id, {
+        cargoInsuranceStatus: status,
+        insuranceStatus: status,
+      } as any);
       if (res.data.success) {
         showToast(
           status === "APPROVED" ? "Póliza aprobada" : "Póliza rechazada",
@@ -187,6 +214,7 @@ export const CarrierDocumentsPage: React.FC = () => {
       showToast("Error al actualizar el estado de la póliza.", "error");
     }
   };
+
 
   const getStatusLabelAndColor = (status: string) => {
     switch (status) {
@@ -247,6 +275,7 @@ export const CarrierDocumentsPage: React.FC = () => {
       header: "Transportista",
       render: (doc: CarrierDocument) => {
         const carrierName =
+          doc.carrier?.name ||
           carriers.find((c) => c.id === doc.carrierId)?.name ||
           `ID: ${doc.carrierId}`;
         return (
@@ -257,6 +286,26 @@ export const CarrierDocumentsPage: React.FC = () => {
         );
       },
     },
+    {
+      header: "Camión (Patente / Tipo)",
+      render: (doc: CarrierDocument) => {
+        const t = doc.truck;
+        if (!t) return <span className="text-xs text-slate-400 font-mono">N/D</span>;
+        const plateStr = t.chassisPlate || t.plate || "Sin chasis";
+        const trailerStr = t.trailerPlate ? ` / Acoplado: ${t.trailerPlate}` : "";
+        return (
+          <div className="flex flex-col">
+            <span className="font-bold font-mono text-slate-900 dark:text-white text-xs uppercase">
+              {plateStr}{trailerStr}
+            </span>
+            <span className="text-[11px] text-slate-500 font-semibold">
+              {t.type} ({t.capacity ? `${Number(t.capacity).toLocaleString()} kg` : ''})
+            </span>
+          </div>
+        );
+      },
+    },
+
     {
       header: "Vencimiento",
       render: (doc: CarrierDocument) => {

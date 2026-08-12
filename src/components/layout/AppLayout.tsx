@@ -29,10 +29,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isCarrier = user?.role === 'CARRIER';
   const [isOpen, setIsOpen] = useState(false);
 
+  const isOperator = user?.role === 'OPERATOR' || user?.role === 'PLAYERO';
+
   const navItems = [
-    { label: 'Panel de Control', icon: Home, path: '/' },
-    { label: 'Cargas y Viajes', icon: Briefcase, path: '/loads' },
-    ...(isStaff ? [
+    ...(!isOperator ? [{ label: 'Panel de Control', icon: Home, path: '/' }] : []),
+    { label: isOperator ? 'Cargas' : 'Cargas y Viajes', icon: Briefcase, path: '/loads' },
+
+
+    ...(isStaff && !isOperator ? [
       { label: 'Transportistas', icon: Truck, path: '/carriers' },
     ] : []),
     ...(isCarrier ? [
@@ -41,12 +45,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       { label: 'Facturación', icon: FileText, path: '/invoices' },
     ] : []),
     ...(isAdmin ? [
+      { label: 'Documentación', icon: FileText, path: '/documents' },
       { label: 'Grupos', icon: Layers, path: '/groups' },
       { label: 'Personal', icon: Users, path: '/users' }
     ] : []),
-    { label: 'Documentación', icon: FileText, path: '/documents' },
     { label: 'Configuración', icon: Settings, path: '/settings' },
   ];
+
+
+
+
+
 
   const isActive = (path: string) => location.pathname === path;
 
