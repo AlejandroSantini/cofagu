@@ -79,6 +79,8 @@ interface LoadDetailsProps {
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
   onConfirmDepartureByApp?: (appId: number, ctg: string, loadedWeight: number) => Promise<boolean>;
   onCompleteLoadByApp?: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) => Promise<boolean>;
+  onCancelApplication?: (appId: number, reason: string) => Promise<boolean>;
+  onNoShow?: (loadId: number, appId?: number) => Promise<boolean>;
   onCompleteLoad: (data: { 
     unloadedWeight: number; 
     fuelConsumption?: number; 
@@ -110,8 +112,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onReportContingency,
   onConfirmDepartureByApp,
   onCompleteLoadByApp,
+  onCancelApplication,
+  onNoShow,
   onCompleteLoad,
   onUpdateLoad,
+
 
   
   selectedAppId,
@@ -140,9 +145,16 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [plantCtg, setPlantCtg] = useState('');
+  const [plantWaybillData, setPlantWaybillData] = useState('');
   const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
   const [showDelayedModal, setShowDelayedModal] = useState(false);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
+
+  // Cancel application modal state
+  const [showCancelAppModal, setShowCancelAppModal] = useState(false);
+  const [cancelAppId, setCancelAppId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+
 
 
 
@@ -151,10 +163,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const maxCapacity = load.maxTrucks || 1;
   const selectedApp = load.applications?.find(a => a.id === selectedAppId);
 
-  const canUserWrite = user?.role === 'ADMIN' || user?.role === 'OPERATOR';
+  const isAdmin = user?.role === 'ADMIN';
+  const isOperator = user?.role === 'OPERATOR';
+  const isLogistics = user?.role === 'LOGISTICS';
+  const canUserWrite = isAdmin || isOperator || isLogistics;
   const isCarrier = user?.role === 'CARRIER';
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'OPERATOR' || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
+  const isStaff = isAdmin || isOperator || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || isLogistics;
   const hasApplied = load.applications?.some(app => app.carrierId === user?.carrierId);
+
+
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -168,17 +185,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const isTruckInsuranceValid = (t: Truck) => {
+    // Si el seguro de carga ha sido aprobado por la administración, la validación del seguro se considera válida
+    if (t.cargoInsuranceStatus === 'APPROVED') {
+      return true;
+    }
     // Si viene la propiedad 'habilitado' en el objeto del camión, se evalúa directamente
     if (typeof t.habilitado === 'boolean') {
       return t.habilitado;
     }
-    // Si viene el estado explícito del seguro de carga
-    if (t.cargoInsuranceStatus) {
-      return t.cargoInsuranceStatus === 'APPROVED';
-    }
     // Si no viene el status pero sí viene el objeto simple dentro de la postulación
     return true;
   };
+
 
 
 
@@ -212,15 +230,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     } else if (onUpdateLoad) {
       success = await onUpdateLoad(load.id, {
         ctg: plantCtg,
+        waybillData: plantWaybillData || undefined,
         loadedWeight: Number(plantLoadedWeight),
         status: 'IN_PROGRESS'
-      });
+      } as any);
     }
     setLocalSubmitLoading(false);
     if (success) {
       setShowPlantModal(false);
       setActiveAppId(null);
       setPlantCtg('');
+      setPlantWaybillData('');
       setPlantLoadedWeight('');
     }
   };
@@ -409,13 +429,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       >
         <div className="space-y-4 pt-2">
           <p className="text-sm text-slate-500">
-            Ingrese el Código de Carta de Porte (CTG) y el pesaje cargado en báscula:
+            Ingrese el Código CTG, Carta de Porte y pesaje cargado en báscula:
           </p>
           <Input
-            label="Código CTG / Carta de Porte *"
+            label="Código CTG *"
             placeholder="Ej: 12345XYZ"
             value={plantCtg}
             onChange={(e) => setPlantCtg(e.target.value)}
+            className="py-2.5"
+          />
+          <Input
+            label="Carta de Porte (Número / Código)"
+            placeholder="Ej: 0001-00001234"
+            value={plantWaybillData}
+            onChange={(e) => setPlantWaybillData(e.target.value)}
             className="py-2.5"
           />
           <Input
@@ -429,6 +456,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           />
         </div>
       </Modal>
+
 
       {/* Completion Modal - simple confirmation only */}
       <Modal
@@ -602,28 +630,36 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </div>
             )}
 
-            {load.targetGroups && load.targetGroups.length > 0 && (
-              <div className="bg-emerald-500/5 dark:bg-zinc-800/40 p-4 rounded-xl border border-emerald-500/20 dark:border-zinc-800 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Layers size={18} className="text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
-                    Publicación Dirigida a Grupos
-                  </span>
+            {(() => {
+              const validTargetGroups = (load.targetGroups || []).filter(
+                (tg) => tg.groupId !== null && tg.groupId !== undefined
+              );
+              if (validTargetGroups.length === 0) return null;
+
+              return (
+                <div className="bg-emerald-500/5 dark:bg-zinc-800/40 p-4 rounded-xl border border-emerald-500/20 dark:border-zinc-800 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Layers size={18} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Publicación Dirigida a Grupos
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {validTargetGroups.map((tg, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-750 text-xs">
+                        <span className="font-bold text-slate-800 dark:text-zinc-200">
+                          {tg.group?.name || `Grupo ID: ${tg.groupId}`}
+                        </span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                          ${Number(tg.rate).toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {load.targetGroups.map((tg, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-750 text-xs">
-                      <span className="font-bold text-slate-800 dark:text-zinc-200">
-                        {tg.group?.name || `Grupo ID: ${tg.groupId}`}
-                      </span>
-                      <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                        ${Number(tg.rate).toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })()}
+
 
             {load.status === 'COMPLETED' && (
               <div className="bg-emerald-50 dark:bg-emerald-950/20 p-6 rounded-xl border border-emerald-100/30 dark:border-emerald-900/30 space-y-4">
@@ -694,11 +730,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
             {/* Actions Triggers */}
             <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
-              {canUserWrite && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && (
+              {(isAdmin || isOperator) && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && (
                 <Button variant="danger" icon={Trash2} onClick={() => onCancelLoad(load.id)}>
                   Cancelar Carga
                 </Button>
               )}
+
               {isStaff && (load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS') && (
                 <Button 
                   variant="primary" 
@@ -712,20 +749,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   Registrar Pesaje de Carga (Balancera)
                 </Button>
               )}
-              {isCarrier && (
+              {(isCarrier || isLogistics) && (
                 <>
                   {load.status === 'PUBLISHED' && !hasApplied && (
                     <Button variant="primary" icon={Send} onClick={() => setShowPostulateModal(true)}>
                       Postularse a este viaje
                     </Button>
                   )}
-                  {load.status === 'ASSIGNED' && (
+                  {load.status === 'ASSIGNED' && isCarrier && (
                     <Button variant="primary" icon={Send} onClick={() => onStatusChange('IN_PROGRESS')}>
                       Iniciar Traslado
                     </Button>
                   )}
                 </>
               )}
+
 
 
               {(isCarrier || canUserWrite) && load.status === 'IN_PROGRESS' && (
@@ -833,8 +871,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
         {/* Application Management (For Admin) or Assignment Information */}
         <div className="space-y-6">
-          {isStaff ? (
+          {!isLogistics && isStaff ? (
             load.status === 'PUBLISHED' ? (
+
               <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
                 <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
                   Postulaciones ({load.applications?.length || 0})
@@ -1022,25 +1061,44 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </div>
                             )}
 
-                            {/* Actions for Balancero (EMPLOYEE/ADMIN) to confirm departure per trip */}
-                            {isStaff && tripStatus === 'ASSIGNED' && (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                icon={CheckCircle}
-                                className="w-full text-xs font-bold mt-2"
-                                onClick={() => {
-                                  setActiveAppId(trip.id);
-                                  setPlantCtg(tripCtg);
-                                  setPlantLoadedWeight(loadedW ? String(loadedW) : '');
-                                  setShowPlantModal(true);
-                                }}
-                              >
-                                Confirmar Salida de Balanza
-                              </Button>
+                            {/* Actions for Balancero (EMPLOYEE/ADMIN/PLAYERO) to confirm or edit departure per trip */}
+                            {isStaff && (tripStatus === 'ASSIGNED' || tripStatus === 'IN_PROGRESS') && (
+                              <div className="flex flex-col gap-2 mt-2">
+                                <Button
+                                  variant={tripStatus === 'IN_PROGRESS' ? 'outline' : 'primary'}
+                                  size="sm"
+                                  icon={CheckCircle}
+                                  className="w-full text-xs font-bold"
+                                  onClick={() => {
+                                    setActiveAppId(trip.id);
+                                    setPlantCtg(tripCtg);
+                                    setPlantLoadedWeight(loadedW ? String(loadedW) : '');
+                                    setShowPlantModal(true);
+                                  }}
+                                >
+                                  {tripStatus === 'IN_PROGRESS' ? 'Editar Carta de Porte / Kilos' : 'Confirmar Salida de Balanza'}
+                                </Button>
+
+                                {(user?.role === 'PLAYERO' || user?.role === 'EMPLOYEE' || user?.role === 'ADMIN') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    icon={XCircle}
+                                    className="w-full text-xs font-bold border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                    onClick={async () => {
+                                      if (onNoShow) {
+                                        const ok = await onNoShow(load.id, trip.id);
+                                        if (ok) alert("Camión marcado como 'No Llegó'. Cupo liberado.");
+                                      }
+                                    }}
+                                  >
+                                    No Llegó / No Show
+                                  </Button>
+                                )}
+                              </div>
                             )}
 
-                            {/* Solo el staff puede finalizar viajes desde esta vista global */}
+                            {/* Staff can finalize trip */}
                             {isStaff && tripStatus === 'IN_PROGRESS' && (
                               <Button
                                 variant="primary"
@@ -1055,8 +1113,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 Registrar Descarga en Destino
                               </Button>
                             )}
-
                           </div>
+
                         );
                       })}
                     </div>
@@ -1082,16 +1140,31 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </div>
                 )}
 
-                {/* Pending application badge */}
+                {/* Pending application badge & cancel button */}
                 {myPendingApp && (
                   <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">Tu Postulación</h3>
                     <div className="p-4 rounded-xl flex items-center justify-between border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
                       <span className="text-sm font-bold text-amber-700 dark:text-amber-300">Postulado — en revisión por el operador</span>
-                      <Badge variant="warning">PENDIENTE</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="warning">PENDIENTE</Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={XCircle}
+                          className="border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                          onClick={() => {
+                            setCancelAppId(myPendingApp.id);
+                            setShowCancelAppModal(true);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
+
 
                 {/* Accepted trips: one card per truck */}
                 {myAcceptedTrips.length > 0 && (
@@ -1151,12 +1224,26 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </div>
                             )}
 
-                            {/* Assigned: waiting for balancero */}
+                            {/* Assigned: waiting for balancero - carrier can cancel before trip goes IN_PROGRESS */}
                             {!isTripInProgress && !isTripCompleted && (
-                              <p className="text-xs text-slate-400 italic">Esperando confirmación de salida en balanza por el operador.</p>
+                              <div className="space-y-2">
+                                <p className="text-xs text-slate-400 italic">Esperando confirmación de salida en balanza por el operador.</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  icon={XCircle}
+                                  className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                                  onClick={() => {
+                                    setCancelAppId(trip.id);
+                                    setShowCancelAppModal(true);
+                                  }}
+                                >
+                                  Cancelar Postulación / Viaje
+                                </Button>
+                              </div>
                             )}
 
-                            {/* In progress: carrier can finalize */}
+                            {/* In progress: trip cannot be cancelled once started */}
                             {isTripInProgress && !isTripCompleted && isCarrier && (
                               <Button
                                 variant="primary"
@@ -1172,6 +1259,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </Button>
                             )}
                           </div>
+
                         );
 
                       })}
@@ -1185,6 +1273,51 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
         </div>
       </div>
+
+      {/* Modal para Cancelación de Postulación con Motivo por Transportista */}
+      <Modal
+        isOpen={showCancelAppModal}
+        onClose={() => {
+          setShowCancelAppModal(false);
+          setCancelAppId(null);
+          setCancelReason('');
+        }}
+        onConfirm={async () => {
+          if (!cancelAppId || !cancelReason.trim()) {
+            alert('Por favor ingrese el motivo de la cancelación.');
+            return;
+          }
+          if (onCancelApplication) {
+            setLocalSubmitLoading(true);
+            try {
+              const ok = await onCancelApplication(cancelAppId, cancelReason.trim());
+              if (ok) {
+                setShowCancelAppModal(false);
+                setCancelAppId(null);
+                setCancelReason('');
+              }
+            } finally {
+              setLocalSubmitLoading(false);
+            }
+          }
+        }}
+        title="Cancelar Postulación / Viaje"
+        description="Por favor, especifica el motivo por el cual necesitas cancelar esta postulación. El sistema liberará el cupo y notificará a la administración."
+        type="danger"
+        confirmText="Confirmar Cancelación"
+        isLoading={localSubmitLoading}
+      >
+        <div className="space-y-4 pt-2">
+          <Input
+            label="Motivo de la Cancelación (Obligatorio)"
+            placeholder="Ej: Se rompió el camión en la ruta / Problema mecánico"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            required
+          />
+        </div>
+      </Modal>
     </div>
   );
 };
+

@@ -74,7 +74,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'LOGISTICS']}>
                   <CarriersPage />
                 </RoleGate>
               </AppLayout>
@@ -87,7 +87,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER', 'LOGISTICS']}>
                   <DriversPage />
                 </RoleGate>
               </AppLayout>
@@ -100,7 +100,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'CARRIER', 'LOGISTICS']}>
                   <TrucksPage />
                 </RoleGate>
               </AppLayout>
@@ -120,6 +120,8 @@ function App() {
             ) : <Navigate to="/login" />
           }
         />
+
+
 
         <Route
           path="/groups"

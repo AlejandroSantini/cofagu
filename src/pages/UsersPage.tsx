@@ -164,14 +164,19 @@ export const UsersPage: React.FC = () => {
       render: (u: User) => (
         <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
           u.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
+          u.role === 'LOGISTICS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' :
+          u.role === 'TECHNICAL_CENTER' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-400' :
           u.role === 'OPERATOR' || u.role === 'PLAYERO' || u.role === 'GAS_STATION' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
           u.role === 'CARRIER' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' :
           'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
         }`}>
-          {u.role === 'OPERATOR' ? 'OPERADOR / PLAYERO' : u.role === 'PLAYERO' ? 'PLAYERO' : u.role === 'GAS_STATION' ? 'ESTACIÓN SERVICIO' : u.role === 'EMPLOYEE' ? 'BALANCERO / EMPLEADO' : u.role}
+          {u.role === 'LOGISTICS' ? 'LOGÍSTICA' : u.role === 'TECHNICAL_CENTER' ? 'CENTRO TÉCNICO' : u.role === 'OPERATOR' ? 'OPERADOR' : u.role === 'PLAYERO' ? 'PLAYERO (PLAYA)' : u.role === 'GAS_STATION' ? 'PLAYERO (COMBUSTIBLE)' : u.role === 'EMPLOYEE' ? 'BALANCERO / EMPLEADO' : u.role}
         </span>
+
       )
     },
+
+
 
 
     {
@@ -267,7 +272,11 @@ export const UsersPage: React.FC = () => {
                 icon={Shield}
                 options={[
                   { value: 'EMPLOYEE', label: 'Empleado / Balancero (Cooperativa)' },
-                  { value: 'OPERATOR', label: 'Playero / Estación de Servicio' },
+                  { value: 'OPERATOR', label: 'Operador (Cooperativa)' },
+                  { value: 'LOGISTICS', label: 'Logística (Gestión de Flotas)' },
+                  { value: 'PLAYERO', label: 'Playero (Playa de Camiones)' },
+                  { value: 'GAS_STATION', label: 'Playero (Combustible)' },
+                  { value: 'TECHNICAL_CENTER', label: 'Centro Técnico (Visualización)' },
                   { value: 'ADMIN', label: 'Administrador (Cooperativa)' },
                   { value: 'CARRIER', label: 'Transportista (Externo)' }
                 ]}
@@ -275,6 +284,10 @@ export const UsersPage: React.FC = () => {
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
                 required
               />
+
+
+
+
 
 
 

@@ -4,10 +4,11 @@ import type { LucideIcon } from 'lucide-react';
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   icon?: LucideIcon;
+  rightElement?: React.ReactNode;
   error?: string;
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, icon: Icon, error, className = '', ...props }, ref) => {
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, icon: Icon, rightElement, error, className = '', ...props }, ref) => {
   return (
     <div className={`flex flex-col w-full ${label ? 'gap-2' : ''}`}>
       {label && (
@@ -26,13 +27,20 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, ic
           className={`
             w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-xl px-4 
             ${Icon ? 'pl-11' : ''} 
+            ${rightElement ? 'pr-11' : ''}
             text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-all
             ${error ? 'border-rose-500 focus:border-rose-600' : 'border-slate-100 dark:border-zinc-800 focus:border-emerald-500'}
             ${className}
           `}
           {...props}
         />
+        {rightElement && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+            {rightElement}
+          </div>
+        )}
       </div>
+
       {error && (
         <span className="text-xs font-medium text-rose-500 ml-1">{error}</span>
       )}

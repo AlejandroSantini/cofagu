@@ -7,7 +7,7 @@ interface LoadsTableProps {
   loads: Load[];
   isLoading: boolean;
   onRowClick: (load: Load) => void;
-  statusFilter?: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED';
+  statusFilter?: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   isCarrier?: boolean;
 }
 
@@ -26,6 +26,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
   const filteredLoads = statusFilter 
     ? loads.filter(l => l.status === statusFilter || (statusFilter === 'ASSIGNED' && l.status === 'IN_PROGRESS')) 
     : loads;
+
 
   const columns = [
     {

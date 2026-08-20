@@ -41,7 +41,8 @@ export const LoadsPage: React.FC = () => {
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   
   // Filtering & Selection for Assignment
-  const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED'>(() => isCarrier ? 'PUBLISHED' : 'ALL');
+
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(() => isCarrier ? user?.carrierId || null : null);
   const [carrierDrivers, setCarrierDrivers] = useState<Driver[]>([]);
@@ -61,10 +62,13 @@ export const LoadsPage: React.FC = () => {
       setLoading(true);
       try {
         const loadParams: { status?: string } = {};
-        if (activeTab !== 'ALL') {
+        if (isPlayero && activeTab === 'ALL') {
+          // Playero por defecto sólo trae activos, salvo si filtra
+        } else if (activeTab !== 'ALL') {
           if (activeTab === 'PUBLISHED') loadParams.status = 'PUBLISHED';
           if (activeTab === 'ASSIGNED') loadParams.status = 'IN_PROGRESS';
           if (activeTab === 'COMPLETED') loadParams.status = 'COMPLETED';
+          if (activeTab === 'CANCELLED') loadParams.status = 'CANCELLED';
         }
         const res = await loadService.getLoads(loadParams);
         if (active && res.data.success) {
@@ -79,7 +83,8 @@ export const LoadsPage: React.FC = () => {
     };
     fetchLoads();
     return () => { active = false; };
-  }, [activeTab, refreshTrigger]);
+  }, [activeTab, refreshTrigger, isPlayero]);
+
 
   // Load details refresh helper after action mutations
   const refreshDetails = async () => {
@@ -92,35 +97,40 @@ export const LoadsPage: React.FC = () => {
     }
   };
 
-  // Load carrier drivers/trucks when an application is selected for assignment
-  useEffect(() => {
-    if (!selectedCarrierId) return;
+  const isLogistics = user?.role === 'LOGISTICS';
 
+  // Load carrier drivers/trucks when an application or logistics user is active
+  useEffect(() => {
     const loadCarrierResources = async () => {
       try {
+        const params = selectedCarrierId ? { carrierId: selectedCarrierId } : undefined;
         const [drvRes, trkRes] = await Promise.all([
-          driverService.getDrivers({ carrierId: selectedCarrierId }),
-          truckService.getTrucks({ carrierId: selectedCarrierId })
+          driverService.getDrivers(params),
+          truckService.getTrucks(params)
         ]);
         if (drvRes.data.success) setCarrierDrivers(drvRes.data.data);
         if (trkRes.data.success) setCarrierTrucks(trkRes.data.data);
       } catch (err) {
         console.error(err);
-        showToast('Error al cargar choferes/camiones del transportista.', 'error');
+        showToast('Error al cargar choferes/camiones.', 'error');
       }
     };
-    loadCarrierResources();
-  }, [selectedCarrierId]);
+    if (selectedCarrierId || isCarrier || isLogistics) {
+      loadCarrierResources();
+    }
+  }, [selectedCarrierId, isCarrier, isLogistics]);
+
 
   const handleRowClick = async (load: Load) => {
     setSelectedLoad(load);
     setSelectedAppId(null);
-    if (!isCarrier) {
+    if (!isCarrier && !isLogistics) {
       setSelectedCarrierId(null);
       setCarrierDrivers([]);
       setCarrierTrucks([]);
     }
   };
+
 
   const onSubmit = async (data: LoadFormValues) => {
     setSubmitLoading(true);
@@ -167,13 +177,23 @@ export const LoadsPage: React.FC = () => {
 
   const handleApply = async (notes: string, driverId: number, truckId: number): Promise<boolean> => {
     if (!selectedLoad) return false;
-    if (!user?.carrierId) {
-      showToast('Tu cuenta no está asociada a ninguna empresa transportista.', 'error');
+
+    // For LOGISTICS, resolve carrierId from selected driver or truck if user.carrierId is null
+    let targetCarrierId = user?.carrierId;
+    if (!targetCarrierId && isLogistics) {
+      const drv = carrierDrivers.find(d => d.id === driverId);
+      const trk = carrierTrucks.find(t => t.id === truckId);
+      targetCarrierId = drv?.carrierId || trk?.carrierId;
+    }
+
+    if (!targetCarrierId) {
+      showToast('No se pudo determinar el transportista asociado a la postulación.', 'error');
       return false;
     }
+
     try {
       const res = await loadService.applyToLoad(selectedLoad.id, {
-        carrierId: user.carrierId,
+        carrierId: targetCarrierId,
         notes,
         driverId,
         truckId
@@ -192,10 +212,10 @@ export const LoadsPage: React.FC = () => {
           navigate('/trucks');
         }, 3000);
       }
-
     }
     return false;
   };
+
 
   const handleAssign = async () => {
     if (!selectedLoad || !selectedAppId) {
@@ -459,7 +479,7 @@ export const LoadsPage: React.FC = () => {
               Volver al Listado
             </Button>
           ) : (
-            canWrite && !isEmployee && !isPlayero && (
+            canWrite && !isEmployee && !isPlayero && !isLogistics && (
               <Button 
                 variant="primary" 
                 icon={Plus} 
@@ -470,6 +490,7 @@ export const LoadsPage: React.FC = () => {
               </Button>
             )
           )}
+
         </div>
       </div>
 
@@ -569,9 +590,37 @@ export const LoadsPage: React.FC = () => {
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
           onConfirmDepartureByApp={handleConfirmDepartureByApp}
-
           onCompleteLoadByApp={handleCompleteLoadByApp}
+          onCancelApplication={async (appId, reason) => {
+            try {
+              const res = await loadService.cancelApplication(appId, reason);
+              if (res.data.success) {
+                showToast('Postulación cancelada correctamente', 'success');
+                refreshDetails();
+                triggerRefresh();
+                return true;
+              }
+            } catch (err) {
+              showToast(getErrorMessage(err, 'Error al cancelar la postulación'), 'error');
+            }
+            return false;
+          }}
+          onNoShow={async (loadId, appId) => {
+            try {
+              const res = await loadService.reportNoShow(loadId, { applicationId: appId });
+              if (res.data.success) {
+                showToast("Inasistencia ('No Llegó') registrada. Cupo liberado.", 'success');
+                refreshDetails();
+                triggerRefresh();
+                return true;
+              }
+            } catch (err) {
+              showToast(getErrorMessage(err, 'Error al registrar la inasistencia'), 'error');
+            }
+            return false;
+          }}
           onCompleteLoad={handleCompleteLoad}
+
 
           selectedAppId={selectedAppId}
           setSelectedAppId={setSelectedAppId}
@@ -623,17 +672,23 @@ export const LoadsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {/* Tab Filters Navigation */}
-          <div className="flex border-b border-slate-200 dark:border-zinc-800">
-            {([
+          <div className="flex border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
+            {(isCarrier ? [
+              { id: 'PUBLISHED', label: 'Viajes Disponibles' },
+              { id: 'ASSIGNED', label: 'En Curso' },
+              { id: 'COMPLETED', label: 'Completados' },
+              { id: 'CANCELLED', label: 'Cancelados' }
+            ] : [
               { id: 'ALL', label: 'Todas' },
               { id: 'PUBLISHED', label: 'Disponibles' },
               { id: 'ASSIGNED', label: 'En Curso' },
-              { id: 'COMPLETED', label: 'Completadas' }
+              { id: 'COMPLETED', label: 'Completadas' },
+              { id: 'CANCELLED', label: 'Canceladas' }
             ] as const).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${
+                onClick={() => handleTabChange(tab.id as any)}
+                className={`px-4 py-2 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -643,6 +698,8 @@ export const LoadsPage: React.FC = () => {
               </button>
             ))}
           </div>
+
+
 
           {/* Tab Content Render */}
           <LoadsTable

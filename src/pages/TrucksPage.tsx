@@ -48,9 +48,24 @@ export const TrucksPage: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
 
+  const isAdmin = useAuthStore((state) => state.isAdmin());
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
-  const canWriteTrucks = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.user?.role === 'CARRIER');
+  const canWriteTrucks = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.isLogistics() || state.user?.role === 'CARRIER');
+
+  
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+
+  const filteredTrucks = trucks.filter((t) => {
+    if (typeFilter === 'ALL') return true;
+    if (typeFilter === 'TOLVA') return t.type === 'TOLVA' || t.type === 'SEMI_TOLVA';
+    if (typeFilter === 'BATEA') return t.type === 'BATEA';
+    return t.type === typeFilter;
+  });
+
+
+
+
 
   const {
     register,
@@ -233,8 +248,9 @@ export const TrucksPage: React.FC = () => {
       header: 'Estado Habilitación',
       render: (t: Truck) => {
         const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
-        const isHabilitado = !isSuspended && t.habilitado !== false && (t.cargoInsuranceStatus === 'APPROVED' || !isCarrier);
+        const isHabilitado = !isSuspended && t.habilitado !== false && (t.cargoInsuranceStatus === 'APPROVED' || t.insuranceStatus === 'APPROVED');
         const isPending = t.cargoInsuranceStatus === 'PENDING';
+
 
         return (
           <div className="flex flex-col gap-1">
@@ -380,8 +396,9 @@ export const TrucksPage: React.FC = () => {
             </div>
 
             {/* Admin approval actions */}
-            {!isCarrier && (
+            {isAdmin && (
               <div className="flex gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -570,13 +587,34 @@ export const TrucksPage: React.FC = () => {
           </form>
         </div>
       ) : (
-        <Table
-          columns={columns}
-          data={trucks}
-          isLoading={loading}
-          onRowClick={canWriteTrucks ? handleEdit : undefined}
-        />
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+              Filtrar por Tipo de Camión:
+            </span>
+            <div className="w-64">
+              <Select
+                options={[
+                  { value: 'ALL', label: 'Todos los tipos' },
+                  { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
+                  { value: 'BATEA', label: 'Batea' },
+                  { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
+                  { value: 'SEMI', label: 'Semi' }
+                ]}
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              />
+            </div>
+          </div>
+          <Table
+            columns={columns}
+            data={filteredTrucks}
+            isLoading={loading}
+            onRowClick={canWriteTrucks ? handleEdit : undefined}
+          />
+        </div>
       )}
+
     </div>
   );
 };

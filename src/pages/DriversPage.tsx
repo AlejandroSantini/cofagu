@@ -32,7 +32,8 @@ export const DriversPage: React.FC = () => {
 
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
-  const canWriteDrivers = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.user?.role === 'CARRIER');
+  const canWriteDrivers = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.isLogistics() || state.user?.role === 'CARRIER');
+
 
   const {
     register,

@@ -1,4 +1,6 @@
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER' | 'PLAYERO' | 'GAS_STATION';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER' | 'PLAYERO' | 'GAS_STATION' | 'LOGISTICS' | 'TECHNICAL_CENTER';
+
+
 
 export interface User {
   id: number;
@@ -139,10 +141,11 @@ export interface ApiResponse<T> {
 export interface CreateCarrierPayload {
   name: string;
   cuit: string;
-  contactEmail: string;
+  contactEmail?: string;
   contactPhone: string;
   password?: string;
 }
+
 
 export interface CreateDriverPayload {
   name: string;

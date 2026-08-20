@@ -53,7 +53,10 @@ export const carrierService = {
     api.put<ApiResponse<Carrier>>(`/carriers/${id}`, data),
   deleteCarrier: (id: number) =>
     api.delete<ApiResponse<void>>(`/carriers/${id}`),
+  getCarrierHistory: (id: number) =>
+    api.get<ApiResponse<Application[]>>(`/carriers/${id}/history`),
 };
+
 
 // --- DRIVERS ---
 export const driverService = {
@@ -114,8 +117,13 @@ export const loadService = {
   postCompletionDataByApp: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) =>
     api.post<ApiResponse<Application>>(`/loads/applications/${appId}/complete-data`, data),
   reportNoShow: (id: number, payload?: { applicationId?: number }) =>
-    api.post<ApiResponse<Load>>(`/loads/${id}/no-show`, payload || {}),
+    api.post<ApiResponse<void>>(`/loads/${id}/no-show`, payload || {}),
+  cancelApplication: (appId: number, reason: string) =>
+    api.post<ApiResponse<void>>(`/loads/applications/${appId}/cancel`, { reason }),
+  getCancelledApplications: () =>
+    api.get<ApiResponse<Application[]>>('/loads/applications/cancelled'),
 };
+
 
 
 

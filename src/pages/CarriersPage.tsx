@@ -3,7 +3,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { carrierSchema, type CarrierFormValues } from '../schemas/carrier.schema';
 import { carrierService } from '../api/services';
+
 import { type Carrier } from '../types';
+
 import { getErrorMessage } from '../api/errorUtils';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
@@ -36,12 +38,16 @@ export const CarriersPage: React.FC = () => {
   // Selected carrier detail state
   const [selectedCarrier, setSelectedCarrier] = useState<Carrier | null>(null);
   const [carrierDetailsLoading, setCarrierDetailsLoading] = useState(false);
-  const [detailTab, setDetailTab] = useState<'DRIVERS' | 'TRUCKS' | 'USERS'>('DRIVERS');
+  const [detailTab, setDetailTab] = useState<'DRIVERS' | 'TRUCKS' | 'USERS' | 'CANCELLATIONS'>('DRIVERS');
+  const [cancelledApps, setCancelledApps] = useState<any[]>([]);
+  const [cancelledLoading, setCancelledLoading] = useState(false);
 
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
 
   const canWrite = useAuthStore((state) => state.canWrite());
+  const isLogistics = useAuthStore((state) => state.isLogistics());
+
 
   const {
     register,
@@ -97,25 +103,35 @@ export const CarriersPage: React.FC = () => {
   const handleRowClick = async (carrier: Carrier) => {
     setSelectedCarrier(carrier);
     setCarrierDetailsLoading(true);
+    setCancelledLoading(true);
     try {
-      const res = await carrierService.getCarrier(carrier.id);
-      if (res.data.success) {
-        setSelectedCarrier(res.data.data);
+      const [res, historyRes] = await Promise.allSettled([
+        carrierService.getCarrier(carrier.id),
+        carrierService.getCarrierHistory(carrier.id)
+      ]);
+
+      if (res.status === 'fulfilled' && res.value.data.success) {
+        setSelectedCarrier(res.value.data.data);
+      }
+      if (historyRes.status === 'fulfilled' && historyRes.value.data.success) {
+        setCancelledApps(historyRes.value.data.data || []);
       }
     } catch (err) {
       console.error(err);
       showToast('Error al cargar detalles del transportista.', 'error');
     } finally {
       setCarrierDetailsLoading(false);
+      setCancelledLoading(false);
     }
   };
+
 
   const handleEdit = (carrier: Carrier) => {
     setSelectedCarrier(null);
     setEditingId(carrier.id);
     setValue('name', carrier.name);
     setValue('cuit', carrier.cuit);
-    setValue('contactEmail', carrier.contactEmail);
+    setValue('contactEmail', carrier.contactEmail || '');
     setValue('contactPhone', carrier.contactPhone);
     setValue('password', '');
     setShowForm(true);
@@ -125,9 +141,24 @@ export const CarriersPage: React.FC = () => {
     setSubmitLoading(true);
     setError('');
     try {
+      const payload: any = {
+        name: data.name,
+        cuit: data.cuit,
+        contactPhone: data.contactPhone,
+      };
+
+      if (data.contactEmail && data.contactEmail.trim() !== '') {
+        payload.contactEmail = data.contactEmail.trim();
+      }
+
+      if (data.password && data.password.trim() !== '') {
+        payload.password = data.password.trim();
+      }
+
       const res = editingId
-        ? await carrierService.updateCarrier(editingId, data)
-        : await carrierService.createCarrier(data);
+        ? await carrierService.updateCarrier(editingId, payload)
+        : await carrierService.createCarrier(payload);
+
 
       if (res.data.success) {
         showToast(editingId ? 'Transportista actualizado con éxito' : 'Transportista creado con éxito');
@@ -135,7 +166,7 @@ export const CarriersPage: React.FC = () => {
         handleBack();
         setLoading(true);
         await fetchCarriers();
-        if (!editingId && createdCarrier.user) {
+        if (!editingId && !isLogistics && createdCarrier.user) {
           setCredentialsModal({
             email: createdCarrier.user.email,
             password: data.password || '12345'
@@ -271,9 +302,14 @@ export const CarriersPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input label="Nombre / Razón Social" placeholder="Ej: Transportes del Norte S.A." icon={Building} {...register('name')} error={errors.name?.message} />
               <Input label="CUIT" placeholder="Ej: 30-12345678-9" icon={ShieldAlert} {...register('cuit')} error={errors.cuit?.message} />
-              <Input label="Email de Contacto (Usuario)" type="email" placeholder="Ej: contacto@transporte.com" icon={Mail} {...register('contactEmail')} error={errors.contactEmail?.message} />
+              
+              {!isLogistics && (
+                <Input label="Email de Contacto (Usuario)" type="email" placeholder="Ej: contacto@transporte.com" icon={Mail} {...register('contactEmail')} error={errors.contactEmail?.message} />
+              )}
+              
               <Input label="Teléfono de Contacto" placeholder="Ej: 3446662836" icon={Phone} {...register('contactPhone')} error={errors.contactPhone?.message} />
-              {!editingId && (
+              
+              {!editingId && !isLogistics && (
                 <Input label="Contraseña de Acceso (Opcional)" type="password" placeholder="Por defecto: 12345" icon={Key} {...register('password')} error={errors.password?.message} />
               )}
             </div>
@@ -283,6 +319,7 @@ export const CarriersPage: React.FC = () => {
             </div>
           </form>
         </div>
+
       ) : selectedCarrier ? (
         <CarrierDetails
           carrier={selectedCarrier}
@@ -295,7 +332,10 @@ export const CarriersPage: React.FC = () => {
           onCopyCredentials={handleCopyCredentials}
           credentialsModal={credentialsModal}
           copied={copied}
+          cancelledApps={cancelledApps}
+          cancelledLoading={cancelledLoading}
         />
+
       ) : (
         <CarrierList
           carriers={carriers}

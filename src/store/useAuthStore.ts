@@ -12,6 +12,8 @@ interface AuthState {
   isOperator: () => boolean;
   isPlayero: () => boolean;
   isGasStation: () => boolean;
+  isLogistics: () => boolean;
+  isTechnicalCenter: () => boolean;
   isStaff: () => boolean;
   canWrite: () => boolean;
 }
@@ -29,15 +31,18 @@ export const useAuthStore = create<AuthState>()(
       isOperator: () => get().user?.role === 'OPERATOR',
       isPlayero: () => get().user?.role === 'PLAYERO',
       isGasStation: () => get().user?.role === 'GAS_STATION',
+      isLogistics: () => get().user?.role === 'LOGISTICS',
+      isTechnicalCenter: () => get().user?.role === 'TECHNICAL_CENTER',
       isStaff: () => {
         const r = get().user?.role;
-        return r === 'ADMIN' || r === 'OPERATOR' || r === 'EMPLOYEE' || r === 'PLAYERO' || r === 'GAS_STATION';
+        return r === 'ADMIN' || r === 'OPERATOR' || r === 'EMPLOYEE' || r === 'PLAYERO' || r === 'GAS_STATION' || r === 'LOGISTICS' || r === 'TECHNICAL_CENTER';
       },
       canWrite: () => {
         const r = get().user?.role;
-        return r === 'ADMIN' || r === 'OPERATOR';
+        return r === 'ADMIN' || r === 'OPERATOR' || r === 'LOGISTICS';
       },
     }),
+
     {
       name: 'auth-storage',
     }

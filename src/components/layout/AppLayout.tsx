@@ -31,26 +31,31 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const isOperator = user?.role === 'OPERATOR' || user?.role === 'PLAYERO';
 
+  const isLogistics = user?.role === 'LOGISTICS';
+
   const navItems = [
     ...(!isOperator ? [{ label: 'Panel de Control', icon: Home, path: '/' }] : []),
     { label: isOperator ? 'Cargas' : 'Cargas y Viajes', icon: Briefcase, path: '/loads' },
 
-
     ...(isStaff && !isOperator ? [
       { label: 'Transportistas', icon: Truck, path: '/carriers' },
     ] : []),
-    ...(isCarrier ? [
+    ...(isCarrier || isLogistics || isAdmin ? [
       { label: 'Choferes', icon: Users, path: '/drivers' },
       { label: 'Camiones', icon: Truck, path: '/trucks' },
+    ] : []),
+    ...(isCarrier ? [
       { label: 'Facturación', icon: FileText, path: '/invoices' },
     ] : []),
     ...(isAdmin ? [
       { label: 'Documentación', icon: FileText, path: '/documents' },
       { label: 'Grupos', icon: Layers, path: '/groups' },
-      { label: 'Personal', icon: Users, path: '/users' }
+      { label: 'Personal / Usuarios', icon: Users, path: '/users' }
     ] : []),
+
     { label: 'Configuración', icon: Settings, path: '/settings' },
   ];
+
 
 
 
