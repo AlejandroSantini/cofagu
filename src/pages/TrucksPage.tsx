@@ -14,6 +14,7 @@ import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAuthStore } from '../store/useAuthStore';
@@ -111,29 +112,10 @@ export const TrucksPage: React.FC = () => {
   };
 
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const [trkRes, crrRes] = await Promise.all([
-          truckService.getTrucks(),
-          isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
-        ]);
-        if (active) {
-          if (trkRes.data.success) setTrucks(trkRes.data.data);
-          if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
-        }
-      } catch (err) {
-        console.error(err);
-        if (active) setError('Error al cargar camiones o transportistas.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      active = false;
-    };
+    fetchData();
   }, [isCarrier]);
+
+  useAutoRefresh(fetchData);
 
   useEffect(() => {
     let active = true;

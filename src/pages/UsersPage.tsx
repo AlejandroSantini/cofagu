@@ -10,6 +10,7 @@ import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useConfirm } from '../hooks/useConfirm';
 import { getErrorMessage } from '../api/errorUtils';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
@@ -80,6 +81,8 @@ export const UsersPage: React.FC = () => {
     load();
     return () => { mounted = false; };
   }, []);
+
+  useAutoRefresh(loadUsers);
 
   useEffect(() => {
     let active = true;

@@ -14,6 +14,7 @@ import { ErrorMessage } from '../../components/ui/ErrorMessage';
 
 
 import { useToast } from '../../hooks/useToast';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { Toast } from '../../components/ui/Toast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -23,7 +24,7 @@ import { LoadsTable } from './LoadsTable';
 import { LoadForm } from './LoadForm';
 import { LoadDetails } from './LoadDetails';
 
-import { Plus, ChevronLeft } from 'lucide-react';
+import { Plus, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -56,6 +57,9 @@ export const LoadsPage: React.FC = () => {
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number | string>();
 
   const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
+
+  // Auto-refresh using global configuration interval
+  useAutoRefresh(triggerRefresh);
 
   // Load list effect
   useEffect(() => {
@@ -497,35 +501,36 @@ export const LoadsPage: React.FC = () => {
         isLoading={submitLoading}
       />
 
-      <div className="flex flex-col gap-6 mb-8">
-        <PageHeader
-          title={
-            isPlayero
-              ? 'Control de Combustible (Estación / Playero)'
-              : isEmployee
-                ? 'Control de Báscula y Planta'
-                : showForm
-                  ? 'Nueva Carga'
-                  : selectedLoad
-                    ? 'Detalle de Carga'
-                    : 'Gestión de Cargas'
-          }
-          description={
-            isPlayero
-              ? 'Consulta de camiones activos habilitados para carga de combustible.'
-              : isEmployee
-                ? 'Listado de cargas para ingreso/salida y registro de CTG.'
-                : showForm 
-                  ? 'Publica una nueva solicitud de traslado.' 
-                  : selectedLoad 
-                    ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
-                    : 'Consulta cargas disponibles, postulaciones y estado operativo.'
-          }
-        />
+      {!(id && !selectedLoad && !loadError) && (
+        <div className="flex flex-col gap-6 mb-8">
+          <PageHeader
+            title={
+              isPlayero
+                ? 'Control de Combustible (Estación / Playero)'
+                : isEmployee
+                  ? 'Control de Báscula y Planta'
+                  : showForm
+                    ? 'Nueva Carga'
+                    : selectedLoad
+                      ? 'Detalle de Carga'
+                      : 'Gestión de Cargas'
+            }
+            description={
+              isPlayero
+                ? 'Consulta de camiones activos habilitados para carga de combustible.'
+                : isEmployee
+                  ? 'Listado de cargas para ingreso/salida y registro de CTG.'
+                  : showForm 
+                    ? 'Publica una nueva solicitud de traslado.' 
+                    : selectedLoad 
+                      ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
+                      : 'Consulta cargas disponibles, postulaciones y estado operativo.'
+            }
+          />
 
-        <div>
-          {showForm || selectedLoad ? (
-            <Button
+          <div>
+            {showForm || selectedLoad ? (
+              <Button
               variant="outline"
               onClick={() => {
                 if (showForm) handleBack();
@@ -546,16 +551,29 @@ export const LoadsPage: React.FC = () => {
               >
                 Publicar Carga
               </Button>
-            )
-          )}
-
+              )
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <ErrorMessage message={error} className="mb-6" />
 
-      {/* Playero Fuel Authorization Dedicated View */}
-      {isPlayero && !selectedLoad ? (
+      {id && !selectedLoad && !loadError ? (
+        <div className="flex flex-col items-center justify-center p-24 space-y-4">
+          <Loader2 className="animate-spin text-emerald-500" size={48} />
+          <p className="text-slate-500 font-medium animate-pulse">Cargando información del viaje...</p>
+        </div>
+      ) : id && loadError ? (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-xl flex flex-col items-center justify-center text-center max-w-md mx-auto my-12">
+          <AlertTriangle size={48} className="mb-4 opacity-80" />
+          <p className="font-black text-xl mb-2">No se pudo cargar el viaje</p>
+          <p className="text-sm font-medium mb-6">El viaje solicitado no existe o no tienes permisos para acceder a él.</p>
+          <Button variant="outline" className="border-rose-300 hover:bg-rose-100 text-rose-700 font-bold" onClick={() => navigate('/loads')}>
+            Volver al listado principal
+          </Button>
+        </div>
+      ) : isPlayero && !selectedLoad ? (
         <div className="space-y-6">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
             <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">

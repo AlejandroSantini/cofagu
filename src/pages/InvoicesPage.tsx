@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { FileText, Plus, CheckCircle, Eye } from 'lucide-react';
 import { getErrorMessage } from '../api/errorUtils';
 import { useToast } from '../hooks/useToast';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { Toast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 
@@ -60,40 +61,10 @@ export const InvoicesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      try {
-        const [loadsRes, invoicesRes] = await Promise.all([
-          loadService.getLoads({ status: 'COMPLETED' }),
-          invoiceService.getInvoices()
-        ]);
-
-        if (active) {
-          if (loadsRes.data.success) {
-            const unbilled = loadsRes.data.data.filter(l => l.status === 'COMPLETED' && !l.invoiceId);
-            setCompletedLoads(unbilled);
-          }
-          if (invoicesRes.data.success) {
-            setInvoices(invoicesRes.data.data);
-          }
-        }
-      } catch (err) {
-        if (active) {
-          console.log(err);
-          showToast('Error al cargar datos de facturación', 'error');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadData();
-    return () => {
-      active = false;
-    };
+    refreshData();
   }, []);
+
+  useAutoRefresh(refreshData);
 
   useEffect(() => {
     let active = true;

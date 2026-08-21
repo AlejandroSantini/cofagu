@@ -14,6 +14,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { Toast } from '../components/ui/Toast';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAuthStore } from '../store/useAuthStore';
@@ -85,24 +86,10 @@ export const CarriersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const res = await carrierService.getCarriers();
-        if (active && res.data.success) {
-          setCarriers(res.data.data);
-        }
-      } catch (err) {
-        console.error(err);
-        if (active) setError('Error al cargar la lista de transportistas.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    load();
-    return () => { active = false; };
-    return () => { active = false; };
+    fetchCarriers();
   }, []);
+
+  useAutoRefresh(fetchCarriers);
 
   useEffect(() => {
     let active = true;

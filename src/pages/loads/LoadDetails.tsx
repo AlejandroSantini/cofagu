@@ -115,7 +115,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onCompleteLoadByApp,
   onStartTrip,
   onCancelApplication,
-  onNoShow,
   onCompleteLoad,
   onUpdateLoad,
   selectedAppId,
@@ -148,7 +147,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [unloadedWeightInput, setUnloadedWeightInput] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
 
-  const [plantWaybillData, setPlantWaybillData] = useState('');
   const [showRejectedModal, setShowRejectedModal] = useState(false);
 
   // Cancel application modal state
@@ -160,9 +158,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
 
 
-  const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+  const acceptedCount = load.applications?.filter(a => a.status === 'ACCEPTED').length || (load.carrier || load.driver || load.truck || load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS' || load.status === 'COMPLETED' ? 1 : 0);
   const maxCapacity = load.maxTrucks || 1;
-  const selectedApp = load.applications?.find(a => a.id === selectedAppId);
+
 
   const isAdmin = user?.role === 'ADMIN';
   const isOperator = user?.role === 'OPERATOR';
@@ -171,6 +169,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const isCarrier = user?.role === 'CARRIER';
   // LOGISTICS se comporta como transportista en la vista (no ve panel admin, no ve balancera)
   const isStaff = isAdmin || isOperator || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
+  const isBalancero = isOperator || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
 
   // Para LOGISTICS, el carrierId efectivo se resuelve desde los trucks cargados (user.carrierId es null)
   const effectiveCarrierId: number | null | undefined = isLogistics
@@ -248,11 +247,13 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [activeAppId, setActiveAppId] = useState<number | null>(null);
 
   const handleLocalPlantSave = async () => {
-    if (!plantCtg || !plantLoadedWeight) return;
+    const trimmedCtg = plantCtg.trim();
+    const weightNum = Number(plantLoadedWeight);
+    if (!trimmedCtg || isNaN(weightNum) || weightNum <= 0) return;
+
     setLocalSubmitLoading(true);
     let success = false;
 
-    // Bloque 2: Si no hay activeAppId pero hay un único trip aceptado, usarlo automáticamente
     let targetAppId = activeAppId;
     if (!targetAppId && onConfirmDepartureByApp) {
       const acceptedTrips = (load.applications || []).filter(a => a.status === 'ACCEPTED');
@@ -262,12 +263,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     }
 
     if (targetAppId && onConfirmDepartureByApp) {
-      success = await onConfirmDepartureByApp(targetAppId, plantCtg, Number(plantLoadedWeight));
+      success = await onConfirmDepartureByApp(targetAppId, trimmedCtg, weightNum);
     } else if (onUpdateLoad) {
       success = await onUpdateLoad(load.id, {
-        ctg: plantCtg,
-        waybillData: plantWaybillData || undefined,
-        loadedWeight: Number(plantLoadedWeight),
+        ctg: trimmedCtg,
+        loadedWeight: weightNum,
         status: 'IN_PROGRESS'
       } as any);
     }
@@ -276,7 +276,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       setShowPlantModal(false);
       setActiveAppId(null);
       setPlantCtg('');
-      setPlantWaybillData('');
       setPlantLoadedWeight('');
     }
   };
@@ -324,15 +323,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
   const estadoReal = (() => {
     if (isCarrier && myTrips && myTrips.length > 0) {
-      if (myTrips.some(a => a.tripStatus === 'IN_PROGRESS')) return 'IN_PROGRESS';
-      if (myTrips.some(a => a.tripStatus === 'ASSIGNED')) return 'ASSIGNED';
-      if (myTrips.some(a => a.tripStatus === 'COMPLETED')) return 'COMPLETED';
-      return myTrips[0].tripStatus || load.status;
+      const activeMyTrips = myTrips.filter(a => a.status === 'ACCEPTED');
+      if (activeMyTrips.length > 0) {
+        if (activeMyTrips.some(a => a.tripStatus === 'IN_PROGRESS')) return 'IN_PROGRESS';
+        if (activeMyTrips.every(a => a.tripStatus === 'COMPLETED')) return 'COMPLETED';
+        return 'ASSIGNED';
+      }
     }
-    if (!isCarrier && load.applications) {
+    if (load.applications) {
       const acceptedTrips = load.applications.filter(app => app.status === 'ACCEPTED');
       if (acceptedTrips && acceptedTrips.length > 0) {
         if (acceptedTrips.some(a => a.tripStatus === 'IN_PROGRESS')) return 'IN_PROGRESS';
+        if (acceptedTrips.every(a => a.tripStatus === 'COMPLETED')) return 'COMPLETED';
+        return 'ASSIGNED';
       }
     }
     return load.status;
@@ -485,35 +488,29 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       <Modal
         isOpen={showPlantModal}
         onClose={() => setShowPlantModal(false)}
-        title="Registrar Pesaje de Carga (Planta)"
-        confirmText="Guardar Datos"
+        title="Registrar Carta de Porte (CTG) y Peso de Balanza"
+        confirmText="Confirmar Salida de Balanza"
         onConfirm={handleLocalPlantSave}
         isLoading={localSubmitLoading}
-        isConfirmDisabled={!plantCtg || !plantLoadedWeight}
+        isConfirmDisabled={!plantCtg.trim() || !plantLoadedWeight || Number(plantLoadedWeight) <= 0}
       >
         <div className="space-y-4 pt-2">
           <p className="text-sm text-slate-500">
-            Ingrese el Código CTG, Carta de Porte y pesaje cargado en báscula:
+            Ingrese el Código CTG y los Kilos Cargados en Báscula para confirmar la salida del camión:
           </p>
           <Input
             label="Código CTG *"
-            placeholder="Ej: 12345XYZ"
+            placeholder="Ej: 123456789"
             value={plantCtg}
             onChange={(e) => setPlantCtg(e.target.value)}
             className="py-2.5"
           />
           <Input
-            label="Carta de Porte (Número / Código)"
-            placeholder="Ej: 0001-00001234"
-            value={plantWaybillData}
-            onChange={(e) => setPlantWaybillData(e.target.value)}
-            className="py-2.5"
-          />
-          <Input
-            label="Kilos Cargados *"
+            label="Kilos Cargados en Báscula *"
             type="number"
             step="any"
-            placeholder="Ej: 30000"
+            min="1"
+            placeholder="Ej: 30500"
             value={plantLoadedWeight}
             onChange={(e) => setPlantLoadedWeight(e.target.value)}
             className="py-2.5"
@@ -567,11 +564,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       </Modal>
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="space-y-6 w-full">
         
         {/* Main Details Panel */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Detalles de Ruta</span>
@@ -636,45 +632,49 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
-                  <DollarSign size={20} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase">Tarifa</span>
-                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                    ${Number(load.rate).toLocaleString('es-AR')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
-                  <TruckIcon size={20} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase">Cupos Disponibles</span>
-                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                    {load.cuposPendientes !== undefined 
-                      ? `${load.cuposPendientes} libres` 
-                      : `${load.maxTrucks ? load.maxTrucks - acceptedCount : 1} libres`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Progress metric for arrived/completed trucks */}
-              {acceptedCount > 0 && (
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
-                    <CheckCircle size={20} />
+              {!(user?.role === 'OPERATOR' || user?.role === 'PLAYERO' || user?.role === 'EMPLOYEE' || user?.role === 'GAS_STATION') && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                      <DollarSign size={20} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-400 block uppercase">Tarifa</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                        {load.rate != null && !isNaN(Number(load.rate)) ? `$${Number(load.rate).toLocaleString('es-AR')}` : 'S/I'}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 block uppercase">Camiones Arribados</span>
-                    <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {load.applications?.filter(a => a.status === 'ACCEPTED' && a.tripStatus === 'COMPLETED').length || 0} / {load.maxTrucks || acceptedCount} en destino
-                    </span>
+
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                      <TruckIcon size={20} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-400 block uppercase">Cupos Disponibles</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                        {load.cuposPendientes !== undefined 
+                          ? `${load.cuposPendientes} libres` 
+                          : `${load.maxTrucks ? load.maxTrucks - acceptedCount : 1} libres`}
+                      </span>
+                    </div>
                   </div>
-                </div>
+
+                  {/* Progress metric for arrived/completed trucks */}
+                  {acceptedCount > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+                        <CheckCircle size={20} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-400 block uppercase">Camiones Arribados</span>
+                        <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                          {load.applications?.filter(a => a.status === 'ACCEPTED' && a.tripStatus === 'COMPLETED').length || 0} / {load.maxTrucks || acceptedCount} en destino
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
 
@@ -819,20 +819,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   Cancelar Carga
                 </Button>
               )}
-
-              {isStaff && (estadoReal === 'ASSIGNED' || estadoReal === 'IN_PROGRESS') && (
-                <Button 
-                  variant="primary" 
-                  icon={CheckCircle} 
-                  onClick={() => {
-                    setPlantCtg(load.ctg || '');
-                    setPlantLoadedWeight(load.loadedWeight ? String(load.loadedWeight) : '');
-                    setShowPlantModal(true);
-                  }}
-                >
-                  Registrar Pesaje de Carga (Balancera)
-                </Button>
-              )}
               {(isCarrier || isLogistics) && (
                 <>
                   {load.status === 'PUBLISHED' && !hasApplied && (
@@ -924,305 +910,251 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
           </div>
 
-          {/* Contingencies Timeline */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Historial de Contingencias y Novedades</h3>
-            {!load.contingencies || load.contingencies.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No se registraron incidentes durante este traslado.</p>
-            ) : (
-              <div className="relative pl-6 border-l-2 border-slate-100 dark:border-zinc-800 space-y-6">
-                {load.contingencies.map((c) => (
-                  <div key={c.id} className="relative">
-                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 bg-amber-500 rounded-full border-4 border-white dark:border-zinc-900" />
-                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">Reportado por: {c.reportedBy}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{new Date(c.createdAt).toLocaleString('es-AR')}</span>
-                      </div>
-                      <p className="text-sm text-slate-700 dark:text-zinc-300 font-medium">{c.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Application Management (For Admin) or Assignment Information */}
-        <div className="space-y-6">
           {!isLogistics && isStaff ? (
-            load.status === 'PUBLISHED' ? (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
+                Postulaciones y Viajes Asignados ({isBalancero ? (load.applications?.filter(a => a.status === 'ACCEPTED').length || 0) : (load.applications?.length || 0)})
+              </h3>
 
-              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                  Postulaciones ({load.applications?.length || 0})
-                </h3>
-                
-                {!load.applications || load.applications.length === 0 ? (
-                  <p className="text-sm text-slate-500 italic">Esperando postulaciones de transportistas...</p>
-                ) : (
-                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                    {load.applications.map((app) => (
-                      <div
-                        key={app.id}
-                        onClick={() => {
-                          setSelectedAppId(app.id);
-                          setSelectedCarrierId(app.carrierId);
-                        }}
-                        className={`p-4 border rounded-xl cursor-pointer transition-all ${
-                          selectedAppId === app.id
-                            ? 'border-emerald-500 bg-emerald-50/10'
-                            : 'border-slate-100 dark:border-zinc-800 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-bold text-sm text-slate-900 dark:text-white">{app.carrier?.name || 'Transportista'}</span>
-                          <Badge variant={app.status === 'PENDING' ? 'warning' : app.status === 'ACCEPTED' ? 'success' : 'error'}>
-                            {app.status === 'PENDING' ? 'PENDIENTE' : app.status === 'ACCEPTED' ? 'APROBADA' : 'RECHAZADA'}
-                          </Badge>
-                        </div>
-                        {app.notes && <p className="text-xs text-slate-500 mt-1 italic">"{app.notes}"</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {(() => {
+                let appsToShow = load.applications || [];
+                if (isBalancero) {
+                  appsToShow = appsToShow.filter(a => a.status === 'ACCEPTED');
+                }
 
-                {/* Assignment Form */}
-                {selectedAppId && (
-                  <div className="border-t border-slate-100 dark:border-zinc-800 pt-4 space-y-4 animate-in fade-in duration-200">
-                    <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Recursos Propuestos</span>
-                    
-                    {(() => {
-                      const proposedDriver = selectedApp?.driver || carrierDrivers.find(d => d.id === selectedApp?.driverId);
-                      const proposedTruck = selectedApp?.truck || carrierTrucks.find(t => t.id === selectedApp?.truckId);
-                      const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
+                // If no applications and we're just checking accepted trips from direct assignment
+                const rawAcceptedApps = appsToShow.filter(a => a.status === 'ACCEPTED');
+                const directAssignmentTrip = (load.carrier || load.driver || load.truck || load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS' || load.status === 'COMPLETED' || load.applicationId) && rawAcceptedApps.length === 0
+                  ? {
+                      id: (typeof load.applicationId === 'number' ? load.applicationId : (typeof load.id === 'number' ? Number(load.id) || 1 : 1)),
+                      status: 'ACCEPTED',
+                      tripStatus: load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED',
+                      ctg: load.ctg,
+                      loadedWeight: load.loadedWeight,
+                      unloadedWeight: load.unloadedWeight,
+                      carrier: load.carrier,
+                      driver: load.driver,
+                      truck: load.truck,
+                    } as any
+                  : null;
+
+                const hasAnythingToShow = appsToShow.length > 0 || (isBalancero && directAssignmentTrip);
+
+                if (!hasAnythingToShow) {
+                  return <p className="text-sm text-slate-500 italic">Esperando postulaciones de transportistas...</p>;
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {appsToShow.map((app) => {
+                      const isPending = app.status === 'PENDING';
+                      const isAccepted = app.status === 'ACCEPTED';
+                      const tripStatus = app.tripStatus || (load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED');
+                      const tripCtg = app.ctg || load.ctg || '';
+                      const loadedW = app.loadedWeight ?? load.loadedWeight;
+                      const unloadedW = app.unloadedWeight ?? load.unloadedWeight;
+                      const canManageCtg = user?.role !== 'ADMIN' && (isStaff || user?.role === 'OPERATOR' || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION');
 
                       return (
-                        <>
-                          <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
-                            <div className="flex justify-between items-center">
-                              <span className="text-slate-400 uppercase font-bold">Chofer:</span>
-                              <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                {proposedDriver?.name || (selectedApp?.driverId ? `Chofer #${selectedApp.driverId}` : 'No asignado')}
-                                {proposedDriver?.dni ? ` (DNI: ${proposedDriver.dni})` : ''}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-slate-400 uppercase font-bold">Camión:</span>
-                              <span className="text-slate-800 dark:text-zinc-200 font-bold font-mono">
-                                {proposedTruck?.chassisPlate || proposedTruck?.plate || (selectedApp?.truckId ? `Camión #${selectedApp.truckId}` : 'No asignado')}
-                                {proposedTruck?.trailerPlate ? ` / acoplado: ${proposedTruck.trailerPlate}` : ''}
-                              </span>
-                            </div>
-                            {proposedTruck?.type && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-400 uppercase font-bold">Tipo:</span>
-                                <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                  {proposedTruck.type}
-                                </span>
-                              </div>
-                            )}
+                        <div
+                          key={app.id}
+                          onClick={() => {
+                            if (!isBalancero) {
+                              setSelectedAppId(app.id);
+                              setSelectedCarrierId(app.carrierId);
+                            }
+                          }}
+                          className={`p-4 border rounded-xl transition-all ${
+                            !isBalancero ? 'cursor-pointer hover:border-slate-300' : ''
+                          } ${
+                            selectedAppId === app.id
+                              ? 'border-emerald-500 bg-emerald-50/10'
+                              : 'border-slate-100 dark:border-zinc-800'
+                          } ${isAccepted ? 'bg-slate-50 dark:bg-zinc-800/40' : ''}`}
+                        >
+                          <div className="flex justify-between items-center mb-1 border-b border-slate-200/60 dark:border-zinc-700 pb-2">
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{app.carrier?.name || load.carrier?.name || 'Transportista'}</span>
+                            <Badge variant={isAccepted ? (tripStatus === 'COMPLETED' ? 'success' : tripStatus === 'IN_PROGRESS' ? 'primary' : 'warning') : isPending ? 'warning' : 'error'}>
+                              {isAccepted ? (tripStatus === 'COMPLETED' ? 'COMPLETADO' : tripStatus === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO') : isPending ? 'PENDIENTE' : 'RECHAZADA'}
+                            </Badge>
                           </div>
+                          
+                          {app.notes && !isAccepted && <p className="text-xs text-slate-500 mt-2 italic">"{app.notes}"</p>}
 
-                          {selectedApp?.status === 'ACCEPTED' ? (
-                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-xs font-bold flex items-center gap-2">
-                              <CheckCircle size={16} />
-                              Esta postulación ya ha sido aprobada y asignada.
-                            </div>
-                          ) : canUserWrite ? (
-                            <>
-                              {isProposedTruckInvalid && (
-                                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
-                                  <p className="font-bold">⚠️ Seguro de camión propuesto inválido</p>
-                                  <p className="opacity-90">El seguro del camión seleccionado está vencido o incompleto. El transportista debe actualizar los datos.</p>
+                          {isAccepted && (
+                            <div className="space-y-3 mt-3">
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-400 font-bold block uppercase">Camión</span>
+                                  <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
+                                    {app.truck?.chassisPlate || app.truck?.plate || load.truck?.plate || 'S/P'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 font-bold block uppercase">Chofer</span>
+                                  <span className="font-bold text-slate-800 dark:text-zinc-200">
+                                    {app.driver?.name || load.driver?.name || 'N/D'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {tripCtg && (
+                                <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2 rounded border border-slate-200 dark:border-zinc-800 flex justify-between">
+                                  <span>CTG: <strong>{tripCtg}</strong></span>
+                                  {loadedW != null && <span>Cargado: <strong>{Number(loadedW).toLocaleString('es-AR')} kg</strong></span>}
                                 </div>
                               )}
 
-                              <Button
-                                variant="primary"
-                                icon={CheckCircle}
-                                onClick={onAssign}
-                                disabled={!selectedApp?.driverId || !selectedApp?.truckId || acceptedCount >= maxCapacity || isProposedTruckInvalid}
-                                isLoading={submitLoading}
-                                className="w-full"
-                              >
-                                {acceptedCount >= maxCapacity ? 'Cupo completo' : isProposedTruckInvalid ? 'Seguro Vencido / Incompleto' : 'Aprobar Postulación'}
-                              </Button>
-                            </>
-                          ) : null}
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Assigned resources card (trips per truck manager)
-              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                  Recursos y Viajes Asignados ({load.applications?.filter(a => a.status === 'ACCEPTED').length || 0})
-                </h3>
-                
-                {(() => {
-                  const acceptedTrips = load.applications?.filter(a => a.status === 'ACCEPTED') || [];
-                  if (acceptedTrips.length === 0) {
-                    return (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                            <Building size={20} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-400 block uppercase">Transportista</span>
-                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.carrier?.name || 'Sin asignar'}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                            <User size={20} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-400 block uppercase">Chofer</span>
-                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.driver?.name || 'Sin asignar'}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600">
-                            <TruckIcon size={20} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-400 block uppercase">Camión</span>
-                            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{load.truck?.plate || 'Sin asignar'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
+                              {unloadedW != null && (
+                                <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                  Kilos Descargados: {Number(unloadedW).toLocaleString('es-AR')} kg
+                                </div>
+                              )}
 
-                  return (
-                    <div className="space-y-4">
-                      {acceptedTrips.map((trip) => {
-                        const tripStatus = trip.tripStatus || (load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED');
-                        const tripCtg = trip.ctg || load.ctg || '';
-                        const loadedW = trip.loadedWeight ?? load.loadedWeight;
-                        const unloadedW = trip.unloadedWeight ?? load.unloadedWeight;
-
-                        return (
-                          <div key={trip.id} className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-slate-200 dark:border-zinc-700/60 space-y-3">
-                            <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
-                              <span className="font-bold text-sm text-slate-900 dark:text-white">
-                                {trip.carrier?.name || load.carrier?.name || 'Transportista'}
-                              </span>
-                              <Badge variant={tripStatus === 'COMPLETED' ? 'success' : tripStatus === 'IN_PROGRESS' ? 'primary' : 'warning'}>
-                                {tripStatus === 'COMPLETED' ? 'COMPLETADO' : tripStatus === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-slate-400 font-bold block uppercase">Camión</span>
-                                <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
-                                  {trip.truck?.chassisPlate || trip.truck?.plate || load.truck?.plate || 'S/P'}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold block uppercase">Chofer</span>
-                                <span className="font-bold text-slate-800 dark:text-zinc-200">
-                                  {trip.driver?.name || load.driver?.name || 'N/D'}
-                                </span>
-                              </div>
-                            </div>
-
-                            {tripCtg && (
-                              <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2 rounded border border-slate-200 dark:border-zinc-800 flex justify-between">
-                                <span>CTG: <strong>{tripCtg}</strong></span>
-                                {loadedW != null && <span>Cargado: <strong>{Number(loadedW).toLocaleString('es-AR')} kg</strong></span>}
-                              </div>
-                            )}
-
-                            {unloadedW != null && (
-                              <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                                Kilos Descargados: {Number(unloadedW).toLocaleString('es-AR')} kg
-                              </div>
-                            )}
-
-                            {/* Actions for Balancero (EMPLOYEE/ADMIN/PLAYERO) to confirm or edit departure per trip */}
-                            {isStaff && (tripStatus === 'ASSIGNED' || tripStatus === 'IN_PROGRESS') && (
                               <div className="flex flex-col gap-2 mt-2">
-                                <Button
-                                  variant={tripStatus === 'IN_PROGRESS' ? 'outline' : 'primary'}
-                                  size="sm"
-                                  icon={CheckCircle}
-                                  className="w-full text-xs font-bold"
-                                  onClick={() => {
-                                    setActiveAppId(trip.id);
-                                    setPlantCtg(tripCtg);
-                                    setPlantLoadedWeight(loadedW ? String(loadedW) : '');
-                                    setShowPlantModal(true);
-                                  }}
-                                >
-                                  {tripStatus === 'IN_PROGRESS' ? 'Editar Carta de Porte / Kilos' : 'Confirmar Salida de Balanza'}
-                                </Button>
-
-                                {(isCarrier || isLogistics) && onStartTrip ? (
+                                {canManageCtg && (tripStatus === 'ASSIGNED' || tripStatus === 'IN_PROGRESS' || app.status === 'ACCEPTED') && (
                                   <Button
-                                    variant="primary"
+                                    variant={tripCtg ? 'outline' : 'primary'}
                                     size="sm"
-                                    icon={Send}
-                                    className="w-full font-bold text-xs"
-                                    onClick={() => {
-                                      setActiveAppId(trip.id);
-                                      setShowStartTripModal(true);
+                                    icon={CheckCircle}
+                                    className="w-full text-xs font-bold"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveAppId(app.id);
+                                      setPlantCtg(tripCtg);
+                                      setPlantLoadedWeight(loadedW ? String(loadedW) : '');
+                                      setShowPlantModal(true);
                                     }}
                                   >
-                                    🚛 Iniciar Viaje
-                                  </Button>
-                                ) : null}
-
-                                {(user?.role === 'PLAYERO' || user?.role === 'EMPLOYEE' || user?.role === 'ADMIN') && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    icon={XCircle}
-                                    className="w-full text-xs font-bold border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                                    onClick={async () => {
-                                      if (onNoShow) {
-                                        const ok = await onNoShow(load.id, trip.id);
-                                        if (ok) alert("Camión marcado como 'No Llegó'. Cupo liberado.");
-                                      }
-                                    }}
-                                  >
-                                    No Llegó / No Show
+                                    {tripCtg ? 'Editar CTG / Báscula' : 'Cargar CTG (Carta de Porte)'}
                                   </Button>
                                 )}
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                            {/* Staff can finalize trip */}
-                            {isStaff && tripStatus === 'IN_PROGRESS' && (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                icon={CheckCircle}
-                                className="w-full text-xs font-bold mt-2"
-                                onClick={() => {
-                                  setActiveAppId(trip.id);
-                                  setShowCompletionModal(true);
-                                }}
-                              >
-                                Registrar Descarga en Destino
-                              </Button>
-                            )}
+                          {/* Assignment Form inline for Admin when pending app is clicked */}
+                          {!isBalancero && selectedAppId === app.id && !isAccepted && (
+                            <div className="border-t border-slate-100 dark:border-zinc-800 pt-4 mt-3 space-y-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Recursos Propuestos</span>
+                              {(() => {
+                                const proposedDriver = app?.driver || carrierDrivers.find(d => d.id === app?.driverId);
+                                const proposedTruck = app?.truck || carrierTrucks.find(t => t.id === app?.truckId);
+                                const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
+
+                                return (
+                                  <>
+                                    <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 uppercase font-bold">Chofer:</span>
+                                        <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                          {proposedDriver?.name || (app?.driverId ? `Chofer #${app.driverId}` : 'No asignado')}
+                                          {proposedDriver?.dni ? ` (DNI: ${proposedDriver.dni})` : ''}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 uppercase font-bold">Camión:</span>
+                                        <span className="text-slate-800 dark:text-zinc-200 font-bold font-mono">
+                                          {proposedTruck?.chassisPlate || proposedTruck?.plate || (app?.truckId ? `Camión #${app.truckId}` : 'No asignado')}
+                                          {proposedTruck?.trailerPlate ? ` / acoplado: ${proposedTruck.trailerPlate}` : ''}
+                                        </span>
+                                      </div>
+                                      {proposedTruck?.type && (
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-slate-400 uppercase font-bold">Tipo:</span>
+                                          <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                            {proposedTruck.type}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {canUserWrite && (
+                                      <>
+                                        {isProposedTruckInvalid && (
+                                          <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
+                                            <p className="font-bold">⚠️ Seguro de camión propuesto inválido</p>
+                                            <p className="opacity-90">El seguro del camión seleccionado está vencido o incompleto. El transportista debe actualizar los datos.</p>
+                                          </div>
+                                        )}
+                                        <Button
+                                          variant="primary"
+                                          icon={CheckCircle}
+                                          onClick={onAssign}
+                                          disabled={!app?.driverId || !app?.truckId || acceptedCount >= maxCapacity || isProposedTruckInvalid}
+                                          isLoading={submitLoading}
+                                          className="w-full"
+                                        >
+                                          {acceptedCount >= maxCapacity ? 'Cupo completo' : isProposedTruckInvalid ? 'Seguro Vencido / Incompleto' : 'Aprobar Postulación'}
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Direct Assignment Fallback (when no applications exist but load has resources) */}
+                    {directAssignmentTrip && appsToShow.length === 0 && (
+                      <div className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-slate-200 dark:border-zinc-700/60 space-y-3">
+                        <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
+                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                            {directAssignmentTrip.carrier?.name || load.carrier?.name || 'Transportista'}
+                          </span>
+                          <Badge variant={directAssignmentTrip.tripStatus === 'COMPLETED' ? 'success' : directAssignmentTrip.tripStatus === 'IN_PROGRESS' ? 'primary' : 'warning'}>
+                            {directAssignmentTrip.tripStatus === 'COMPLETED' ? 'COMPLETADO' : directAssignmentTrip.tripStatus === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase">Camión</span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
+                              {directAssignmentTrip.truck?.chassisPlate || directAssignmentTrip.truck?.plate || load.truck?.plate || 'S/P'}
+                            </span>
                           </div>
+                          <div>
+                            <span className="text-slate-400 font-bold block uppercase">Chofer</span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200">
+                              {directAssignmentTrip.driver?.name || load.driver?.name || 'N/D'}
+                            </span>
+                          </div>
+                        </div>
 
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            )
+                        {directAssignmentTrip.ctg && (
+                          <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2 rounded border border-slate-200 dark:border-zinc-800 flex justify-between">
+                            <span>CTG: <strong>{directAssignmentTrip.ctg}</strong></span>
+                            {directAssignmentTrip.loadedWeight != null && <span>Cargado: <strong>{Number(directAssignmentTrip.loadedWeight).toLocaleString('es-AR')} kg</strong></span>}
+                          </div>
+                        )}
 
+                        <div className="flex flex-col gap-2 mt-2">
+                          {user?.role !== 'ADMIN' && (isStaff || user?.role === 'OPERATOR' || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION') && (
+                            <Button
+                              variant={directAssignmentTrip.ctg ? 'outline' : 'primary'}
+                              size="sm"
+                              icon={CheckCircle}
+                              className="w-full text-xs font-bold"
+                              onClick={() => {
+                                setActiveAppId(directAssignmentTrip.id);
+                                setPlantCtg(directAssignmentTrip.ctg);
+                                setPlantLoadedWeight(directAssignmentTrip.loadedWeight ? String(directAssignmentTrip.loadedWeight) : '');
+                                setShowPlantModal(true);
+                              }}
+                            >
+                              {directAssignmentTrip.ctg ? 'Editar CTG / Báscula' : 'Cargar CTG (Carta de Porte)'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           ) : (() => {
             // Carrier view: show all their accepted trips (one per truck)
             const myAcceptedTrips = myTrips.filter(app => app.status === 'ACCEPTED');
@@ -1417,7 +1349,31 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             );
           })()}
 
-        </div>
+        {/* Contingencies Timeline */}
+        {!isBalancero && (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Historial de Contingencias y Novedades</h3>
+            {!load.contingencies || load.contingencies.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No se registraron incidentes durante este traslado.</p>
+            ) : (
+              <div className="relative pl-6 border-l-2 border-slate-100 dark:border-zinc-800 space-y-6">
+                {load.contingencies.map((c) => (
+                  <div key={c.id} className="relative">
+                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 bg-amber-500 rounded-full border-4 border-white dark:border-zinc-900" />
+                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">Reportado por: {c.reportedBy}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{new Date(c.createdAt).toLocaleString('es-AR')}</span>
+                      </div>
+                      <p className="text-sm text-slate-700 dark:text-zinc-300 font-medium">{c.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Modal para Cancelación de Postulación con Motivo por Transportista */}

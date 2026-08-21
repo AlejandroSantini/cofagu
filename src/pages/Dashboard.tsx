@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { loadService, truckService } from '../api/services';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 import { type Load } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -22,50 +23,46 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [carrierDocStatus, setCarrierDocStatus] = useState<'APPROVED' | 'PENDING' | 'REJECTED' | 'EXPIRED' | 'MISSING'>('APPROVED');
 
-  useEffect(() => {
-    let active = true;
-    
-    const fetchDashboardData = async () => {
-      try {
-        const res = await loadService.getLoads();
-        if (active && res.data.success) {
-          setLoads(res.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const res = await loadService.getLoads();
+      if (res.data.success) {
+        setLoads(res.data.data);
       }
-      
-      // If user is a CARRIER, fetch their trucks to check insurance status
-      if (user?.role === 'CARRIER') {
-        try {
-          const trkRes = await truckService.getTrucks();
-          if (active && trkRes.data.success) {
-            const trucks = trkRes.data.data;
-            if (trucks.length === 0) {
-              setCarrierDocStatus('MISSING');
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    }
+    
+    // If user is a CARRIER, fetch their trucks to check insurance status
+    if (user?.role === 'CARRIER') {
+      try {
+        const trkRes = await truckService.getTrucks();
+        if (trkRes.data.success) {
+          const trucks = trkRes.data.data;
+          if (trucks.length === 0) {
+            setCarrierDocStatus('MISSING');
+          } else {
+            const hasInvalid = trucks.some(t => t.cargoInsuranceStatus !== 'APPROVED' || (t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).getTime() <= Date.now() : true));
+            if (hasInvalid) {
+              setCarrierDocStatus('PENDING');
             } else {
-              const hasInvalid = trucks.some(t => t.cargoInsuranceStatus !== 'APPROVED' || (t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration).getTime() <= Date.now() : true));
-              if (hasInvalid) {
-                setCarrierDocStatus('PENDING');
-              } else {
-                setCarrierDocStatus('APPROVED');
-              }
+              setCarrierDocStatus('APPROVED');
             }
           }
-        } catch (err) {
-          console.error('Error fetching carrier trucks:', err);
         }
+      } catch (err) {
+        console.error('Error fetching carrier trucks:', err);
       }
-      
-      if (active) setLoading(false);
-    };
-
-    fetchDashboardData();
+    }
     
-    return () => {
-      active = false;
-    };
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useAutoRefresh(fetchDashboardData);
 
 
   // Compute logistics metrics

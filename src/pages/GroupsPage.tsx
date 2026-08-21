@@ -12,6 +12,7 @@ import { Select } from '../components/ui/Select';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useConfirm } from '../hooks/useConfirm';
 import {
   ChevronLeft, Plus, Trash2, UserPlus, UserMinus,
@@ -69,18 +70,15 @@ export const GroupsPage: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    const loadInitialData = async () => {
-      if (!active) return;
-      await Promise.all([fetchGroups(), fetchCarriers()]);
-    };
-
-    loadInitialData();
-    return () => {
-      active = false;
-    };
+  const loadInitialData = useCallback(async () => {
+    await Promise.all([fetchGroups(), fetchCarriers()]);
   }, [fetchGroups, fetchCarriers]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useAutoRefresh(loadInitialData);
 
   useEffect(() => {
     let active = true;
