@@ -141,6 +141,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [contingencyReporter, setContingencyReporter] = useState('');
   const [arrivedTrucksInput, setArrivedTrucksInput] = useState(load.maxTrucks || 1);
   const [completionNotes, setCompletionNotes] = useState('');
+  const [unloadedWeightInput, setUnloadedWeightInput] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
 
   const [showPlantModal, setShowPlantModal] = useState(false);
@@ -168,8 +169,31 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const isLogistics = user?.role === 'LOGISTICS';
   const canUserWrite = isAdmin || isOperator || isLogistics;
   const isCarrier = user?.role === 'CARRIER';
-  const isStaff = isAdmin || isOperator || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || isLogistics;
-  const hasApplied = load.applications?.some(app => app.carrierId === user?.carrierId);
+  // LOGISTICS se comporta como transportista en la vista (no ve panel admin, no ve balancera)
+  const isStaff = isAdmin || isOperator || user?.role === 'EMPLOYEE' || user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
+
+  // Para LOGISTICS, el carrierId efectivo se resuelve desde los trucks cargados (user.carrierId es null)
+  const effectiveCarrierId: number | null | undefined = isLogistics
+    ? (carrierTrucks[0]?.carrierId ?? null)
+    : user?.carrierId;
+
+  // Con paginación no podemos saber si TODOS los camiones del transportista ya están postulados
+  // (solo tenemos los camiones de la página actual cargada).
+  // Por eso nunca ocultamos el botón basándonos en eso: dejamos que el modal informe si no hay disponibles.
+  const appliedTruckIds = new Set(
+    (load.applications || [])
+      .filter(a => a.carrierId === effectiveCarrierId && a.status !== 'CANCELLED')
+      .map(a => a.truckId)
+  );
+  // El botón se oculta solo si el carrier YA tiene una postulación activa Y no hay camiones disponibles
+  // en la página actual. Si hay paginación, es posible que haya más camiones no cargados aún.
+  const availableTrucks = carrierTrucks.filter(t => !appliedTruckIds.has(t.id));
+  // Mostrar botón siempre que haya camiones disponibles en la página cargada,
+  // o si aún no se cargaron camiones (loading), o si hay 0 aplicaciones propias (primer postulación).
+  const myActiveApps = (load.applications || []).filter(
+    a => a.carrierId === effectiveCarrierId && a.status !== 'CANCELLED'
+  );
+  const hasApplied = myActiveApps.length > 0 && availableTrucks.length === 0 && carrierTrucks.length > 0;
 
 
 
@@ -225,8 +249,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     if (!plantCtg || !plantLoadedWeight) return;
     setLocalSubmitLoading(true);
     let success = false;
-    if (activeAppId && onConfirmDepartureByApp) {
-      success = await onConfirmDepartureByApp(activeAppId, plantCtg, Number(plantLoadedWeight));
+
+    // Bloque 2: Si no hay activeAppId pero hay un único trip aceptado, usarlo automáticamente
+    let targetAppId = activeAppId;
+    if (!targetAppId && onConfirmDepartureByApp) {
+      const acceptedTrips = (load.applications || []).filter(a => a.status === 'ACCEPTED');
+      if (acceptedTrips.length === 1) {
+        targetAppId = acceptedTrips[0].id;
+      }
+    }
+
+    if (targetAppId && onConfirmDepartureByApp) {
+      success = await onConfirmDepartureByApp(targetAppId, plantCtg, Number(plantLoadedWeight));
     } else if (onUpdateLoad) {
       success = await onUpdateLoad(load.id, {
         ctg: plantCtg,
@@ -257,28 +291,33 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const handleLocalComplete = async () => {
-    setLocalSubmitLoading(true);
-    let success = false;
-    if (activeAppId && onCompleteLoadByApp) {
-      success = await onCompleteLoadByApp(activeAppId, {
-        unloadedWeight: 1,
-      });
-    } else {
-      const data = {
-        unloadedWeight: 1,
-        arrivedTrucks: arrivedTrucksInput ? Number(arrivedTrucksInput) : undefined,
-        notes: completionNotes || undefined,
-      };
-      success = await onCompleteLoad(data);
-    }
+    // Bloque 3: usar el valor real del input de kilos descargados
+    const kg = Number(unloadedWeightInput);
+    if (!kg || kg <= 0) return;
 
-    setLocalSubmitLoading(false);
-    if (success) {
+    setLocalSubmitLoading(true);
+
+    const onSuccess = () => {
       setShowCompletionModal(false);
       setActiveAppId(null);
       setArrivedTrucksInput(load.maxTrucks || 1);
       setCompletionNotes('');
+      setUnloadedWeightInput('');
+    };
+
+    if (activeAppId && onCompleteLoadByApp) {
+      const ok = await onCompleteLoadByApp(activeAppId, { unloadedWeight: kg });
+      if (ok) onSuccess();
+    } else {
+      const ok = await onCompleteLoad({
+        unloadedWeight: kg,
+        arrivedTrucks: arrivedTrucksInput ? Number(arrivedTrucksInput) : undefined,
+        notes: completionNotes || undefined,
+      });
+      if (ok) onSuccess();
     }
+
+    setLocalSubmitLoading(false);
   };
 
 
@@ -329,63 +368,72 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         confirmText="Confirmar"
         onConfirm={handleLocalApply}
         isLoading={localSubmitLoading}
-        isConfirmDisabled={!postulateDriverId || !postulateTruckId}
+        isConfirmDisabled={!postulateDriverId || !postulateTruckId || availableTrucks.length === 0}
       >
         <div className="space-y-4 pt-2">
-          <p className="text-sm text-slate-500">
-            ¿Deseas postularte a esta solicitud de carga? Por favor selecciona el chofer y camión que realizarán el viaje:
-          </p>
-          <Select
-            label="Chofer Habilitado"
-            icon={User}
-            options={carrierDrivers.map((d) => {
-              const isSuspended = d.isSuspended || (d.suspendedUntil ? new Date(d.suspendedUntil) > new Date() : false);
-              const suffix = isSuspended 
-                ? ` - Suspendido hasta ${d.suspendedUntil ? new Date(d.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}` 
-                : '';
-              return {
-                value: String(d.id),
-                label: `${d.name} (DNI: ${d.dni})${suffix}`,
-                disabled: isSuspended
-              };
-            })}
-            value={postulateDriverId}
-            onChange={(e) => setPostulateDriverId(e.target.value)}
-          />
-          <Select
-            label="Camión Flota"
-            icon={TruckIcon}
-            options={carrierTrucks.map((t) => {
-              const plateText = t.chassisPlate || t.plate || 'S/P';
-              const validInsurance = isTruckInsuranceValid(t);
-              const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
-              const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
-              
-              let suffix = '';
-              if (isSuspended) {
-                suffix = ` - Suspendido hasta ${t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}`;
-              } else if (!validInsurance) {
-                suffix = expired ? ' - Seguro Carga Vencido (Bloqueado)' : ' - Seguro Carga Incompleto (Bloqueado)';
-              }
+          {availableTrucks.length === 0 && carrierTrucks.length > 0 ? (
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-700 dark:text-amber-300 font-medium">
+              ⚠️ Todos los camiones de tu flota ya están postulados a esta carga.
+              Si tenés más camiones que no aparecen aquí, verificá que estén cargados en el sistema.
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-500">
+                ¿Deseas postularte a esta solicitud de carga? Por favor seleccioná el chofer y camión que realizarán el viaje:
+              </p>
+              <Select
+                label="Chofer Habilitado"
+                icon={User}
+                options={carrierDrivers.map((d) => {
+                  const isSuspended = d.isSuspended || (d.suspendedUntil ? new Date(d.suspendedUntil) > new Date() : false);
+                  const suffix = isSuspended 
+                    ? ` - Suspendido hasta ${d.suspendedUntil ? new Date(d.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}` 
+                    : '';
+                  return {
+                    value: String(d.id),
+                    label: `${d.name} (DNI: ${d.dni})${suffix}`,
+                    disabled: isSuspended
+                  };
+                })}
+                value={postulateDriverId}
+                onChange={(e) => setPostulateDriverId(e.target.value)}
+              />
+              <Select
+                label="Camión Flota"
+                icon={TruckIcon}
+                options={availableTrucks.map((t) => {
+                  const plateText = t.chassisPlate || t.plate || 'S/P';
+                  const validInsurance = isTruckInsuranceValid(t);
+                  const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
+                  const expired = t.cargoInsuranceExpiration ? new Date(t.cargoInsuranceExpiration) < new Date() : true;
+                  
+                  let suffix = '';
+                  if (isSuspended) {
+                    suffix = ` - Suspendido hasta ${t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'}`;
+                  } else if (!validInsurance) {
+                    suffix = expired ? ' - Seguro Carga Vencido (Bloqueado)' : ' - Seguro Carga Incompleto (Bloqueado)';
+                  }
 
-              const disabled = isSuspended || !validInsurance;
-              return {
-                value: String(t.id),
-                label: `${plateText} (${t.type})${suffix}`,
-                disabled
-              };
-            })}
-            value={postulateTruckId}
-            onChange={(e) => setPostulateTruckId(e.target.value)}
-          />
+                  const disabled = isSuspended || !validInsurance;
+                  return {
+                    value: String(t.id),
+                    label: `${plateText} (${t.type})${suffix}`,
+                    disabled
+                  };
+                })}
+                value={postulateTruckId}
+                onChange={(e) => setPostulateTruckId(e.target.value)}
+              />
 
-          <Input
-            label="Comentarios / Notas (Opcional)"
-            placeholder="Ej: Contamos con flota disponible para salida inmediata."
-            value={postulateNotes}
-            onChange={(e) => setPostulateNotes(e.target.value)}
-            className="py-2.5"
-          />
+              <Input
+                label="Comentarios / Notas (Opcional)"
+                placeholder="Ej: Contamos con flota disponible para salida inmediata."
+                value={postulateNotes}
+                onChange={(e) => setPostulateNotes(e.target.value)}
+                className="py-2.5"
+              />
+            </>
+          )}
         </div>
       </Modal>
 
@@ -458,29 +506,49 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       </Modal>
 
 
-      {/* Completion Modal - simple confirmation only */}
+      {/* Completion Modal - campo obligatorio de kilos descargados */}
       <Modal
         isOpen={showCompletionModal}
         onClose={() => {
           setShowCompletionModal(false);
           setActiveAppId(null);
+          setUnloadedWeightInput('');
         }}
-        title="Finalizar Viaje"
+        title="Registrar Descarga en Destino"
         confirmText="Confirmar Llegada"
         onConfirm={handleLocalComplete}
         isLoading={localSubmitLoading}
+        isConfirmDisabled={!unloadedWeightInput || Number(unloadedWeightInput) <= 0}
         type="success"
-        description={(() => {
-          const activeTrip = (load.applications || []).find(a => a.id === activeAppId);
-          const plate = activeTrip?.truck?.chassisPlate || activeTrip?.truck?.plate || load.truck?.plate;
-          const driver = activeTrip?.driver?.name || load.driver?.name;
-          
-          if (plate || driver) {
-            return `¿Confirmás la llegada a destino del camión ${plate ? `[${plate}]` : ''} ${driver ? `(Chofer: ${driver})` : ''}? Esta acción marcará su viaje como finalizado.`;
-          }
-          return "¿Confirmás que el camión llegó al destino y completó la descarga? Esta acción marcará el viaje como finalizado.";
-        })()}
-      />
+      >
+        <div className="space-y-4 pt-2">
+          {(() => {
+            const activeTrip = (load.applications || []).find(a => a.id === activeAppId);
+            const plate = activeTrip?.truck?.chassisPlate || activeTrip?.truck?.plate || load.truck?.plate;
+            const driver = activeTrip?.driver?.name || load.driver?.name;
+            if (plate || driver) {
+              return (
+                <p className="text-sm text-slate-500">
+                  Registrando descarga para el camión <strong className="text-slate-700 dark:text-slate-300">{plate ? `[${plate}]` : ''}</strong>{driver ? ` — Chofer: ${driver}` : ''}.
+                </p>
+              );
+            }
+            return null;
+          })()}
+          <Input
+            label="Kilos Descargados en Destino *"
+            type="number"
+            step="any"
+            min="1"
+            placeholder="Ej: 29500"
+            value={unloadedWeightInput}
+            onChange={(e) => setUnloadedWeightInput(e.target.value)}
+            className="py-2.5"
+            icon={Scale}
+          />
+          <p className="text-xs text-slate-400">Este valor es obligatorio. El backend rechazará la solicitud si no se envía.</p>
+        </div>
+      </Modal>
 
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1125,7 +1193,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
           ) : (() => {
             // Carrier view: show all their accepted trips (one per truck)
-            const myTrips = (load.applications || []).filter(app => app.carrierId === user?.carrierId);
+            const myTrips = (load.applications || []).filter(app => app.carrierId === effectiveCarrierId);
             const myAcceptedTrips = myTrips.filter(app => app.status === 'ACCEPTED');
             const myPendingApp = myTrips.find(app => app.status === 'PENDING');
 

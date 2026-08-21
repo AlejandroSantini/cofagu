@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Save, LogOut } from 'lucide-react';
+import { Lock, Save, LogOut, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { authService } from '../api/services';
 import { Button } from '../components/ui/Button';
@@ -11,6 +11,8 @@ import { useThemeStore } from '../store/useThemeStore';
 export const ChangePasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -41,7 +43,6 @@ export const ChangePasswordPage: React.FC = () => {
     try {
       const response = await authService.changePassword(newPassword);
       if (response.data.success) {
-        // Successfully changed, update store state
         if (user && token) {
           setAuth({ ...user, mustChangePassword: false }, token);
         }
@@ -83,24 +84,44 @@ export const ChangePasswordPage: React.FC = () => {
 
             <Input 
               label="Nueva Contraseña"
-              type="password"
+              type={showNewPassword ? "text" : "password"}
               icon={Lock}
               placeholder="Mínimo 5 caracteres"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
               className="py-2.5"
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
+                  title={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <Input 
               label="Confirmar Contraseña"
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               icon={Lock}
               placeholder="Repite la nueva contraseña"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               className="py-2.5"
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
+                  title={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <div className="flex flex-col gap-3 pt-2">

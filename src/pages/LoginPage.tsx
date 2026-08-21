@@ -109,6 +109,15 @@ export const LoginPage: React.FC = () => {
             >
               Iniciar Sesión
             </Button>
+
+            <div className="text-center pt-1">
+              <a
+                href="/forgot-password"
+                className="text-sm text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-medium"
+              >
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
           </form>
         </div>
 

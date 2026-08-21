@@ -39,6 +39,12 @@ export const authService = {
 
   changePassword: (newPassword: string) => 
     api.post<ApiResponse<void>>('/users/change-password', { newPassword }),
+
+  forgotPassword: (email: string) =>
+    api.post<ApiResponse<void>>('/users/forgot-password', { email }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<ApiResponse<void>>('/users/reset-password', { token, newPassword }),
 };
 
 // --- CARRIERS ---

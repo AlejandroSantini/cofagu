@@ -20,6 +20,8 @@ import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 
 import { GroupsPage } from './pages/GroupsPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 
 function App() {
@@ -47,6 +49,9 @@ function App() {
           path="/login" 
           element={!token ? <LoginPage /> : <Navigate to="/" />} 
         />
+        
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         
         <Route
           path="/"
