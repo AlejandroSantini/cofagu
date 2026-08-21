@@ -7,7 +7,7 @@ interface LoadsTableProps {
   loads: Load[];
   isLoading: boolean;
   onRowClick: (load: Load) => void;
-  statusFilter?: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  statusFilter?: string;
   isCarrier?: boolean;
   myCarrierId?: number | null;
 }
@@ -16,12 +16,26 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'warning';
+      case 'PENDING': return 'warning';
       case 'ASSIGNED': return 'primary';
-      case 'IN_PROGRESS': return 'primary';
       case 'ACCEPTED': return 'primary';
+      case 'IN_PROGRESS': return 'primary';
       case 'COMPLETED': return 'success';
       case 'CANCELLED': return 'neutral';
       default: return 'neutral';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED': return 'DISPONIBLE';
+      case 'PENDING': return 'PENDIENTE';
+      case 'ASSIGNED': return 'ASIGNADO';
+      case 'ACCEPTED': return 'ASIGNADO';
+      case 'IN_PROGRESS': return 'EN CURSO';
+      case 'COMPLETED': return 'COMPLETADO';
+      case 'CANCELLED': return 'CANCELADO';
+      default: return status;
     }
   };
 
@@ -82,11 +96,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Estado',
       render: (l: Load) => (
         <Badge variant={getStatusBadgeVariant(l.status)}>
-          {l.status === 'PUBLISHED' ? 'DISPONIBLE' : 
-           l.status === 'ASSIGNED' ? 'ASIGNADO' : 
-           l.status === 'IN_PROGRESS' ? 'EN VIAJE' : 
-           l.status === 'ACCEPTED' ? 'APROBADO' : 
-           l.status === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO'}
+          {getStatusLabel(l.status)}
         </Badge>
       )
     }

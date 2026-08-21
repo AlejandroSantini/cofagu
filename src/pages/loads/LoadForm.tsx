@@ -44,6 +44,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isValid },
   } = useForm<LoadFormValues>({
     resolver: zodResolver(loadSchema),
@@ -136,7 +137,15 @@ export const LoadForm: React.FC<LoadFormProps> = ({
               min="1"
               placeholder="Ej: 1"
               icon={Truck}
-              {...register("maxTrucks")}
+              {...register("maxTrucks", {
+                onBlur: (e) => {
+                  const val = e.target.value;
+                  if (!val || isNaN(Number(val)) || Number(val) < 1) {
+                    setValue("maxTrucks", "1", { shouldValidate: true });
+                  }
+                }
+              })}
+              value={watch("maxTrucks") ?? ""}
               error={errors.maxTrucks?.message}
             />
           </div>

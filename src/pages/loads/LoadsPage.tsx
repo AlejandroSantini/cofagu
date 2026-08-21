@@ -42,7 +42,7 @@ export const LoadsPage: React.FC = () => {
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   
   // Filtering & Selection for Assignment
-  const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED'>(() => isCarrier ? 'PUBLISHED' : 'ALL');
+  const [activeTab, setActiveTab] = useState<'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'>('PUBLISHED');
 
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -63,15 +63,7 @@ export const LoadsPage: React.FC = () => {
     const fetchLoads = async () => {
       setLoading(true);
       try {
-        const loadParams: { status?: string } = {};
-        if (isPlayero && activeTab === 'ALL') {
-          // Playero por defecto sólo trae activos, salvo si filtra
-        } else if (activeTab !== 'ALL') {
-          if (activeTab === 'PUBLISHED') loadParams.status = 'PUBLISHED';
-          if (activeTab === 'ASSIGNED') loadParams.status = 'ASSIGNED';
-          if (activeTab === 'COMPLETED') loadParams.status = 'COMPLETED';
-          if (activeTab === 'CANCELLED') loadParams.status = 'CANCELLED';
-        }
+        const loadParams: { status?: string } = { status: activeTab };
         const res = await loadService.getLoads(loadParams);
         if (active && res.data.success) {
           setLoads(res.data.data);
@@ -408,7 +400,7 @@ export const LoadsPage: React.FC = () => {
     setShowForm(false);
   };
 
-  const handleTabChange = (tab: 'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED') => {
+  const handleTabChange = (tab: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') => {
     setLoading(true);
     setActiveTab(tab);
   };
@@ -741,14 +733,14 @@ export const LoadsPage: React.FC = () => {
           {/* Tab Filters Navigation */}
           <div className="flex border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
             {(isCarrier ? [
-              { id: 'PUBLISHED', label: 'Viajes Disponibles' },
-              { id: 'ASSIGNED', label: 'En Curso' },
-              { id: 'COMPLETED', label: 'Completados' },
-              { id: 'CANCELLED', label: 'Cancelados' }
-            ] : [
-              { id: 'ALL', label: 'Todas' },
               { id: 'PUBLISHED', label: 'Disponibles' },
-              { id: 'ASSIGNED', label: 'En Curso' },
+              { id: 'ASSIGNED', label: 'Asignados' },
+              { id: 'IN_PROGRESS', label: 'En Curso' },
+              { id: 'COMPLETED', label: 'Completados' }
+            ] : [
+              { id: 'PUBLISHED', label: 'Disponibles' },
+              { id: 'ASSIGNED', label: 'Asignados' },
+              { id: 'IN_PROGRESS', label: 'En Curso' },
               { id: 'COMPLETED', label: 'Completadas' },
               { id: 'CANCELLED', label: 'Canceladas' }
             ] as const).map((tab) => (
@@ -773,7 +765,7 @@ export const LoadsPage: React.FC = () => {
             loads={loads}
             isLoading={loading}
             onRowClick={handleRowClick}
-            statusFilter={activeTab !== 'ALL' ? activeTab : undefined}
+            statusFilter={activeTab}
             isCarrier={isCarrier}
             myCarrierId={user?.carrierId}
           />
