@@ -29,6 +29,8 @@ export const authService = {
 
   getUsers: () => api.get<ApiResponse<User[]>>('/users'),
   
+  getUser: (id: number) => api.get<ApiResponse<User>>(`/users/${id}`),
+  
   register: (data: unknown) => api.post<ApiResponse<User>>('/users/register', data),
 
   updateUser: (id: number, data: Partial<User>) => 
@@ -96,36 +98,44 @@ export const truckService = {
 export const loadService = {
   getLoads: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>('/loads', { params }),
-  getLoad: (id: number) =>
+  getLoad: (id: number | string) =>
     api.get<ApiResponse<Load>>(`/loads/${id}`),
+  getApplication: (id: number) =>
+    api.get<ApiResponse<Application>>(`/loads/applications/${id}`),
+  getContingency: (id: number) =>
+    api.get<ApiResponse<any>>(`/loads/contingencies/${id}`),
+  getNoShow: (id: number) =>
+    api.get<ApiResponse<any>>(`/noshows/${id}`),
   createLoad: (data: CreateLoadPayload) =>
     api.post<ApiResponse<Load>>('/loads', data),
-  updateLoad: (id: number, data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean }) =>
+  updateLoad: (id: number | string, data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean }) =>
     api.put<ApiResponse<Load>>(`/loads/${id}`, data),
-  deleteLoad: (id: number) =>
+  deleteLoad: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/loads/${id}`),
-  patchLoadStatus: (id: number, status: string) =>
+  patchLoadStatus: (id: number | string, status: string) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
-  confirmDeparture: (id: number, data: { ctg: string; loadedWeight: number }) =>
+  confirmDeparture: (id: number | string, data: { ctg: string; loadedWeight: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
   confirmDepartureByApp: (appId: number, data: { ctg: string; loadedWeight: number }) =>
     api.post<ApiResponse<Application>>(`/loads/applications/${appId}/confirm-departure`, data),
-  applyToLoad: (id: number, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
+  applyToLoad: (id: number | string, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
-  assignLoad: (id: number, data: { applicationId: number; driverId: number; truckId: number }) =>
+  assignLoad: (id: number | string, data: { applicationId: number; driverId: number; truckId: number }) =>
     api.post<ApiResponse<AssignLoadResponse>>(`/loads/${id}/assign`, data),
-  assignResources: (id: number, data: { driverId: number; truckId: number }) =>
+  assignResources: (id: number | string, data: { driverId: number; truckId: number }) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
-  reportContingency: (id: number, data: { description: string; reportedBy: string }) =>
+  reportContingency: (id: number | string, data: { description: string; reportedBy: string }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
-  postCompletionData: (id: number, data: unknown) =>
+  postCompletionData: (id: number | string, data: unknown) =>
     api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
   postCompletionDataByApp: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) =>
     api.post<ApiResponse<Application>>(`/loads/applications/${appId}/complete-data`, data),
-  reportNoShow: (id: number, payload?: { applicationId?: number }) =>
+  reportNoShow: (id: number | string, payload?: { applicationId?: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/no-show`, payload || {}),
   cancelApplication: (appId: number, reason: string) =>
     api.post<ApiResponse<void>>(`/loads/applications/${appId}/cancel`, { reason }),
+  startTrip: (appId: number, data?: { ctg?: string }) =>
+    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/start-trip`, data || {}),
   getCancelledApplications: () =>
     api.get<ApiResponse<Application[]>>('/loads/applications/cancelled'),
 };
@@ -190,10 +200,12 @@ export const groupService = {
 };
 
 export const invoiceService = {
-  createInvoice: (data: { number?: string; fileUrl?: string; invoiceNumber?: string; invoicePhotoUrl?: string; loadIds: number[] }) =>
+  createInvoice: (data: { number?: string; fileUrl?: string; invoiceNumber?: string; invoicePhotoUrl?: string; loadIds: (number | string)[] }) =>
     api.post<ApiResponse<Invoice>>('/invoices', data),
   getInvoices: () =>
     api.get<ApiResponse<Invoice[]>>('/invoices'),
+  getInvoice: (id: number) =>
+    api.get<ApiResponse<Invoice>>(`/invoices/${id}`),
 };
 
 

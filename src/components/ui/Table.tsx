@@ -74,7 +74,7 @@ export function Table<T>({
             ) : displayedData.length > 0 ? (
               displayedData.map((item, rowIdx) => (
                 <tr 
-                  key={rowIdx} 
+                  key={(item as any).id ?? rowIdx} 
                   onClick={() => onRowClick?.(item)}
                   className={`
                     transition-colors group

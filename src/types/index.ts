@@ -61,10 +61,11 @@ export interface Truck {
 }
 
 
-export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED';
+export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ACCEPTED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED';
 
 export interface Application {
   id: number;
+  loadId?: number;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
   tripStatus?: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   carrierId: number;
@@ -91,7 +92,10 @@ export interface Contingency {
 }
 
 export interface Load {
-  id: number;
+  id: number | string;
+  loadId?: number;
+  applicationId?: number | null;
+  cupoType?: 'OCCUPIED' | 'EMPTY';
   origin: string;
   destination: string;
   date: string;

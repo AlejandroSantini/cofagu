@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { loadService, invoiceService } from '../api/services';
 import { type Load, type Invoice } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -11,15 +12,20 @@ import { FileText, Plus, CheckCircle, Eye } from 'lucide-react';
 import { getErrorMessage } from '../api/errorUtils';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/ui/Toast';
+import { Modal } from '../components/ui/Modal';
 
 export const InvoicesPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
   const { toast, showToast, hideToast } = useToast();
 
   const [completedLoads, setCompletedLoads] = useState<Load[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [selectedLoadIds, setSelectedLoadIds] = useState<number[]>([]);
+  const [selectedLoadIds, setSelectedLoadIds] = useState<(number | string)[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   
@@ -89,7 +95,31 @@ export const InvoicesPage: React.FC = () => {
     };
   }, []);
 
-  const handleSelectLoad = (id: number) => {
+  useEffect(() => {
+    let active = true;
+    const fetchInvoice = async () => {
+      if (!id) {
+        if (active) setSelectedInvoice(null);
+        return;
+      }
+      try {
+        const res = await invoiceService.getInvoice(Number(id));
+        if (active && res.data.success) {
+          setSelectedInvoice(res.data.data);
+        }
+      } catch (err) {
+        if (active) {
+          console.error(err);
+          showToast('Error al cargar la factura', 'error');
+          navigate('/invoices');
+        }
+      }
+    };
+    fetchInvoice();
+    return () => { active = false; };
+  }, [id, navigate]);
+
+  const handleSelectLoad = (id: number | string) => {
     setSelectedLoadIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
@@ -339,9 +369,53 @@ export const InvoicesPage: React.FC = () => {
             columns={invoiceColumns}
             data={invoices}
             isLoading={loading}
+            onRowClick={(inv) => navigate(`/invoices/${inv.id}`)}
           />
         )}
       </div>
+
+      <Modal
+        isOpen={!!selectedInvoice}
+        onClose={() => navigate('/invoices')}
+        title="Detalles de Factura"
+        type="info"
+      >
+        {selectedInvoice && (
+          <div className="space-y-4">
+            <div className="flex flex-col border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <span className="text-xs font-bold text-slate-500 uppercase">Número</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200 text-lg">
+                {selectedInvoice.invoiceNumber || `Factura #${selectedInvoice.id}`}
+              </span>
+            </div>
+            <div className="flex flex-col border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <span className="text-xs font-bold text-slate-500 uppercase">Fecha de Registro</span>
+              <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                {new Date(selectedInvoice.createdAt).toLocaleDateString('es-AR')}
+              </span>
+            </div>
+            <div className="flex flex-col border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <span className="text-xs font-bold text-slate-500 uppercase">Viajes Asociados</span>
+              <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                {selectedInvoice.loadIds?.length || 0} viajes
+              </span>
+            </div>
+            {selectedInvoice.invoicePhotoUrl && (
+              <div className="pt-2">
+                <a 
+                  href={selectedInvoice.invoicePhotoUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <Eye size={18} /> Ver Comprobante
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
       {toast && <Toast message={toast.message} type={toast.type} isVisible={toast.isVisible} onClose={hideToast} />}
     </div>
   );

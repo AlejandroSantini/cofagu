@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { driverSchema, type DriverFormValues } from '../schemas/driver.schema';
@@ -19,6 +20,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Plus, ChevronLeft, Save, Trash2, User, Phone, FileText, Building2 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,13 +97,39 @@ export const DriversPage: React.FC = () => {
     };
   }, [isCarrier]);
 
+  useEffect(() => {
+    let active = true;
+    const fetchSelectedDriver = async () => {
+      if (!id) {
+        if (active) {
+          setShowForm(false);
+          setEditingId(null);
+          reset({ name: '', dni: '', phone: '', carrierId: '' });
+        }
+        return;
+      }
+      try {
+        const res = await driverService.getDriver(Number(id));
+        if (active && res.data.success) {
+          const driver = res.data.data;
+          setEditingId(driver.id);
+          setValue('name', driver.name);
+          setValue('dni', driver.dni);
+          setValue('phone', driver.phone);
+          setValue('carrierId', driver.carrierId ? String(driver.carrierId) : '');
+          setShowForm(true);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) showToast('Error al cargar detalles del chofer.', 'error');
+      }
+    };
+    fetchSelectedDriver();
+    return () => { active = false; };
+  }, [id, setValue]);
+
   const handleEdit = (driver: Driver) => {
-    setEditingId(driver.id);
-    setValue('name', driver.name);
-    setValue('dni', driver.dni);
-    setValue('phone', driver.phone);
-    setValue('carrierId', driver.carrierId ? String(driver.carrierId) : '');
-    setShowForm(true);
+    navigate(`/drivers/${driver.id}`);
   };
 
   const onSubmit = async (data: DriverFormValues) => {
@@ -123,7 +152,11 @@ export const DriversPage: React.FC = () => {
 
       if (res.data.success) {
         showToast(editingId ? 'Chofer actualizado con éxito' : 'Chofer creado con éxito');
-        handleBack();
+        if (id) {
+          navigate('/drivers');
+        } else {
+          handleBack();
+        }
         setLoading(true);
         fetchData();
       }
@@ -154,15 +187,19 @@ export const DriversPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    setShowForm(false);
-    setEditingId(null);
-    reset({
-      name: '',
-      dni: '',
-      phone: '',
-      carrierId: ''
-    });
-    setError('');
+    if (id) {
+      navigate('/drivers');
+    } else {
+      setShowForm(false);
+      setEditingId(null);
+      reset({
+        name: '',
+        dni: '',
+        phone: '',
+        carrierId: ''
+      });
+      setError('');
+    }
   };
 
   const columns = [
@@ -261,7 +298,12 @@ export const DriversPage: React.FC = () => {
               variant={showForm ? 'outline' : 'primary'}
               onClick={() => {
                 if (showForm) handleBack();
-                else setShowForm(true);
+                else {
+                  navigate('/drivers');
+                  setShowForm(true);
+                  setEditingId(null);
+                  reset({ name: '', dni: '', phone: '', carrierId: '' });
+                }
               }}
               icon={showForm ? ChevronLeft : Plus}
               className="w-full md:w-fit px-8"

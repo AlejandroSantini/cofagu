@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Users, Plus, ChevronLeft, Shield, Mail, Trash2, Save, Building } from 'lucide-react';
 import { authService, carrierService } from '../api/services';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -15,6 +16,8 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { type User, type Carrier } from '../types';
 
 export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -78,16 +81,42 @@ export const UsersPage: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const fetchSelectedUser = async () => {
+      if (!id) {
+        if (active) {
+          setShowForm(false);
+          setEditingId(null);
+          setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
+        }
+        return;
+      }
+      try {
+        const res = await authService.getUser(Number(id));
+        if (active && res.data.success) {
+          const user = res.data.data;
+          setEditingId(user.id);
+          setFormData({
+            name: user.name,
+            email: user.email,
+            password: '',
+            role: user.role,
+            carrierId: user.carrierId || ''
+          });
+          setShowForm(true);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) showToast('Error al cargar detalles del usuario.', 'error');
+      }
+    };
+    fetchSelectedUser();
+    return () => { active = false; };
+  }, [id]);
+
   const handleEdit = (user: User) => {
-    setEditingId(user.id);
-    setFormData({
-      name: user.name,
-      email: user.email,
-      password: '',
-      role: user.role,
-      carrierId: user.carrierId || ''
-    });
-    setShowForm(true);
+    navigate(`/users/${user.id}`);
   };
 
   const handleDelete = async () => {
@@ -128,9 +157,13 @@ export const UsersPage: React.FC = () => {
 
       if (response.data.success) {
         loadUsers();
-        setEditingId(null);
-        setShowForm(false);
-        setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
+        if (id) {
+          navigate('/users');
+        } else {
+          setEditingId(null);
+          setShowForm(false);
+          setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
+        }
         showToast(editingId ? 'Usuario actualizado' : 'Usuario creado con éxito');
       }
     } catch (err) {
@@ -219,10 +252,18 @@ export const UsersPage: React.FC = () => {
           variant={showForm ? "outline" : "primary"}
           onClick={() => {
             if (showForm) {
+              if (id) navigate('/users');
+              else {
+                setEditingId(null);
+                setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
+                setShowForm(false);
+              }
+            } else {
+              navigate('/users');
               setEditingId(null);
               setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE', carrierId: '' });
+              setShowForm(true);
             }
-            setShowForm(!showForm);
           }}
           icon={showForm ? ChevronLeft : Plus}
           className="w-full md:w-fit px-8"

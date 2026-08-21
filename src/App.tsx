@@ -7,6 +7,7 @@ import { DriversPage } from './pages/DriversPage';
 import { TrucksPage } from './pages/TrucksPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { useAuthStore } from './store/useAuthStore';
+import { ApplicationRedirect, ContingencyRedirect, NoShowRedirect } from './pages/redirects/EntityRedirects';
 
 import { useThemeStore } from './store/useThemeStore';
 import { RoleGate } from './components/RoleGate';
@@ -70,12 +71,12 @@ function App() {
 
         
         <Route
-          path="/loads"
+          path="/loads/:id?"
           element={token ? <AppLayout><LoadsPage /></AppLayout> : <Navigate to="/login" />}
         />
 
         <Route
-          path="/carriers"
+          path="/carriers/:id?"
           element={
             token ? (
               <AppLayout>
@@ -88,7 +89,7 @@ function App() {
         />
 
         <Route
-          path="/drivers"
+          path="/drivers/:id?"
           element={
             token ? (
               <AppLayout>
@@ -101,7 +102,7 @@ function App() {
         />
 
         <Route
-          path="/trucks"
+          path="/trucks/:id?"
           element={
             token ? (
               <AppLayout>
@@ -114,7 +115,7 @@ function App() {
         />
 
         <Route
-          path="/users"
+          path="/users/:id?"
           element={
             token ? (
               <AppLayout>
@@ -129,7 +130,7 @@ function App() {
 
 
         <Route
-          path="/groups"
+          path="/groups/:id?"
           element={
             token ? (
               <AppLayout>
@@ -156,9 +157,7 @@ function App() {
 
 
         <Route
-          path="/invoices"
-
-
+          path="/invoices/:id?"
           element={
             token ? (
               <AppLayout>
@@ -173,6 +172,20 @@ function App() {
         <Route
           path="/settings"
           element={token ? <AppLayout><ConfigurationPage /></AppLayout> : <Navigate to="/login" />}
+        />
+
+        {/* Redirect Routes for Sub-Entities */}
+        <Route
+          path="/applications/:id"
+          element={token ? <AppLayout><ApplicationRedirect /></AppLayout> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/contingencies/:id"
+          element={token ? <AppLayout><ContingencyRedirect /></AppLayout> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/noshows/:id"
+          element={token ? <AppLayout><NoShowRedirect /></AppLayout> : <Navigate to="/login" />}
         />
 
         <Route path="*" element={<Navigate to="/" />} />

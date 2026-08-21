@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
@@ -37,6 +38,8 @@ const isInsuranceExpired = (expirationDate?: string) => {
 };
 
 export const TrucksPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,35 +135,75 @@ export const TrucksPage: React.FC = () => {
     };
   }, [isCarrier]);
 
+  useEffect(() => {
+    let active = true;
+    const fetchSelectedTruck = async () => {
+      if (!id) {
+        if (active) {
+          setShowForm(false);
+          setEditingId(null);
+          reset({
+            chassisPlate: '',
+            trailerPlate: '',
+            type: '',
+            capacity: '',
+            carrierId: '',
+            cargoInsurancePolicy: '',
+            cargoInsuranceCompany: '',
+            cargoInsuranceExpiration: '',
+            cargoInsurancePhotoUrl: ''
+          });
+        }
+        return;
+      }
+      try {
+        const res = await truckService.getTruck(Number(id));
+        if (active && res.data.success) {
+          const truck = res.data.data;
+          setEditingId(truck.id);
+          setValue('chassisPlate', truck.chassisPlate || truck.plate || '');
+          setValue('trailerPlate', truck.trailerPlate || '');
+          setValue('type', truck.type as any);
+          setValue('capacity', String(truck.capacity));
+          setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
+          setValue('cargoInsurancePolicy', truck.cargoInsurancePolicy || '');
+          setValue('cargoInsuranceCompany', truck.cargoInsuranceCompany || '');
+          setValue('cargoInsuranceExpiration', truck.cargoInsuranceExpiration ? new Date(truck.cargoInsuranceExpiration).toISOString().split('T')[0] : '');
+          setValue('cargoInsurancePhotoUrl', truck.cargoInsurancePhotoUrl || '');
+          setShowForm(true);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) showToast('Error al cargar detalles del camión.', 'error');
+      }
+    };
+    fetchSelectedTruck();
+    return () => { active = false; };
+  }, [id, setValue]);
+
   const handleBack = () => {
-    setShowForm(false);
-    setEditingId(null);
-    reset({
-      chassisPlate: '',
-      trailerPlate: '',
-      type: '',
-      capacity: '',
-      carrierId: '',
-      cargoInsurancePolicy: '',
-      cargoInsuranceCompany: '',
-      cargoInsuranceExpiration: '',
-      cargoInsurancePhotoUrl: ''
-    });
-    setError('');
+    if (id) {
+      navigate('/trucks');
+    } else {
+      setShowForm(false);
+      setEditingId(null);
+      reset({
+        chassisPlate: '',
+        trailerPlate: '',
+        type: '',
+        capacity: '',
+        carrierId: '',
+        cargoInsurancePolicy: '',
+        cargoInsuranceCompany: '',
+        cargoInsuranceExpiration: '',
+        cargoInsurancePhotoUrl: ''
+      });
+      setError('');
+    }
   };
 
   const handleEdit = (truck: Truck) => {
-    setEditingId(truck.id);
-    setValue('chassisPlate', truck.chassisPlate || truck.plate || '');
-    setValue('trailerPlate', truck.trailerPlate || '');
-    setValue('type', truck.type as any);
-    setValue('capacity', String(truck.capacity));
-    setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
-    setValue('cargoInsurancePolicy', truck.cargoInsurancePolicy || '');
-    setValue('cargoInsuranceCompany', truck.cargoInsuranceCompany || '');
-    setValue('cargoInsuranceExpiration', truck.cargoInsuranceExpiration ? new Date(truck.cargoInsuranceExpiration).toISOString().split('T')[0] : '');
-    setValue('cargoInsurancePhotoUrl', truck.cargoInsurancePhotoUrl || '');
-    setShowForm(true);
+    navigate(`/trucks/${truck.id}`);
   };
 
   const handleApproveInsurance = async (truck: Truck, status: 'APPROVED' | 'REJECTED') => {
@@ -213,7 +256,11 @@ export const TrucksPage: React.FC = () => {
           ? 'Los datos del seguro se enviaron a revisión de la administración y el camión quedará temporalmente inhabilitado.'
           : (editingId ? 'Camión actualizado con éxito' : 'Camión creado con éxito');
         showToast(successMsg, 'success');
-        handleBack();
+        if (id) {
+          navigate('/trucks');
+        } else {
+          handleBack();
+        }
         setLoading(true);
         fetchData();
       }
@@ -471,7 +518,22 @@ export const TrucksPage: React.FC = () => {
               variant={showForm ? 'outline' : 'primary'}
               onClick={() => {
                 if (showForm) handleBack();
-                else setShowForm(true);
+                else {
+                  navigate('/trucks');
+                  setShowForm(true);
+                  setEditingId(null);
+                  reset({
+                    chassisPlate: '',
+                    trailerPlate: '',
+                    type: '',
+                    capacity: '',
+                    carrierId: '',
+                    cargoInsurancePolicy: '',
+                    cargoInsuranceCompany: '',
+                    cargoInsuranceExpiration: '',
+                    cargoInsurancePhotoUrl: ''
+                  });
+                }
               }}
               icon={showForm ? ChevronLeft : Plus}
               className="w-full md:w-fit px-8"

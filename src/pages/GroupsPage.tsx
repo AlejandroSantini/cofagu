@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { groupService, carrierService } from '../api/services';
 import { type CarrierGroup, type Carrier } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 
 export const GroupsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [groups, setGroups] = useState<CarrierGroup[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,8 +82,43 @@ export const GroupsPage: React.FC = () => {
     };
   }, [fetchGroups, fetchCarriers]);
 
+  useEffect(() => {
+    let active = true;
+    const loadSelectedGroup = async () => {
+      if (!id) {
+        if (active) {
+          setViewMode('LIST');
+          setEditingGroup(null);
+        }
+        return;
+      }
+      setGroupDetailsLoading(true);
+      try {
+        const res = await groupService.getGroup(Number(id));
+        if (active && res.data.success && res.data.data) {
+          const group = res.data.data;
+          setEditingGroup(group);
+          setGroupName(group.name);
+          setGroupDescription(group.description || '');
+          setSelectedCarrierToAdd('');
+          setViewMode('FORM');
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) showToast('Error al cargar integrantes del grupo.', 'error');
+      } finally {
+        if (active) setGroupDetailsLoading(false);
+      }
+    };
+    loadSelectedGroup();
+    return () => { active = false; };
+  }, [id, showToast]);
+
   // Open create group view
   const handleOpenCreate = () => {
+    if (id) {
+      navigate('/groups');
+    }
     setEditingGroup(null);
     setGroupName('');
     setGroupDescription('');
@@ -90,31 +128,18 @@ export const GroupsPage: React.FC = () => {
 
   // Open edit group view & load details
   const handleOpenEdit = async (group: CarrierGroup) => {
-    setEditingGroup(group);
-    setGroupName(group.name);
-    setGroupDescription(group.description || '');
-    setSelectedCarrierToAdd('');
-    setViewMode('FORM');
-    setGroupDetailsLoading(true);
-
-    try {
-      const res = await groupService.getGroup(group.id);
-      if (res.data.success && res.data.data) {
-        setEditingGroup(res.data.data);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error al cargar integrantes del grupo.', 'error');
-    } finally {
-      setGroupDetailsLoading(false);
-    }
+    navigate(`/groups/${group.id}`);
   };
 
   // Return to group list view
   const handleBackToList = () => {
-    setViewMode('LIST');
-    setEditingGroup(null);
-    fetchGroups();
+    if (id) {
+      navigate('/groups');
+    } else {
+      setViewMode('LIST');
+      setEditingGroup(null);
+      fetchGroups();
+    }
   };
 
   // Save group info (Create or Update)
@@ -146,6 +171,7 @@ export const GroupsPage: React.FC = () => {
           if (detailRes.data.success && detailRes.data.data) {
             setEditingGroup(detailRes.data.data);
           }
+          navigate(`/groups/${createdGroup.id}`);
         }
       }
     } catch (err) {
@@ -171,7 +197,9 @@ export const GroupsPage: React.FC = () => {
         showToast('Grupo eliminado con éxito');
         confirmDelete();
         fetchGroups();
-        if (viewMode === 'FORM') {
+        if (id) {
+          navigate('/groups');
+        } else if (viewMode === 'FORM') {
           setViewMode('LIST');
           setEditingGroup(null);
         }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate, useParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { carrierSchema, type CarrierFormValues } from '../schemas/carrier.schema';
 import { carrierService } from '../api/services';
@@ -24,6 +25,8 @@ import CarrierList from '../components/carriers/CarrierList';
 import CarrierDetails from '../components/carriers/CarrierDetails';
 
 export const CarriersPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -98,36 +101,51 @@ export const CarriersPage: React.FC = () => {
     };
     load();
     return () => { active = false; };
+    return () => { active = false; };
   }, []);
 
-  const handleRowClick = async (carrier: Carrier) => {
-    setSelectedCarrier(carrier);
-    setCarrierDetailsLoading(true);
-    setCancelledLoading(true);
-    try {
-      const [res, historyRes] = await Promise.allSettled([
-        carrierService.getCarrier(carrier.id),
-        carrierService.getCarrierHistory(carrier.id)
-      ]);
+  useEffect(() => {
+    let active = true;
+    const fetchSelectedCarrier = async () => {
+      if (!id) {
+        if (active) setSelectedCarrier(null);
+        return;
+      }
+      setCarrierDetailsLoading(true);
+      setCancelledLoading(true);
+      try {
+        const [res, historyRes] = await Promise.allSettled([
+          carrierService.getCarrier(Number(id)),
+          carrierService.getCarrierHistory(Number(id))
+        ]);
 
-      if (res.status === 'fulfilled' && res.value.data.success) {
-        setSelectedCarrier(res.value.data.data);
+        if (active && res.status === 'fulfilled' && res.value.data.success) {
+          setSelectedCarrier(res.value.data.data);
+        }
+        if (active && historyRes.status === 'fulfilled' && historyRes.value.data.success) {
+          setCancelledApps(historyRes.value.data.data || []);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) showToast('Error al cargar detalles del transportista.', 'error');
+      } finally {
+        if (active) {
+          setCarrierDetailsLoading(false);
+          setCancelledLoading(false);
+        }
       }
-      if (historyRes.status === 'fulfilled' && historyRes.value.data.success) {
-        setCancelledApps(historyRes.value.data.data || []);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error al cargar detalles del transportista.', 'error');
-    } finally {
-      setCarrierDetailsLoading(false);
-      setCancelledLoading(false);
-    }
+    };
+    fetchSelectedCarrier();
+    return () => { active = false; };
+  }, [id]);
+
+  const handleRowClick = async (carrier: Carrier) => {
+    navigate(`/carriers/${carrier.id}`);
   };
 
 
   const handleEdit = (carrier: Carrier) => {
-    setSelectedCarrier(null);
+    navigate('/carriers');
     setEditingId(carrier.id);
     setValue('name', carrier.name);
     setValue('cuit', carrier.cuit);
@@ -188,7 +206,7 @@ export const CarriersPage: React.FC = () => {
       if (res.data.success) {
         showToast('Transportista eliminado con éxito');
         confirmDelete();
-        setSelectedCarrier(null);
+        navigate('/carriers');
         setLoading(true);
         fetchCarriers();
       }
@@ -327,7 +345,7 @@ export const CarriersPage: React.FC = () => {
           detailTab={detailTab}
           setDetailTab={setDetailTab}
           onEdit={handleEdit}
-          onBack={() => setSelectedCarrier(null)}
+          onBack={() => navigate('/carriers')}
           canWrite={canWrite}
           onCopyCredentials={handleCopyCredentials}
           credentialsModal={credentialsModal}

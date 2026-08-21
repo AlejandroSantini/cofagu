@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
@@ -27,6 +27,7 @@ import { Plus, ChevronLeft } from 'lucide-react';
 
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
   const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
@@ -44,6 +45,7 @@ export const LoadsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'ALL' | 'PUBLISHED' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED'>(() => isCarrier ? 'PUBLISHED' : 'ALL');
 
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(() => isCarrier ? user?.carrierId || null : null);
   const [carrierDrivers, setCarrierDrivers] = useState<Driver[]>([]);
   const [carrierTrucks, setCarrierTrucks] = useState<Truck[]>([]);
@@ -51,7 +53,7 @@ export const LoadsPage: React.FC = () => {
 
   const [error, setError] = useState('');
   const { toast, showToast, hideToast } = useToast();
-  const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
+  const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number | string>();
 
   const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -66,7 +68,7 @@ export const LoadsPage: React.FC = () => {
           // Playero por defecto sólo trae activos, salvo si filtra
         } else if (activeTab !== 'ALL') {
           if (activeTab === 'PUBLISHED') loadParams.status = 'PUBLISHED';
-          if (activeTab === 'ASSIGNED') loadParams.status = 'IN_PROGRESS';
+          if (activeTab === 'ASSIGNED') loadParams.status = 'ASSIGNED';
           if (activeTab === 'COMPLETED') loadParams.status = 'COMPLETED';
           if (activeTab === 'CANCELLED') loadParams.status = 'CANCELLED';
         }
@@ -86,20 +88,42 @@ export const LoadsPage: React.FC = () => {
   }, [activeTab, refreshTrigger, isPlayero]);
 
 
+  useEffect(() => {
+    let active = true;
+    const fetchSelectedLoad = async () => {
+      if (!id) {
+        if (active) setSelectedLoad(null);
+        return;
+      }
+
+      try {
+        const res = await loadService.getLoad(Number(id));
+        if (active && res.data.success && res.data.data) {
+          setSelectedLoad(res.data.data);
+          setLoadError(false);
+        } else if (active) {
+          setLoadError(true);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) {
+          setLoadError(true);
+          showToast('Error al cargar detalle del viaje.', 'error');
+        }
+      }
+    };
+    fetchSelectedLoad();
+    return () => { active = false; };
+  }, [id, refreshTrigger]);
+
   // Load details refresh helper after action mutations
   const refreshDetails = async () => {
-    if (!selectedLoad) return;
-    try {
-      const detailsRes = await loadService.getLoad(selectedLoad.id);
-      if (detailsRes.data.success) setSelectedLoad(detailsRes.data.data);
-    } catch (err) {
-      console.error(err);
-    }
+    triggerRefresh();
   };
 
   const isLogistics = user?.role === 'LOGISTICS';
 
-  // Load carrier drivers/trucks when an application or logistics user is active
+  // Load carrier drivers/trucks ONLY when viewing detail or form (not for main loads table)
   useEffect(() => {
     const loadCarrierResources = async () => {
       try {
@@ -112,17 +136,17 @@ export const LoadsPage: React.FC = () => {
         if (trkRes.data.success) setCarrierTrucks(trkRes.data.data);
       } catch (err) {
         console.error(err);
-        showToast('Error al cargar choferes/camiones.', 'error');
       }
     };
-    if (selectedCarrierId || isCarrier || isLogistics) {
+    if (selectedLoad || showForm) {
       loadCarrierResources();
     }
-  }, [selectedCarrierId, isCarrier, isLogistics]);
+  }, [selectedCarrierId, selectedLoad, showForm]);
 
 
   const handleRowClick = async (load: Load) => {
-    setSelectedLoad(load);
+    const targetId = load.loadId || load.id;
+    navigate(`/loads/${targetId}`);
     setSelectedAppId(null);
     if (!isCarrier && !isLogistics) {
       setSelectedCarrierId(null);
@@ -164,7 +188,7 @@ export const LoadsPage: React.FC = () => {
       if (res.data.success) {
         showToast('Carga cancelada/eliminada correctamente');
         confirmDelete();
-        setSelectedLoad(null);
+        navigate('/loads');
         triggerRefresh();
       }
     } catch (err) {
@@ -240,6 +264,7 @@ export const LoadsPage: React.FC = () => {
         } else {
           showToast('Viaje asignado correctamente', 'success');
         }
+        navigate('/loads');
         setSelectedAppId(null);
         setSelectedCarrierId(null);
         setCarrierDrivers([]);
@@ -303,6 +328,21 @@ export const LoadsPage: React.FC = () => {
       }
     } catch (err) {
       showToast(getErrorMessage(err, 'Error al confirmar salida de balanza.'), 'error');
+    }
+    return false;
+  };
+
+  const handleStartTrip = async (appId: number, ctg?: string): Promise<boolean> => {
+    try {
+      const res = await loadService.startTrip(appId, ctg ? { ctg } : undefined);
+      if (res.data.success) {
+        showToast('Viaje iniciado correctamente', 'success');
+        refreshDetails();
+        triggerRefresh();
+        return true;
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al iniciar el viaje.'), 'error');
     }
     return false;
   };
@@ -429,6 +469,32 @@ export const LoadsPage: React.FC = () => {
       />
 
       <Modal
+        isOpen={loadError}
+        onClose={() => {
+          setLoadError(false);
+          navigate('/loads', { replace: true });
+        }}
+        title="Viaje no encontrado"
+      >
+        <div className="space-y-4">
+          <p className="text-slate-600 dark:text-zinc-400">
+            No se pudo cargar la información del viaje. Es posible que no exista, haya sido eliminado o no tengas los permisos necesarios para verlo.
+          </p>
+          <div className="flex justify-end">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setLoadError(false);
+                navigate('/loads', { replace: true });
+              }}
+            >
+              Volver al listado
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={isDelOpen}
         onClose={cancelDelete}
         onConfirm={handleDelete}
@@ -471,7 +537,7 @@ export const LoadsPage: React.FC = () => {
               variant="outline"
               onClick={() => {
                 if (showForm) handleBack();
-                if (selectedLoad) setSelectedLoad(null);
+                if (id) navigate('/loads');
               }}
               icon={ChevronLeft}
               className="w-full md:w-fit px-8"
@@ -590,6 +656,7 @@ export const LoadsPage: React.FC = () => {
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
           onConfirmDepartureByApp={handleConfirmDepartureByApp}
+          onStartTrip={handleStartTrip}
           onCompleteLoadByApp={handleCompleteLoadByApp}
           onCancelApplication={async (appId, reason) => {
             try {
@@ -708,10 +775,10 @@ export const LoadsPage: React.FC = () => {
             onRowClick={handleRowClick}
             statusFilter={activeTab !== 'ALL' ? activeTab : undefined}
             isCarrier={isCarrier}
+            myCarrierId={user?.carrierId}
           />
         </div>
       )}
     </div>
   );
 };
-

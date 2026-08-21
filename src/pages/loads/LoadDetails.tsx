@@ -60,7 +60,7 @@ const SecureImagePreview: React.FC<{ src: string; alt?: string; className?: stri
   }
 
   if (!displayUrl) {
-    return <span className="text-xs text-rose-500 font-bold">Error al cargar vista previa</span>;
+    return null;
   }
 
   return (
@@ -73,14 +73,15 @@ const SecureImagePreview: React.FC<{ src: string; alt?: string; className?: stri
 interface LoadDetailsProps {
   load: Load;
   user: UserType | null;
-  onCancelLoad: (id: number) => void;
+  onCancelLoad: (id: number | string) => void;
   onApply: (notes: string, driverId: number, truckId: number) => Promise<boolean>;
   onStatusChange: (newStatus: string) => void;
   onReportContingency: (description: string, reportedBy: string) => Promise<boolean>;
   onConfirmDepartureByApp?: (appId: number, ctg: string, loadedWeight: number) => Promise<boolean>;
   onCompleteLoadByApp?: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) => Promise<boolean>;
+  onStartTrip?: (appId: number, ctg?: string) => Promise<boolean>;
   onCancelApplication?: (appId: number, reason: string) => Promise<boolean>;
-  onNoShow?: (loadId: number, appId?: number) => Promise<boolean>;
+  onNoShow?: (loadId: number | string, appId?: number) => Promise<boolean>;
   onCompleteLoad: (data: { 
     unloadedWeight: number; 
     fuelConsumption?: number; 
@@ -90,7 +91,7 @@ interface LoadDetailsProps {
     invoiceUrl?: string;
     waybillUrl?: string;
   }) => Promise<boolean>;
-  onUpdateLoad?: (id: number, data: Partial<Load>) => Promise<boolean>;
+  onUpdateLoad?: (id: number | string, data: Partial<Load>) => Promise<boolean>;
   
   // Assignment resources props
   selectedAppId: number | null;
@@ -112,13 +113,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onReportContingency,
   onConfirmDepartureByApp,
   onCompleteLoadByApp,
+  onStartTrip,
   onCancelApplication,
   onNoShow,
   onCompleteLoad,
   onUpdateLoad,
-
-
-  
   selectedAppId,
   setSelectedAppId,
   setSelectedCarrierId,
@@ -131,8 +130,13 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   // Local modal states
   const [showPostulateModal, setShowPostulateModal] = useState(false);
   const [showContingencyModal, setShowContingencyModal] = useState(false);
+  const [showPlantModal, setShowPlantModal] = useState(false);
+  const [showStartTripModal, setShowStartTripModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showDelayedModal, setShowDelayedModal] = useState(false);
   
+  const [plantCtg, setPlantCtg] = useState('');
+  const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
   // Local input states
   const [postulateNotes, setPostulateNotes] = useState('');
   const [postulateDriverId, setPostulateDriverId] = useState('');
@@ -144,11 +148,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [unloadedWeightInput, setUnloadedWeightInput] = useState('');
   const [localSubmitLoading, setLocalSubmitLoading] = useState(false);
 
-  const [showPlantModal, setShowPlantModal] = useState(false);
-  const [plantCtg, setPlantCtg] = useState('');
   const [plantWaybillData, setPlantWaybillData] = useState('');
-  const [plantLoadedWeight, setPlantLoadedWeight] = useState('');
-  const [showDelayedModal, setShowDelayedModal] = useState(false);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
 
   // Cancel application modal state
@@ -194,6 +194,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     a => a.carrierId === effectiveCarrierId && a.status !== 'CANCELLED'
   );
   const hasApplied = myActiveApps.length > 0 && availableTrucks.length === 0 && carrierTrucks.length > 0;
+  
+  const myTrips = (load?.applications || []).filter(app => app.carrierId === effectiveCarrierId);
 
 
 
@@ -320,7 +322,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     setLocalSubmitLoading(false);
   };
 
-
+  const estadoReal = (() => {
+    if (isCarrier && myTrips && myTrips.length > 0) {
+      if (myTrips.some(a => a.tripStatus === 'IN_PROGRESS')) return 'IN_PROGRESS';
+      if (myTrips.some(a => a.tripStatus === 'ASSIGNED')) return 'ASSIGNED';
+      if (myTrips.some(a => a.tripStatus === 'COMPLETED')) return 'COMPLETED';
+      return myTrips[0].tripStatus || load.status;
+    }
+    if (!isCarrier && load.applications) {
+      const acceptedTrips = load.applications.filter(app => app.status === 'ACCEPTED');
+      if (acceptedTrips && acceptedTrips.length > 0) {
+        if (acceptedTrips.some(a => a.tripStatus === 'IN_PROGRESS')) return 'IN_PROGRESS';
+      }
+    }
+    return load.status;
+  })();
 
   return (
     <div className="space-y-6">
@@ -561,11 +577,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Detalles de Ruta</span>
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{load.origin} → {load.destination}</h2>
               </div>
-              <Badge variant={getStatusBadgeVariant(load.status)}>
-                {load.status === 'PUBLISHED' ? 'DISPONIBLE' : 
-                 load.status === 'ASSIGNED' ? 'ASIGNADO' : 
-                 load.status === 'IN_PROGRESS' ? 'EN VIAJE' : 
-                 load.status === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO'}
+              <Badge variant={getStatusBadgeVariant(estadoReal)}>
+                {estadoReal === 'PUBLISHED' ? 'DISPONIBLE' : 
+                 estadoReal === 'ASSIGNED' ? 'ASIGNADO' : 
+                 estadoReal === 'IN_PROGRESS' ? 'EN VIAJE' : 
+                 estadoReal === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO'}
               </Badge>
             </div>
 
@@ -655,7 +671,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <div>
                     <span className="text-xs font-bold text-slate-400 block uppercase">Camiones Arribados</span>
                     <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {load.applications?.filter(a => a.status === 'ACCEPTED' && (a.tripStatus === 'COMPLETED' || load.status === 'COMPLETED')).length || 0} / {acceptedCount} en destino
+                      {load.applications?.filter(a => a.status === 'ACCEPTED' && a.tripStatus === 'COMPLETED').length || 0} / {load.maxTrucks || acceptedCount} en destino
                     </span>
                   </div>
                 </div>
@@ -804,7 +820,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </Button>
               )}
 
-              {isStaff && (load.status === 'ASSIGNED' || load.status === 'IN_PROGRESS') && (
+              {isStaff && (estadoReal === 'ASSIGNED' || estadoReal === 'IN_PROGRESS') && (
                 <Button 
                   variant="primary" 
                   icon={CheckCircle} 
@@ -824,17 +840,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       Postularse a este viaje
                     </Button>
                   )}
-                  {load.status === 'ASSIGNED' && isCarrier && (
-                    <Button variant="primary" icon={Send} onClick={() => onStatusChange('IN_PROGRESS')}>
-                      Iniciar Traslado
-                    </Button>
-                  )}
                 </>
               )}
 
 
 
-              {(isCarrier || canUserWrite) && load.status === 'IN_PROGRESS' && (
+              {(isCarrier || canUserWrite) && (load.status === 'IN_PROGRESS' || myTrips.some(t => t.tripStatus === 'IN_PROGRESS' || t.tripStatus === 'ASSIGNED')) && (
                 <>
                   <Button 
                     variant="outline" 
@@ -981,35 +992,45 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <div className="border-t border-slate-100 dark:border-zinc-800 pt-4 space-y-4 animate-in fade-in duration-200">
                     <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Recursos Propuestos</span>
                     
-                    {selectedApp?.status === 'ACCEPTED' ? (
-                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-sm font-semibold">
-                        Esta postulación ya ha sido aprobada y asignada.
-                      </div>
-                    ) : canUserWrite ? (
-                      <>
-                        {(() => {
-                          const proposedDriver = selectedApp?.driver;
-                          const proposedTruck = selectedApp?.truck;
-                          const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
+                    {(() => {
+                      const proposedDriver = selectedApp?.driver || carrierDrivers.find(d => d.id === selectedApp?.driverId);
+                      const proposedTruck = selectedApp?.truck || carrierTrucks.find(t => t.id === selectedApp?.truckId);
+                      const isProposedTruckInvalid = proposedTruck ? !isTruckInsuranceValid(proposedTruck) : false;
 
-                          return (
-                            <>
-                              <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-slate-400 uppercase font-bold">Chofer:</span>
-                                  <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                    {proposedDriver?.name || `ID: ${selectedApp?.driverId || 'No asignado'}`}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-slate-400 uppercase font-bold">Camión:</span>
-                                  <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                    {proposedTruck?.chassisPlate || proposedTruck?.plate || `ID: ${selectedApp?.truckId || 'No asignado'}`}
-                                  </span>
-                                </div>
+                      return (
+                        <>
+                          <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 uppercase font-bold">Chofer:</span>
+                              <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                {proposedDriver?.name || (selectedApp?.driverId ? `Chofer #${selectedApp.driverId}` : 'No asignado')}
+                                {proposedDriver?.dni ? ` (DNI: ${proposedDriver.dni})` : ''}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 uppercase font-bold">Camión:</span>
+                              <span className="text-slate-800 dark:text-zinc-200 font-bold font-mono">
+                                {proposedTruck?.chassisPlate || proposedTruck?.plate || (selectedApp?.truckId ? `Camión #${selectedApp.truckId}` : 'No asignado')}
+                                {proposedTruck?.trailerPlate ? ` / acoplado: ${proposedTruck.trailerPlate}` : ''}
+                              </span>
+                            </div>
+                            {proposedTruck?.type && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-400 uppercase font-bold">Tipo:</span>
+                                <span className="text-slate-800 dark:text-zinc-200 font-bold">
+                                  {proposedTruck.type}
+                                </span>
                               </div>
+                            )}
+                          </div>
 
-
+                          {selectedApp?.status === 'ACCEPTED' ? (
+                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl text-xs font-bold flex items-center gap-2">
+                              <CheckCircle size={16} />
+                              Esta postulación ya ha sido aprobada y asignada.
+                            </div>
+                          ) : canUserWrite ? (
+                            <>
                               {isProposedTruckInvalid && (
                                 <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
                                   <p className="font-bold">⚠️ Seguro de camión propuesto inválido</p>
@@ -1028,14 +1049,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 {acceptedCount >= maxCapacity ? 'Cupo completo' : isProposedTruckInvalid ? 'Seguro Vencido / Incompleto' : 'Aprobar Postulación'}
                               </Button>
                             </>
-                          );
-                        })()}
-                      </>
-                    ) : (
-                      <div className="p-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 rounded-xl text-xs italic">
-                        Solo los administradores y operadores pueden aprobar postulaciones.
-                      </div>
-                    )}
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1147,6 +1164,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   {tripStatus === 'IN_PROGRESS' ? 'Editar Carta de Porte / Kilos' : 'Confirmar Salida de Balanza'}
                                 </Button>
 
+                                {(isCarrier || isLogistics) && onStartTrip ? (
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    icon={Send}
+                                    className="w-full font-bold text-xs"
+                                    onClick={() => {
+                                      setActiveAppId(trip.id);
+                                      setShowStartTripModal(true);
+                                    }}
+                                  >
+                                    🚛 Iniciar Viaje
+                                  </Button>
+                                ) : null}
+
                                 {(user?.role === 'PLAYERO' || user?.role === 'EMPLOYEE' || user?.role === 'ADMIN') && (
                                   <Button
                                     variant="outline"
@@ -1193,7 +1225,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
           ) : (() => {
             // Carrier view: show all their accepted trips (one per truck)
-            const myTrips = (load.applications || []).filter(app => app.carrierId === effectiveCarrierId);
             const myAcceptedTrips = myTrips.filter(app => app.status === 'ACCEPTED');
             const myPendingApp = myTrips.find(app => app.status === 'PENDING');
 
@@ -1212,9 +1243,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {myPendingApp && (
                   <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">Tu Postulación</h3>
-                    <div className="p-4 rounded-xl flex items-center justify-between border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
-                      <span className="text-sm font-bold text-amber-700 dark:text-amber-300">Postulado — en revisión por el operador</span>
-                      <div className="flex items-center gap-2">
+                    <div className="p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
+                      <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                        Postulado — en revisión por el operador
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
                         <Badge variant="warning">PENDIENTE</Badge>
                         <Button
                           variant="outline"
@@ -1245,16 +1278,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         const effectiveTripStatus = trip.tripStatus || (load.status === 'COMPLETED' ? 'COMPLETED' : load.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ASSIGNED');
                         const isTripInProgress = effectiveTripStatus === 'IN_PROGRESS' || load.status === 'IN_PROGRESS';
                         const isTripCompleted = effectiveTripStatus === 'COMPLETED' || load.status === 'COMPLETED';
-                        const tripCtg = trip.ctg || load.ctg || '';
-                        const loadedW = trip.loadedWeight ?? load.loadedWeight;
+                        const tripCtg = trip.ctg || '';
+                        const loadedW = trip.loadedWeight;
 
+                        const driverName = trip.driver?.name || carrierDrivers.find(d => d.id === trip.driverId)?.name || 'Chofer Asignado';
+                        const truckPlate = trip.truck?.chassisPlate || trip.truck?.plate || carrierTrucks.find(t => t.id === trip.truckId)?.plate || 'S/P';
+                        const truckType = trip.truck?.type || carrierTrucks.find(t => t.id === trip.truckId)?.type || 'N/D';
 
                         return (
                           <div key={trip.id} className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-slate-200 dark:border-zinc-700/60 space-y-3">
                             {/* Header */}
                             <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
                               <span className="font-bold text-sm text-slate-900 dark:text-white">
-                                {trip.driver?.name || load.driver?.name || 'Chofer Asignado'}
+                                {driverName}
                               </span>
                               <Badge variant={isTripCompleted ? 'success' : isTripInProgress ? 'primary' : 'warning'}>
                                 {isTripCompleted ? 'COMPLETADO' : isTripInProgress ? 'EN VIAJE' : 'ASIGNADO'}
@@ -1266,20 +1302,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               <div>
                                 <span className="text-slate-400 font-bold block uppercase">Patente</span>
                                 <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
-                                  {trip.truck?.chassisPlate || trip.truck?.plate || load.truck?.plate || 'S/P'}
+                                  {truckPlate}
                                 </span>
                               </div>
                               <div>
                                 <span className="text-slate-400 font-bold block uppercase">Tipo</span>
                                 <span className="font-bold text-slate-800 dark:text-zinc-200">
-                                  {trip.truck?.type || load.truck?.type || 'N/D'}
+                                  {truckType}
                                 </span>
                               </div>
                             </div>
 
                             {/* CTG & loaded weight (set by balancero) */}
-                            {(!isTripCompleted && isTripInProgress) || tripCtg ? (
-                              <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2.5 rounded border border-slate-200 dark:border-zinc-800 space-y-1">
+                            {(tripCtg || loadedW != null) ? (
+                              <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2.5 rounded border border-slate-200 dark:border-zinc-800 space-y-1 text-slate-800 dark:text-zinc-200">
                                 {tripCtg && <div>CTG: <strong>{tripCtg}</strong></div>}
                                 {loadedW != null && <div>Kilos cargados: <strong>{Number(loadedW).toLocaleString('es-AR')} kg</strong></div>}
                               </div>
@@ -1287,20 +1323,62 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                             {/* Unloaded weight if completed */}
                             {isTripCompleted && (
-                              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                                Llegada confirmada — en destino
+                              <div className="space-y-2">
+                                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                                  <CheckCircle size={14} />
+                                  Llegada confirmada — en destino
+                                </div>
+                                {load.status !== 'COMPLETED' && (
+                                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-semibold space-y-1">
+                                    <p className="font-bold flex items-center gap-1.5">
+                                      <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                                      Tu viaje ha finalizado con éxito.
+                                    </p>
+                                    <p className="opacity-90 leading-relaxed">
+                                      La carga se moverá a "Completados" y se habilitará para facturación cuando el resto de los camiones asignados lleguen a destino.
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             )}
 
-                            {/* Assigned: waiting for balancero - carrier can cancel before trip goes IN_PROGRESS */}
+                            {/* Assigned: Carrier can only start if balancero/admin already loaded the CTG */}
                             {!isTripInProgress && !isTripCompleted && (
                               <div className="space-y-2">
-                                <p className="text-xs text-slate-400 italic">Esperando confirmación de salida en balanza por el operador.</p>
+                                {!tripCtg ? (
+                                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                                      <Clock size={14} className="shrink-0" />
+                                      Esperando que el balancero u operador registre la Carta de Porte (CTG) en báscula.
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {(isCarrier || canUserWrite) ? (
+                                      <Button
+                                        variant="primary"
+                                        size="sm"
+                                        icon={Send}
+                                        className="w-full font-bold"
+                                        onClick={() => {
+                                          setActiveAppId(trip.id);
+                                          setShowStartTripModal(true);
+                                        }}
+                                      >
+                                        Iniciar Viaje
+                                      </Button>
+                                    ) : (
+                                      <p className="text-xs text-slate-400 italic">
+                                        Carta de Porte (CTG) cargada. Esperando que el transportista inicie el viaje.
+                                      </p>
+                                    )}
+                                  </>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   icon={XCircle}
-                                  className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                                  className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold mt-2"
                                   onClick={() => {
                                     setCancelAppId(trip.id);
                                     setShowCancelAppModal(true);
@@ -1385,6 +1463,34 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           />
         </div>
       </Modal>
+
+      {/* Modal para Iniciar Viaje por Transportista */}
+      <Modal
+        isOpen={showStartTripModal}
+        onClose={() => {
+          setShowStartTripModal(false);
+          setActiveAppId(null);
+        }}
+        onConfirm={async () => {
+          if (onStartTrip && activeAppId) {
+            setLocalSubmitLoading(true);
+            try {
+              const ok = await onStartTrip(activeAppId);
+              if (ok) {
+                setShowStartTripModal(false);
+                setActiveAppId(null);
+              }
+            } finally {
+              setLocalSubmitLoading(false);
+            }
+          }
+        }}
+        title="Iniciar Viaje"
+        description="¿Estás seguro de que deseas confirmar el inicio del viaje para este camión? El estado del traslado pasará a estar 'En Viaje'."
+        type="info"
+        confirmText="Confirmar Inicio"
+        isLoading={localSubmitLoading}
+      />
     </div>
   );
 };
