@@ -68,7 +68,9 @@ export const LoadsPage: React.FC = () => {
       setLoading(true);
       try {
         const loadParams: { status?: string } = { status: activeTab };
-        const res = await loadService.getLoads(loadParams);
+        const res = activeTab === 'PUBLISHED' 
+          ? await loadService.getTrips(loadParams) 
+          : await loadService.getLoads(loadParams);
         if (active && res.data.success) {
           setLoads(res.data.data);
         }
@@ -93,7 +95,13 @@ export const LoadsPage: React.FC = () => {
       }
 
       try {
-        const res = await loadService.getLoad(Number(id));
+        let res;
+        try {
+          res = await loadService.getTrip(Number(id));
+        } catch (tripErr) {
+          res = await loadService.getLoad(Number(id));
+        }
+        
         if (active && res.data.success && res.data.data) {
           setSelectedLoad(res.data.data);
           setLoadError(false);
@@ -116,6 +124,8 @@ export const LoadsPage: React.FC = () => {
   const refreshDetails = async () => {
     triggerRefresh();
   };
+
+
 
   const isLogistics = user?.role === 'LOGISTICS';
 
@@ -156,7 +166,7 @@ export const LoadsPage: React.FC = () => {
     setSubmitLoading(true);
     setError('');
     try {
-      const res = await loadService.createLoad({
+      const res = await loadService.createTrip({
         ...data,
         rate: Number(data.rate),
         maxTrucks: Number(data.maxTrucks),
@@ -212,7 +222,7 @@ export const LoadsPage: React.FC = () => {
     }
 
     try {
-      const res = await loadService.applyToLoad(selectedLoad.id, {
+      const res = await loadService.applyToTrip(selectedLoad.id, {
         carrierId: targetCarrierId,
         notes,
         driverId,
@@ -249,8 +259,7 @@ export const LoadsPage: React.FC = () => {
     }
     setSubmitLoading(true);
     try {
-      const res = await loadService.assignLoad(selectedLoad.id, {
-        applicationId: selectedAppId,
+      const res = await loadService.acceptTripApplication(selectedAppId, {
         driverId: Number(selectedApp.driverId),
         truckId: Number(selectedApp.truckId)
       });
@@ -312,10 +321,10 @@ export const LoadsPage: React.FC = () => {
   };
 
 
-  const handleConfirmDepartureByApp = async (appId: number, ctg: string, loadedWeight: number): Promise<boolean> => {
-
+  const handleConfirmDeparture = async (ctg: string, loadedWeight: number): Promise<boolean> => {
+    if (!selectedLoad) return false;
     try {
-      const res = await loadService.confirmDepartureByApp(appId, { ctg, loadedWeight });
+      const res = await loadService.confirmDeparture(selectedLoad.id, { ctg, loadedWeight });
       if (res.data.success) {
         showToast('Salida de balanza confirmada con éxito', 'success');
         refreshDetails();
@@ -343,25 +352,7 @@ export const LoadsPage: React.FC = () => {
     return false;
   };
 
-  const handleCompleteLoadByApp = async (appId: number, data: {
-    unloadedWeight: number;
-    waybillUrl?: string;
-    fuelConsumption?: number;
-    mileage?: number;
-  }): Promise<boolean> => {
-    try {
-      const res = await loadService.postCompletionDataByApp(appId, data);
-      if (res.data.success) {
-        showToast('Descarga en destino confirmada con éxito', 'success');
-        refreshDetails();
-        triggerRefresh();
-        return true;
-      }
-    } catch (err) {
-      showToast(getErrorMessage(err, 'Error al registrar descarga en destino.'), 'error');
-    }
-    return false;
-  };
+
 
   const handleCompleteLoad = async (data: { 
     unloadedWeight: number; 
@@ -665,9 +656,9 @@ export const LoadsPage: React.FC = () => {
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}
-          onConfirmDepartureByApp={handleConfirmDepartureByApp}
+          onConfirmDeparture={handleConfirmDeparture}
           onStartTrip={handleStartTrip}
-          onCompleteLoadByApp={handleCompleteLoadByApp}
+          onCompleteLoad={handleCompleteLoad}
           onCancelApplication={async (appId, reason) => {
             try {
               const res = await loadService.cancelApplication(appId, reason);
@@ -696,7 +687,6 @@ export const LoadsPage: React.FC = () => {
             }
             return false;
           }}
-          onCompleteLoad={handleCompleteLoad}
 
 
           selectedAppId={selectedAppId}
@@ -733,9 +723,8 @@ export const LoadsPage: React.FC = () => {
               }
             } catch (err) {
               showToast(getErrorMessage(err, 'Error al actualizar el viaje.'), 'error');
-            } finally {
-              setSubmitLoading(false);
             }
+            setSubmitLoading(false);
             return false;
           }}
           submitLoading={submitLoading}

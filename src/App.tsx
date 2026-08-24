@@ -12,6 +12,7 @@ import { ApplicationRedirect, ContingencyRedirect, NoShowRedirect } from './page
 import { useThemeStore } from './store/useThemeStore';
 import { RoleGate } from './components/RoleGate';
 import { useEffect } from 'react';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 
 import { ConfigurationPage } from './pages/ConfigurationPage';
@@ -29,6 +30,9 @@ function App() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
+
+  // Initialize push notifications when user is authenticated
+  usePushNotifications(!!token);
 
   useEffect(() => {
     if (isDarkMode) {

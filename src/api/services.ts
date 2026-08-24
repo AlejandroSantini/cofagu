@@ -47,6 +47,9 @@ export const authService = {
 
   resetPassword: (token: string, newPassword: string) =>
     api.post<ApiResponse<void>>('/users/reset-password', { token, newPassword }),
+
+  registerFcmToken: (fcmToken: string) =>
+    api.post<ApiResponse<void>>('/users/fcm-token', { fcmToken }),
 };
 
 // --- CARRIERS ---
@@ -98,6 +101,10 @@ export const truckService = {
 export const loadService = {
   getLoads: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>('/loads', { params }),
+  getTrips: (params?: { status?: string; carrierId?: number }) =>
+    api.get<ApiResponse<Load[]>>('/trips', { params }),
+  getTrip: (id: number | string) =>
+    api.get<ApiResponse<Load>>(`/trips/${id}`),
   getLoad: (id: number | string) =>
     api.get<ApiResponse<Load>>(`/loads/${id}`),
   getApplication: (id: number) =>
@@ -106,8 +113,8 @@ export const loadService = {
     api.get<ApiResponse<any>>(`/loads/contingencies/${id}`),
   getNoShow: (id: number) =>
     api.get<ApiResponse<any>>(`/noshows/${id}`),
-  createLoad: (data: CreateLoadPayload) =>
-    api.post<ApiResponse<Load>>('/loads', data),
+  createTrip: (data: CreateLoadPayload) =>
+    api.post<ApiResponse<Load>>('/trips', data),
   updateLoad: (id: number | string, data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean }) =>
     api.put<ApiResponse<Load>>(`/loads/${id}`, data),
   deleteLoad: (id: number | string) =>
@@ -118,10 +125,10 @@ export const loadService = {
     api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
   confirmDepartureByApp: (appId: number, data: { ctg: string; loadedWeight: number }) =>
     api.post<ApiResponse<Application>>(`/loads/applications/${appId}/confirm-departure`, data),
-  applyToLoad: (id: number | string, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
-    api.post<ApiResponse<void>>(`/loads/${id}/apply`, data),
-  assignLoad: (id: number | string, data: { applicationId: number; driverId: number; truckId: number }) =>
-    api.post<ApiResponse<AssignLoadResponse>>(`/loads/${id}/assign`, data),
+  applyToTrip: (id: number | string, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
+    api.post<ApiResponse<void>>(`/trips/${id}/apply`, data),
+  acceptTripApplication: (appId: number | string, data: { driverId: number; truckId: number }) =>
+    api.post<ApiResponse<AssignLoadResponse>>(`/trips/applications/${appId}/accept`, data),
   assignResources: (id: number | string, data: { driverId: number; truckId: number }) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
   reportContingency: (id: number | string, data: { description: string; reportedBy: string }) =>
