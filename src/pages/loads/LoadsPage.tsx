@@ -174,8 +174,7 @@ export const LoadsPage: React.FC = () => {
     // If we're clicking a Load object (from a non-ACTIVE tab), navigate to its parent Trip ID
     // so we can see the full trip context (with all trucks) in the detail view.
     const targetId = load.tripId || load.id;
-    // We pass the type parameter to ensure the correct fetch
-    const type = load.tripId ? 'trip' : 'trip'; // Actually, if we navigate to parent trip ID, it's ALWAYS a trip! Wait, no. If we want to view the TRIP context, we pass type=trip.
+    // We navigate to parent trip ID so we can see the full trip context
     navigate(`/loads/${targetId}?type=trip`);
     setSelectedAppId(null);
     if (!isCarrier && !isLogistics) {
@@ -359,7 +358,7 @@ export const LoadsPage: React.FC = () => {
           (l.truckId === app.truckId || l.truckId === app.truck?.id)
         );
         if (matchedLoad) {
-          targetId = matchedLoad.id;
+          targetId = Number(matchedLoad.id);
         } else {
           showToast('No se encontró la carga correspondiente para esta postulación.', 'error');
           return false;

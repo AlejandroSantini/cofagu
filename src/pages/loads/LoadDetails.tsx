@@ -132,7 +132,7 @@ interface LoadDetailsProps {
     notes?: string;
     invoiceUrl?: string;
     waybillUrl?: string;
-  }) => Promise<boolean>;
+  }, appId?: number) => Promise<boolean>;
   onUpdateLoad?: (id: number | string, data: Partial<Load>) => Promise<boolean>;
 
   // Assignment resources props

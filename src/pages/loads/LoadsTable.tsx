@@ -85,8 +85,8 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         if (l.driver && l.truck) {
           return (
             <div className="flex flex-col">
-              <span className="font-bold text-slate-800 dark:text-zinc-200">{l.driver.name} {l.driver.lastName}</span>
-              <span className="text-xs text-slate-500 font-mono">{l.truck.plate}</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200">{l.driver.name}</span>
+              <span className="text-slate-500 font-mono">{l.truck.plate}</span>
             </div>
           );
         }

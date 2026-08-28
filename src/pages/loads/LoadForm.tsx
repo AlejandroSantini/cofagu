@@ -44,7 +44,6 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors, isValid },
   } = useForm<LoadFormValues>({
     resolver: zodResolver(loadSchema),

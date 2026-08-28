@@ -61,7 +61,7 @@ export interface Truck {
 }
 
 
-export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ACCEPTED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED';
+export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ACCEPTED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED' | 'ACTIVE';
 
 export interface Application {
   id: number;
@@ -112,6 +112,8 @@ export interface Load {
   truck?: Truck;
   applications?: Application[];
   contingencies?: Contingency[];
+  tripId?: number;
+  loads?: Load[];
   ctg?: string;
   loadedWeight?: number;
   unloadedWeight?: number;
