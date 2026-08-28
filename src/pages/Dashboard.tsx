@@ -79,7 +79,10 @@ export const Dashboard: React.FC = () => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'warning';
-      case 'ASSIGNED': return 'primary';
+      case 'ACTIVE': return 'success';
+      case 'PENDING': return 'warning';
+      case 'ASSIGNED': return 'info';
+      case 'ACCEPTED': return 'info';
       case 'IN_PROGRESS': return 'primary';
       case 'COMPLETED': return 'success';
       case 'CANCELLED': return 'neutral';
@@ -125,8 +128,9 @@ export const Dashboard: React.FC = () => {
       header: 'Estado',
       render: (l: Load) => (
         <Badge variant={getStatusBadgeVariant(l.status)}>
-          {l.status === 'PUBLISHED' ? 'DISPONIBLE' : 
-           l.status === 'ASSIGNED' ? 'ASIGNADO' : 
+          {l.status === 'PUBLISHED' || l.status === 'ACTIVE' ? 'DISPONIBLE' : 
+           l.status === 'PENDING' ? 'PENDIENTE' :
+           l.status === 'ASSIGNED' || l.status === 'ACCEPTED' ? 'ASIGNADO' : 
            l.status === 'IN_PROGRESS' ? 'EN VIAJE' : 
            l.status === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO'}
         </Badge>

@@ -120,7 +120,7 @@ interface LoadDetailsProps {
     description: string,
     reportedBy: string,
   ) => Promise<boolean>;
-  onConfirmDeparture?: (ctg: string, loadedWeight: number) => Promise<boolean>;
+  onConfirmDeparture?: (appId: number, ctg: string, loadedWeight: number) => Promise<boolean>;
   onStartTrip?: (appId: number, ctg?: string) => Promise<boolean>;
   onCancelApplication?: (appId: number, reason: string) => Promise<boolean>;
   onNoShow?: (loadId: number | string, appId?: number) => Promise<boolean>;
@@ -264,8 +264,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     switch (status) {
       case "PUBLISHED":
         return "warning";
+      case "ACTIVE":
+        return "success";
+      case "PENDING":
+        return "warning";
       case "ASSIGNED":
-        return "primary";
+        return "info";
+      case "ACCEPTED":
+        return "info";
       case "IN_PROGRESS":
         return "primary";
       case "COMPLETED":
@@ -326,8 +332,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     setLocalSubmitLoading(true);
     let success = false;
 
-    if (onConfirmDeparture) {
-      success = await onConfirmDeparture(trimmedCtg, weightNum);
+    if (onConfirmDeparture && activeAppId) {
+      success = await onConfirmDeparture(activeAppId, trimmedCtg, weightNum);
     } else if (onUpdateLoad) {
       success = await onUpdateLoad(load.id, {
         ctg: trimmedCtg,
@@ -380,7 +386,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           ? Number(arrivedTrucksInput)
           : undefined,
         notes: completionNotes || undefined,
-      });
+      }, activeAppId || undefined);
       if (ok) onSuccess();
     }
 
@@ -683,15 +689,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </h2>
             </div>
             <Badge variant={getStatusBadgeVariant(estadoReal)}>
-              {estadoReal === "PUBLISHED"
+              {estadoReal === "PUBLISHED" 
                 ? "DISPONIBLE"
-                : estadoReal === "ASSIGNED"
-                  ? "ASIGNADO"
-                  : estadoReal === "IN_PROGRESS"
-                    ? "EN VIAJE"
-                    : estadoReal === "COMPLETED"
-                      ? "COMPLETADO"
-                      : "CANCELADO"}
+                : estadoReal === "ACTIVE"
+                  ? "ACTIVO"
+                  : estadoReal === "ASSIGNED"
+                    ? "ASIGNADO"
+                    : estadoReal === "IN_PROGRESS"
+                      ? "EN VIAJE"
+                      : estadoReal === "COMPLETED"
+                        ? "COMPLETADO"
+                        : "CANCELADO"}
             </Badge>
           </div>
 
@@ -798,7 +806,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </div>
 
                 {/* Progress metric for arrived/completed trucks */}
-                {acceptedCount > 0 && (
+                {acceptedCount > 0 && isAdmin && (
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
                       <CheckCircle size={20} />
@@ -998,7 +1006,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               )}
             {(isCarrier || isLogistics) && (
               <>
-                {load.status === "PUBLISHED" && !hasApplied && (
+                {(load.status === "PUBLISHED" || load.status === "ACTIVE") && !hasApplied && load.cuposPendientes !== 0 && (
                   <Button
                     variant="primary"
                     icon={Send}
@@ -1178,18 +1186,24 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               return (
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                   {appsToShow.map((app) => {
+                    const matchedLoad = load.loads?.find((l: any) => 
+                      l.carrierId === app.carrierId && 
+                      (l.truckId === app.truckId || l.truckId === app.truck?.id)
+                    );
+
                     const isPending = app.status === "PENDING";
                     const isAccepted = app.status === "ACCEPTED";
                     const tripStatus =
+                      matchedLoad?.status ||
                       app.tripStatus ||
                       (load.status === "COMPLETED"
                         ? "COMPLETED"
                         : load.status === "IN_PROGRESS"
                           ? "IN_PROGRESS"
                           : "ASSIGNED");
-                    const tripCtg = app.ctg || load.ctg || "";
-                    const loadedW = app.loadedWeight ?? load.loadedWeight;
-                    const unloadedW = app.unloadedWeight ?? load.unloadedWeight;
+                    const tripCtg = matchedLoad?.ctg || app.ctg || load.ctg || "";
+                    const loadedW = matchedLoad?.loadedWeight ?? app.loadedWeight ?? load.loadedWeight;
+                    const unloadedW = matchedLoad?.unloadedWeight ?? app.unloadedWeight ?? load.unloadedWeight;
                     const canManageCtg =
                       user?.role !== "ADMIN" &&
                       (isStaff ||
@@ -1230,7 +1244,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   ? "success"
                                   : tripStatus === "IN_PROGRESS"
                                     ? "primary"
-                                    : "warning"
+                                    : "info"
                                 : isPending
                                   ? "warning"
                                   : "error"
@@ -1465,7 +1479,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               : directAssignmentTrip.tripStatus ===
                                   "IN_PROGRESS"
                                 ? "primary"
-                                : "warning"
+                                : "info"
                           }
                         >
                           {directAssignmentTrip.tripStatus === "COMPLETED"
@@ -1616,7 +1630,13 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     </h3>
                     <div className="space-y-4">
                       {myAcceptedTrips.map((trip) => {
+                        const matchedLoad = load.loads?.find((l: any) => 
+                          l.carrierId === trip.carrierId && 
+                          (l.truckId === trip.truckId || l.truckId === trip.truck?.id)
+                        );
+                        
                         const effectiveTripStatus =
+                          matchedLoad?.status ||
                           trip.tripStatus ||
                           (load.status === "COMPLETED"
                             ? "COMPLETED"
@@ -1629,8 +1649,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         const isTripCompleted =
                           effectiveTripStatus === "COMPLETED" ||
                           load.status === "COMPLETED";
-                        const tripCtg = trip.ctg || "";
-                        const loadedW = trip.loadedWeight;
+                        const tripCtg = matchedLoad?.ctg || trip.ctg || "";
+                        const loadedW = matchedLoad?.loadedWeight ?? trip.loadedWeight;
 
                         const driverName =
                           trip.driver?.name ||
@@ -1665,7 +1685,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                     ? "success"
                                     : isTripInProgress
                                       ? "primary"
-                                      : "warning"
+                                      : "info"
                                 }
                               >
                                 {isTripCompleted
@@ -1719,25 +1739,23 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             {/* Unloaded weight if completed */}
                             {isTripCompleted && (
                               <div className="space-y-2">
-                                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
-                                  <CheckCircle size={14} />
-                                  Llegada confirmada — en destino
-                                </div>
-                                {load.status !== "COMPLETED" && (
+                                {load.status !== "COMPLETED" ? (
                                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-semibold space-y-1">
                                     <p className="font-bold flex items-center gap-1.5">
                                       <CheckCircle
                                         size={14}
                                         className="text-emerald-600 shrink-0"
                                       />
-                                      Tu viaje ha finalizado con éxito.
+                                      Llegada confirmada — en destino
                                     </p>
-                                    <p className="opacity-90 leading-relaxed">
-                                      La carga se moverá a "Completados" y se
-                                      habilitará para facturación cuando el
-                                      resto de los camiones asignados lleguen a
-                                      destino.
+                                    <p className="opacity-90 leading-relaxed font-medium">
+                                      Tu viaje ha finalizado con éxito. La carga se moverá a "Completados" y se habilitará para facturación cuando el resto de los camiones asignados lleguen a destino.
                                     </p>
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                                    <CheckCircle size={14} />
+                                    Llegada confirmada — en destino
                                   </div>
                                 )}
                               </div>

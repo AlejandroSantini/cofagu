@@ -137,15 +137,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
               min="1"
               placeholder="Ej: 1"
               icon={Truck}
-              {...register("maxTrucks", {
-                onBlur: (e) => {
-                  const val = e.target.value;
-                  if (!val || isNaN(Number(val)) || Number(val) < 1) {
-                    setValue("maxTrucks", "1", { shouldValidate: true });
-                  }
-                }
-              })}
-              value={watch("maxTrucks") ?? ""}
+              {...register("maxTrucks")}
               error={errors.maxTrucks?.message}
             />
           </div>

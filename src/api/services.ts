@@ -107,6 +107,8 @@ export const loadService = {
     api.get<ApiResponse<Load>>(`/trips/${id}`),
   getLoad: (id: number | string) =>
     api.get<ApiResponse<Load>>(`/loads/${id}`),
+  deleteTrip: (id: number | string) =>
+    api.delete<ApiResponse<void>>(`/trips/${id}`),
   getApplication: (id: number) =>
     api.get<ApiResponse<Application>>(`/loads/applications/${id}`),
   getContingency: (id: number) =>

@@ -12,13 +12,14 @@ interface LoadsTableProps {
   myCarrierId?: number | null;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick }) => {
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'warning';
+      case 'ACTIVE': return 'success';
       case 'PENDING': return 'warning';
-      case 'ASSIGNED': return 'primary';
-      case 'ACCEPTED': return 'primary';
+      case 'ASSIGNED': return 'info';
+      case 'ACCEPTED': return 'info';
       case 'IN_PROGRESS': return 'primary';
       case 'COMPLETED': return 'success';
       case 'CANCELLED': return 'neutral';
@@ -29,6 +30,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'DISPONIBLE';
+      case 'ACTIVE': return 'DISPONIBLE';
       case 'PENDING': return 'PENDIENTE';
       case 'ASSIGNED': return 'ASIGNADO';
       case 'ACCEPTED': return 'ASIGNADO';
@@ -59,7 +61,8 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     {
       header: 'Tarifa',
       render: (l: Load) => {
-        const baseRate = Number(l.rate);
+        const rateValue = l.rate ?? (l as any).trip?.rate;
+        const baseRate = Number(rateValue);
         return (
           <span className="text-emerald-600 dark:text-emerald-400 font-black">
             {!isNaN(baseRate) && baseRate > 0 ? `$${baseRate.toLocaleString('es-AR')}` : 'Consultar'}
@@ -79,17 +82,15 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     {
       header: 'Chofer / Camión',
       render: (l: Load) => {
-        const driverName = l.driver?.name;
-        const truckPlate = l.truck?.chassisPlate || l.truck?.plate;
-        if (!driverName && !truckPlate) {
-          return <span className="text-slate-400 text-xs italic">-</span>;
+        if (l.driver && l.truck) {
+          return (
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-800 dark:text-zinc-200">{l.driver.name} {l.driver.lastName}</span>
+              <span className="text-xs text-slate-500 font-mono">{l.truck.plate}</span>
+            </div>
+          );
         }
-        return (
-          <div className="flex flex-col text-xs">
-            {driverName && <span className="font-semibold text-slate-700 dark:text-zinc-300">{driverName}</span>}
-            {truckPlate && <span className="font-mono text-slate-500">{truckPlate}</span>}
-          </div>
-        );
+        return <span className="text-xs text-slate-400 italic">N/A</span>;
       }
     },
     {
@@ -99,7 +100,56 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
           {getStatusLabel(l.status)}
         </Badge>
       )
-    }
+    },
+    ...(statusFilter === 'ACTIVE' ? (
+      isCarrier 
+        ? [
+            {
+              header: 'Cupos Disponibles',
+              render: (l: Load) => {
+                const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+                const maxCapacity = l.maxTrucks || 1;
+                const cupos = Math.max(0, maxCapacity - acceptedCount);
+                
+                if (l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS' || l.status === 'COMPLETED' || cupos <= 0) {
+                  return (
+                    <span className="text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-1 rounded-md border border-rose-200/50 dark:border-rose-900/40">
+                      Sin cupo disponible
+                    </span>
+                  );
+                }
+
+                return (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-1 rounded-md border border-emerald-200/50 dark:border-emerald-900/40">
+                    {cupos} {cupos === 1 ? 'cupo libre' : 'cupos libres'}
+                  </span>
+                );
+              }
+            }
+          ]
+        : [
+            {
+              header: 'Cupo (Aprobados)',
+              render: (l: Load) => {
+                const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
+                const maxCapacity = l.maxTrucks || 1;
+                return (
+                  <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-md">
+                    {acceptedCount} / {maxCapacity}
+                  </span>
+                );
+              }
+            },
+            {
+              header: 'Postulantes',
+              render: (l: Load) => (
+                <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-md">
+                  {l.applications?.filter(a => a.status === 'PENDING').length || 0}
+                </span>
+              )
+            }
+          ]
+    ) : [])
   ];
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
@@ -29,6 +29,7 @@ import { Plus, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
   const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
@@ -43,7 +44,7 @@ export const LoadsPage: React.FC = () => {
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   
   // Filtering & Selection for Assignment
-  const [activeTab, setActiveTab] = useState<'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'>('PUBLISHED');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'>(isEmployee ? 'ASSIGNED' : 'ACTIVE');
 
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -61,18 +62,20 @@ export const LoadsPage: React.FC = () => {
   // Auto-refresh using global configuration interval
   useAutoRefresh(triggerRefresh);
 
-  // Load list effect
   useEffect(() => {
     let active = true;
     const fetchLoads = async () => {
       setLoading(true);
+      setError('');
       try {
         const loadParams: { status?: string } = { status: activeTab };
-        const res = activeTab === 'PUBLISHED' 
+        const res = activeTab === 'ACTIVE' 
           ? await loadService.getTrips(loadParams) 
           : await loadService.getLoads(loadParams);
-        if (active && res.data.success) {
-          setLoads(res.data.data);
+        if (active && res.data && res.data.success !== false) {
+          const rawData = Array.isArray(res.data) ? res.data : res.data.data;
+          
+          setLoads(rawData);
         }
       } catch (err) {
         console.error(err);
@@ -94,16 +97,33 @@ export const LoadsPage: React.FC = () => {
         return;
       }
 
+      setError('');
       try {
         let res;
-        try {
+        const type = searchParams.get('type');
+        if (type === 'trip') {
           res = await loadService.getTrip(Number(id));
-        } catch (tripErr) {
+        } else if (type === 'load') {
           res = await loadService.getLoad(Number(id));
+        } else {
+          // Fallback if URL is accessed directly without type parameter
+          if (activeTab === 'ACTIVE') {
+            try {
+              res = await loadService.getTrip(Number(id));
+            } catch {
+              res = await loadService.getLoad(Number(id));
+            }
+          } else {
+            try {
+              res = await loadService.getLoad(Number(id));
+            } catch {
+              res = await loadService.getTrip(Number(id));
+            }
+          }
         }
         
-        if (active && res.data.success && res.data.data) {
-          setSelectedLoad(res.data.data);
+        if (active && res.data && res.data.success !== false) {
+          setSelectedLoad(res.data.data || res.data);
           setLoadError(false);
         } else if (active) {
           setLoadError(true);
@@ -118,7 +138,7 @@ export const LoadsPage: React.FC = () => {
     };
     fetchSelectedLoad();
     return () => { active = false; };
-  }, [id, refreshTrigger]);
+  }, [id, refreshTrigger, activeTab]);
 
   // Load details refresh helper after action mutations
   const refreshDetails = async () => {
@@ -151,8 +171,12 @@ export const LoadsPage: React.FC = () => {
 
 
   const handleRowClick = async (load: Load) => {
-    const targetId = load.loadId || load.id;
-    navigate(`/loads/${targetId}`);
+    // If we're clicking a Load object (from a non-ACTIVE tab), navigate to its parent Trip ID
+    // so we can see the full trip context (with all trucks) in the detail view.
+    const targetId = load.tripId || load.id;
+    // We pass the type parameter to ensure the correct fetch
+    const type = load.tripId ? 'trip' : 'trip'; // Actually, if we navigate to parent trip ID, it's ALWAYS a trip! Wait, no. If we want to view the TRIP context, we pass type=trip.
+    navigate(`/loads/${targetId}?type=trip`);
     setSelectedAppId(null);
     if (!isCarrier && !isLogistics) {
       setSelectedCarrierId(null);
@@ -174,7 +198,7 @@ export const LoadsPage: React.FC = () => {
         quotaDate: new Date(data.quotaDate).toISOString(),
         date: new Date(data.loadingDate).toISOString()
       });
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Carga publicada con éxito');
         handleBack();
         triggerRefresh();
@@ -190,8 +214,10 @@ export const LoadsPage: React.FC = () => {
     if (!delId) return;
     setSubmitLoading(true);
     try {
-      const res = await loadService.deleteLoad(delId);
-      if (res.data.success) {
+      const res = activeTab === 'ACTIVE' 
+        ? await loadService.deleteTrip(delId) 
+        : await loadService.deleteLoad(delId);
+      if (res.status === 204 || (res.data && res.data.success !== false) || !res.data) {
         showToast('Carga cancelada/eliminada correctamente');
         confirmDelete();
         navigate('/loads');
@@ -228,7 +254,7 @@ export const LoadsPage: React.FC = () => {
         driverId,
         truckId
       });
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Postulación enviada correctamente');
         refreshDetails();
         triggerRefresh();
@@ -263,12 +289,9 @@ export const LoadsPage: React.FC = () => {
         driverId: Number(selectedApp.driverId),
         truckId: Number(selectedApp.truckId)
       });
-      if (res.data.success) {
-        if (res.data.data.cupoCompleto) {
-          showToast('¡Cupo completo! La carga pasó a En Curso.', 'success');
-        } else {
-          showToast('Viaje asignado correctamente', 'success');
-        }
+      if (res.data && (res.data as any).success !== false) {
+        showToast('Viaje asignado correctamente', 'success');
+
         navigate('/loads');
         setSelectedAppId(null);
         setSelectedCarrierId(null);
@@ -289,7 +312,7 @@ export const LoadsPage: React.FC = () => {
     setSubmitLoading(true);
     try {
       const res = await loadService.patchLoadStatus(selectedLoad.id, newStatus);
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast(`Estado actualizado a ${newStatus}`);
         refreshDetails();
         triggerRefresh();
@@ -308,7 +331,7 @@ export const LoadsPage: React.FC = () => {
         description,
         reportedBy: reportedBy || user?.name || 'Chofer'
       });
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Contingencia reportada con éxito');
         refreshDetails();
         triggerRefresh();
@@ -321,11 +344,32 @@ export const LoadsPage: React.FC = () => {
   };
 
 
-  const handleConfirmDeparture = async (ctg: string, loadedWeight: number): Promise<boolean> => {
+  const handleConfirmDeparture = async (appId: number, ctg: string, loadedWeight: number): Promise<boolean> => {
     if (!selectedLoad) return false;
+    
+    let targetId = appId;
+    const isLoad = selectedLoad.tripId !== undefined && selectedLoad.applications === undefined;
+    
+    // If selectedLoad is a Trip, it has .loads and .applications
+    if (!isLoad && selectedLoad.loads && selectedLoad.applications) {
+      const app = selectedLoad.applications.find((a: any) => a.id === appId);
+      if (app) {
+        const matchedLoad = selectedLoad.loads.find((l: any) => 
+          l.carrierId === app.carrierId && 
+          (l.truckId === app.truckId || l.truckId === app.truck?.id)
+        );
+        if (matchedLoad) {
+          targetId = matchedLoad.id;
+        } else {
+          showToast('No se encontró la carga correspondiente para esta postulación.', 'error');
+          return false;
+        }
+      }
+    }
+
     try {
-      const res = await loadService.confirmDeparture(selectedLoad.id, { ctg, loadedWeight });
-      if (res.data.success) {
+      const res = await loadService.confirmDeparture(targetId, { ctg, loadedWeight });
+      if (res.data && res.data.success !== false) {
         showToast('Salida de balanza confirmada con éxito', 'success');
         refreshDetails();
         triggerRefresh();
@@ -340,7 +384,7 @@ export const LoadsPage: React.FC = () => {
   const handleStartTrip = async (appId: number, ctg?: string): Promise<boolean> => {
     try {
       const res = await loadService.startTrip(appId, ctg ? { ctg } : undefined);
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Viaje iniciado correctamente', 'success');
         refreshDetails();
         triggerRefresh();
@@ -362,11 +406,33 @@ export const LoadsPage: React.FC = () => {
     notes?: string;
     invoiceUrl?: string;
     waybillUrl?: string;
-  }): Promise<boolean> => {
+  }, appId?: number): Promise<boolean> => {
     if (!selectedLoad) return false;
     setSubmitLoading(true);
+    
+    let targetId = selectedLoad.id;
+    // Check if the currently viewed item is a Trip (parent) instead of a Load
+    const isLoad = 'tripId' in selectedLoad && selectedLoad.tripId !== null;
+
+    if (appId && !isLoad) {
+      const selectedApp = selectedLoad.applications?.find((a: any) => a.id === appId);
+      if (selectedApp) {
+        const matchedLoad = selectedLoad.loads?.find((l: any) => 
+          l.carrierId === selectedApp.carrierId && 
+          (l.truckId === selectedApp.truckId || l.truckId === selectedApp.truck?.id)
+        );
+        if (matchedLoad) {
+          targetId = matchedLoad.id;
+        } else {
+          showToast('No se encontró la carga correspondiente para esta postulación.', 'error');
+          setSubmitLoading(false);
+          return false;
+        }
+      }
+    }
+
     try {
-      const res = await loadService.postCompletionData(selectedLoad.id, {
+      const res = await loadService.postCompletionData(targetId, {
         unloadedWeight: data.unloadedWeight,
         fuelConsumption: data.fuelConsumption,
         mileage: data.mileage,
@@ -375,7 +441,7 @@ export const LoadsPage: React.FC = () => {
         notes: data.notes,
         arrivedTrucks: data.arrivedTrucks
       });
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Viaje finalizado con éxito', 'success');
         refreshDetails();
         triggerRefresh();
@@ -391,11 +457,11 @@ export const LoadsPage: React.FC = () => {
 
 
   const handleBack = () => {
-
+    setError('');
     setShowForm(false);
   };
 
-  const handleTabChange = (tab: 'PUBLISHED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') => {
+  const handleTabChange = (tab: 'ACTIVE' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') => {
     setLoading(true);
     setActiveTab(tab);
   };
@@ -425,7 +491,7 @@ export const LoadsPage: React.FC = () => {
     setSubmitLoading(true);
     try {
       const res = await loadService.reportNoShow(noShowModalLoad.loadId, { applicationId: noShowModalLoad.appId });
-      if (res.data.success) {
+      if (res.data && res.data.success !== false) {
         showToast('Inasistencia registrada correctamente. Se liberó el cupo y se acumuló falta.', 'success');
         setNoShowModalLoad(null);
         if (selectedLoad?.id === noShowModalLoad.loadId) {
@@ -662,7 +728,7 @@ export const LoadsPage: React.FC = () => {
           onCancelApplication={async (appId, reason) => {
             try {
               const res = await loadService.cancelApplication(appId, reason);
-              if (res.data.success) {
+              if (res.data && res.data.success !== false) {
                 showToast('Postulación cancelada correctamente', 'success');
                 refreshDetails();
                 triggerRefresh();
@@ -676,7 +742,7 @@ export const LoadsPage: React.FC = () => {
           onNoShow={async (loadId, appId) => {
             try {
               const res = await loadService.reportNoShow(loadId, { applicationId: appId });
-              if (res.data.success) {
+              if (res.data && res.data.success !== false) {
                 showToast("Inasistencia ('No Llegó') registrada. Cupo liberado.", 'success');
                 refreshDetails();
                 triggerRefresh();
@@ -700,7 +766,7 @@ export const LoadsPage: React.FC = () => {
             setSubmitLoading(true);
             try {
               const res = await loadService.assignResources(selectedLoad.id, { driverId, truckId });
-              if (res.data.success) {
+              if (res.data && res.data.success !== false) {
                 showToast('Recursos de viaje asignados con éxito', 'success');
                 await refreshDetails();
                 triggerRefresh();
@@ -715,7 +781,7 @@ export const LoadsPage: React.FC = () => {
             setSubmitLoading(true);
             try {
               const res = await loadService.updateLoad(id, data);
-              if (res.data.success) {
+              if (res.data && res.data.success !== false) {
                 showToast('Viaje actualizado con éxito', 'success');
                 await refreshDetails();
                 triggerRefresh();
@@ -740,12 +806,17 @@ export const LoadsPage: React.FC = () => {
           {/* Tab Filters Navigation */}
           <div className="flex border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
             {(isCarrier ? [
-              { id: 'PUBLISHED', label: 'Disponibles' },
+              { id: 'ACTIVE', label: 'Disponibles' },
               { id: 'ASSIGNED', label: 'Asignados' },
               { id: 'IN_PROGRESS', label: 'En Curso' },
               { id: 'COMPLETED', label: 'Completados' }
+            ] : isEmployee ? [
+              { id: 'ASSIGNED', label: 'Asignados' },
+              { id: 'IN_PROGRESS', label: 'En Curso' },
+              { id: 'COMPLETED', label: 'Completadas' },
+              { id: 'CANCELLED', label: 'Canceladas' }
             ] : [
-              { id: 'PUBLISHED', label: 'Disponibles' },
+              { id: 'ACTIVE', label: 'Disponibles' },
               { id: 'ASSIGNED', label: 'Asignados' },
               { id: 'IN_PROGRESS', label: 'En Curso' },
               { id: 'COMPLETED', label: 'Completadas' },
