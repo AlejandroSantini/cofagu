@@ -999,9 +999,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 <Button
                   variant="danger"
                   icon={Trash2}
-                  onClick={() => onCancelLoad(load.id)}
+                  onClick={() => {
+                    if (load.loads !== undefined) {
+                      const hasActive = load.loads.some(l => l.status === 'IN_PROGRESS' || l.status === 'COMPLETED');
+                      if (hasActive) {
+                        if (!window.confirm("ADVERTENCIA: Este viaje ya tiene camiones en curso o completados. Cancelar el viaje principal podría afectar la trazabilidad de esos camiones. ¿Está COMPLETAMENTE seguro de cancelar el viaje entero?")) {
+                          return;
+                        }
+                      }
+                    }
+                    onCancelLoad(load.id);
+                  }}
                 >
-                  Cancelar Carga
+                  {load.loads !== undefined ? "Cancelar Viaje Completo" : "Cancelar Carga"}
                 </Button>
               )}
             {(isCarrier || isLogistics) && (

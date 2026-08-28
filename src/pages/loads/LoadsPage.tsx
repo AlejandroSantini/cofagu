@@ -213,7 +213,15 @@ export const LoadsPage: React.FC = () => {
     if (!delId) return;
     setSubmitLoading(true);
     try {
-      const res = activeTab === 'ACTIVE' 
+      let isTrip = activeTab === 'ACTIVE';
+      if (selectedLoad) {
+        // En vista de detalle, sabemos si es viaje porque tiene array de loads/applications
+        isTrip = searchParams.get('type') === 'trip' || (selectedLoad.loads !== undefined && selectedLoad.applications !== undefined);
+      } else if (searchParams.get('type')) {
+        isTrip = searchParams.get('type') === 'trip';
+      }
+      
+      const res = isTrip 
         ? await loadService.deleteTrip(delId) 
         : await loadService.deleteLoad(delId);
       if (res.status === 204 || (res.data && res.data.success !== false) || !res.data) {
