@@ -136,12 +136,9 @@ interface LoadDetailsProps {
   onUpdateLoad?: (id: number | string, data: Partial<Load>) => Promise<boolean>;
 
   // Assignment resources props
-  selectedAppId: number | null;
-  setSelectedAppId: (id: number | null) => void;
-  setSelectedCarrierId: (id: number | null) => void;
   carrierDrivers: Driver[];
   carrierTrucks: Truck[];
-  onAssign: () => void;
+  onAssign: (appId?: number) => void;
   onAssignResources?: (driverId: number, truckId: number) => Promise<void>;
   submitLoading: boolean;
 }
@@ -158,9 +155,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onCancelApplication,
   onCompleteLoad,
   onUpdateLoad,
-  selectedAppId,
-  setSelectedAppId,
-  setSelectedCarrierId,
   carrierDrivers,
   carrierTrucks,
   onAssign,
@@ -1225,21 +1219,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     return (
                       <div
                         key={app.id}
-                        onClick={() => {
-                          if (!isBalancero) {
-                            setSelectedAppId(app.id);
-                            setSelectedCarrierId(app.carrierId);
-                          }
-                        }}
-                        className={`p-4 border rounded-xl transition-all ${
-                          !isBalancero
-                            ? "cursor-pointer hover:border-slate-300"
-                            : ""
-                        } ${
-                          selectedAppId === app.id
-                            ? "border-emerald-500 bg-emerald-50/10"
-                            : "border-slate-100 dark:border-zinc-800"
-                        } ${isAccepted ? "bg-slate-50 dark:bg-zinc-800/40" : ""}`}
+                        className={`p-4 border rounded-xl border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 ${!isPending && !isAccepted ? "opacity-60" : ""}`}
                       >
                         <div className="flex justify-between items-center mb-1 border-b border-slate-200/60 dark:border-zinc-700 pb-2">
                           <span className="font-bold text-sm text-slate-900 dark:text-white">
@@ -1278,8 +1258,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           </p>
                         )}
 
-                        {isAccepted && (
-                          <div className="space-y-3 mt-3">
+                        <div className="space-y-3 mt-3">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               <div>
                                 <span className="text-slate-400 font-bold block uppercase">
@@ -1304,7 +1283,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </div>
                             </div>
 
-                            {tripCtg && (
+                            {isAccepted && tripCtg && (
                               <div className="text-xs font-mono bg-white dark:bg-zinc-900 p-2 rounded border border-slate-200 dark:border-zinc-800 flex justify-between">
                                 <span>
                                   CTG: <strong>{tripCtg}</strong>
@@ -1321,7 +1300,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </div>
                             )}
 
-                            {unloadedW != null && (
+                            {isAccepted && unloadedW != null && (
                               <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                                 Kilos Descargados:{" "}
                                 {Number(unloadedW).toLocaleString("es-AR")} kg
@@ -1329,7 +1308,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             )}
 
                             <div className="flex flex-col gap-2 mt-2">
-                              {canManageCtg &&
+                              {/* ACCEPTED ACTIONS (CTG) */}
+                              {isAccepted && canManageCtg &&
                                 (tripStatus === "ASSIGNED" ||
                                   tripStatus === "IN_PROGRESS" ||
                                   app.status === "ACCEPTED") && (
@@ -1353,27 +1333,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                       : "Cargar CTG (Carta de Porte)"}
                                   </Button>
                                 )}
-                            </div>
-                          </div>
-                        )}
 
-                        {/* Assignment Form inline for Admin when pending app is clicked */}
-                        {!isBalancero &&
-                          selectedAppId === app.id &&
-                          !isAccepted && (
-                            <div
-                              className="border-t border-slate-100 dark:border-zinc-800 pt-4 mt-3 space-y-4 animate-in fade-in duration-200"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="text-xs font-black uppercase text-slate-400 tracking-wider">
-                                Recursos Propuestos
-                              </span>
-                              {(() => {
-                                const proposedDriver =
-                                  app?.driver ||
-                                  carrierDrivers.find(
-                                    (d) => d.id === app?.driverId,
-                                  );
+                              {/* PENDING ACTIONS (APPROVE & REJECT) */}
+                              {isPending && !isBalancero && canUserWrite && (() => {
                                 const proposedTruck =
                                   app?.truck ||
                                   carrierTrucks.find(
@@ -1385,90 +1347,47 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                                 return (
                                   <>
-                                    <div className="space-y-3 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 text-xs font-semibold">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-slate-400 uppercase font-bold">
-                                          Chofer:
-                                        </span>
-                                        <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                          {proposedDriver?.name ||
-                                            (app?.driverId
-                                              ? `Chofer #${app.driverId}`
-                                              : "No asignado")}
-                                          {proposedDriver?.dni
-                                            ? ` (DNI: ${proposedDriver.dni})`
-                                            : ""}
-                                        </span>
+                                    {isProposedTruckInvalid && (
+                                      <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
+                                        <p className="font-bold">
+                                          ⚠️ Seguro de camión propuesto
+                                          inválido
+                                        </p>
+                                        <p className="opacity-90">
+                                          El seguro del camión seleccionado
+                                          está vencido o incompleto. El
+                                          transportista debe actualizar los
+                                          datos.
+                                        </p>
                                       </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-slate-400 uppercase font-bold">
-                                          Camión:
-                                        </span>
-                                        <span className="text-slate-800 dark:text-zinc-200 font-bold font-mono">
-                                          {proposedTruck?.chassisPlate ||
-                                            proposedTruck?.plate ||
-                                            (app?.truckId
-                                              ? `Camión #${app.truckId}`
-                                              : "No asignado")}
-                                          {proposedTruck?.trailerPlate
-                                            ? ` / acoplado: ${proposedTruck.trailerPlate}`
-                                            : ""}
-                                        </span>
-                                      </div>
-                                      {proposedTruck?.type && (
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-slate-400 uppercase font-bold">
-                                            Tipo:
-                                          </span>
-                                          <span className="text-slate-800 dark:text-zinc-200 font-bold">
-                                            {proposedTruck.type}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {canUserWrite && (
-                                      <>
-                                        {isProposedTruckInvalid && (
-                                          <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-xl text-xs font-semibold space-y-1">
-                                            <p className="font-bold">
-                                              ⚠️ Seguro de camión propuesto
-                                              inválido
-                                            </p>
-                                            <p className="opacity-90">
-                                              El seguro del camión seleccionado
-                                              está vencido o incompleto. El
-                                              transportista debe actualizar los
-                                              datos.
-                                            </p>
-                                          </div>
-                                        )}
-                                        <Button
-                                          variant="primary"
-                                          icon={CheckCircle}
-                                          onClick={onAssign}
-                                          disabled={
-                                            !app?.driverId ||
-                                            !app?.truckId ||
-                                            acceptedCount >= maxCapacity ||
-                                            isProposedTruckInvalid
-                                          }
-                                          isLoading={submitLoading}
-                                          className="w-full"
-                                        >
-                                          {acceptedCount >= maxCapacity
-                                            ? "Cupo completo"
-                                            : isProposedTruckInvalid
-                                              ? "Seguro Vencido / Incompleto"
-                                              : "Aprobar Postulación"}
-                                        </Button>
-                                      </>
                                     )}
+                                    <Button
+                                      variant="primary"
+                                      icon={CheckCircle}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onAssign(app.id);
+                                      }}
+                                      disabled={
+                                        !app?.driverId ||
+                                        !app?.truckId ||
+                                        acceptedCount >= maxCapacity ||
+                                        isProposedTruckInvalid
+                                      }
+                                      isLoading={submitLoading}
+                                      className="w-full"
+                                    >
+                                      {acceptedCount >= maxCapacity
+                                        ? "Cupo completo"
+                                        : isProposedTruckInvalid
+                                          ? "Seguro Vencido / Incompleto"
+                                          : "Aprobar Postulación"}
+                                    </Button>
                                   </>
                                 );
                               })()}
                             </div>
-                          )}
+                          </div>
                       </div>
                     );
                   })}
@@ -1585,7 +1504,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             const myAcceptedTrips = myTrips.filter(
               (app) => app.status === "ACCEPTED",
             );
-            const myPendingApp = myTrips.find(
+            const myPendingApps = myTrips.filter(
               (app) => app.status === "PENDING",
             );
 
@@ -1593,42 +1512,57 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <div className="space-y-6">
                 {/* If no applications at all */}
                 {myTrips.length === 0 && (
-                  <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2 mb-4">
-                      Tu Postulación
-                    </h3>
-                    <p className="text-sm text-slate-500 italic">
-                      Aún no te has postulado a esta carga.
+                  <div className="p-6 bg-slate-50 dark:bg-zinc-900 rounded-xl border border-slate-100 dark:border-zinc-800 text-center">
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">
+                      Aún no te has postulado a este viaje.
                     </p>
                   </div>
                 )}
 
-                {/* Pending application badge & cancel button */}
-                {myPendingApp && (
+                {/* Pending applications — one card per truck */}
+                {myPendingApps.length > 0 && (
                   <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                      Tu Postulación
+                      Tus Postulaciones Pendientes ({myPendingApps.length})
                     </h3>
-                    <div className="p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
-                      <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                        Postulado — en revisión por el operador
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant="warning">PENDIENTE</Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={XCircle}
-                          className="border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
-                          onClick={() => {
-                            setCancelAppId(myPendingApp.id);
-                            setShowCancelAppModal(true);
-                          }}
-                        >
-                          Cancelar
-                        </Button>
+                    {myPendingApps.map((pendingApp) => (
+                      <div key={pendingApp.id} className="p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                            Postulado — en revisión por el operador
+                          </span>
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            {pendingApp.driver && (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <span className="font-semibold">Chofer:</span>
+                                {pendingApp.driver.name}
+                              </span>
+                            )}
+                            {pendingApp.truck && (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <span className="font-semibold">Camión:</span>
+                                {(pendingApp.truck as any).chassisPlate || pendingApp.truck.plate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="warning">PENDIENTE</Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            icon={XCircle}
+                            className="border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                            onClick={() => {
+                              setCancelAppId(pendingApp.id);
+                              setShowCancelAppModal(true);
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
@@ -1915,16 +1849,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             }
           }
         }}
-        title="Cancelar Postulación / Viaje"
-        description="Por favor, especifica el motivo por el cual necesitas cancelar esta postulación. El sistema liberará el cupo y notificará a la administración."
+        title={isCarrier ? "Cancelar Postulación / Viaje" : "Rechazar Postulación"}
+        description={
+          isCarrier
+            ? "Por favor, especifica el motivo por el cual necesitas cancelar esta postulación. El sistema liberará el cupo y notificará a la administración."
+            : "Por favor, especifica el motivo por el cual rechazas esta postulación."
+        }
         type="danger"
-        confirmText="Confirmar Cancelación"
+        confirmText={isCarrier ? "Confirmar Cancelación" : "Confirmar Rechazo"}
         isLoading={localSubmitLoading}
       >
         <div className="space-y-4 pt-2">
           <Input
-            label="Motivo de la Cancelación (Obligatorio)"
-            placeholder="Ej: Se rompió el camión en la ruta / Problema mecánico"
+            label={isCarrier ? "Motivo de la Cancelación (Obligatorio)" : "Motivo del Rechazo (Obligatorio)"}
+            placeholder={isCarrier ? "Ej: Se rompió el camión en la ruta / Problema mecánico" : "Ej: Seguro vencido / Camión no apto"}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             required

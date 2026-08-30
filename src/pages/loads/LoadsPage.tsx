@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck } from '../../types';
@@ -149,25 +149,32 @@ export const LoadsPage: React.FC = () => {
 
   const isLogistics = user?.role === 'LOGISTICS';
 
-  // Load carrier drivers/trucks ONLY when viewing detail or form (not for main loads table)
-  useEffect(() => {
-    const loadCarrierResources = async () => {
-      try {
-        const params = selectedCarrierId ? { carrierId: selectedCarrierId } : undefined;
-        const [drvRes, trkRes] = await Promise.all([
-          driverService.getDrivers(params),
-          truckService.getTrucks(params)
-        ]);
-        if (drvRes.data.success) setCarrierDrivers(drvRes.data.data);
-        if (trkRes.data.success) setCarrierTrucks(trkRes.data.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    if (selectedLoad || showForm) {
-      loadCarrierResources();
+  // Carga camiones/choferes SOLO cuando el carrier abre el modal de postulación
+  // o cuando se está creando un viaje (showForm). NO en cada refresh del detalle.
+  const fetchCarrierResources = useCallback(async () => {
+    try {
+      const tripId = selectedLoad?.id ? Number(selectedLoad.id) : undefined;
+      const params = {
+        ...(selectedCarrierId ? { carrierId: selectedCarrierId } : {}),
+        ...(tripId ? { tripId } : {})
+      };
+      const [drvRes, trkRes] = await Promise.all([
+        driverService.getDrivers(params),
+        truckService.getTrucks(params)
+      ]);
+      if (drvRes.data.success) setCarrierDrivers(drvRes.data.data);
+      if (trkRes.data.success) setCarrierTrucks(trkRes.data.data);
+    } catch (err) {
+      console.error(err);
     }
-  }, [selectedCarrierId, selectedLoad, showForm]);
+  }, [selectedCarrierId, selectedLoad]);
+
+  // Solo auto-fetch cuando cambia el carrierId en el formulario de creación de viaje
+  useEffect(() => {
+    if (showForm) {
+      fetchCarrierResources();
+    }
+  }, [selectedCarrierId, showForm]);
 
 
   const handleRowClick = async (load: Load) => {
@@ -280,26 +287,26 @@ export const LoadsPage: React.FC = () => {
   };
 
 
-  const handleAssign = async () => {
-    if (!selectedLoad || !selectedAppId) {
+  const handleAssign = async (appId?: number) => {
+    const idToUse = appId || selectedAppId;
+    if (!selectedLoad || !idToUse) {
       showToast('Por favor, selecciona una postulación.', 'error');
       return;
     }
-    const selectedApp = selectedLoad.applications?.find(a => a.id === selectedAppId);
+    const selectedApp = selectedLoad.applications?.find(a => a.id === idToUse);
     if (!selectedApp || !selectedApp.driverId || !selectedApp.truckId) {
       showToast('La postulación no cuenta con chofer o camión propuesto.', 'error');
       return;
     }
     setSubmitLoading(true);
     try {
-      const res = await loadService.acceptTripApplication(selectedAppId, {
+      const res = await loadService.acceptTripApplication(idToUse, {
         driverId: Number(selectedApp.driverId),
         truckId: Number(selectedApp.truckId)
       });
       if (res.data && (res.data as any).success !== false) {
         showToast('Viaje asignado correctamente', 'success');
 
-        navigate('/loads');
         setSelectedAppId(null);
         setSelectedCarrierId(null);
         setCarrierDrivers([]);
@@ -762,9 +769,6 @@ export const LoadsPage: React.FC = () => {
           }}
 
 
-          selectedAppId={selectedAppId}
-          setSelectedAppId={setSelectedAppId}
-          setSelectedCarrierId={setSelectedCarrierId}
           carrierDrivers={carrierDrivers}
           carrierTrucks={carrierTrucks}
           onAssign={handleAssign}

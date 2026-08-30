@@ -71,7 +71,7 @@ export const carrierService = {
 
 // --- DRIVERS ---
 export const driverService = {
-  getDrivers: (params?: { carrierId?: number }) =>
+  getDrivers: (params?: { carrierId?: number, available?: boolean, tripId?: number }) =>
     api.get<ApiResponse<Driver[]>>('/drivers', { params }),
   getDriver: (id: number) =>
     api.get<ApiResponse<Driver>>(`/drivers/${id}`),
@@ -85,7 +85,7 @@ export const driverService = {
 
 // --- TRUCKS ---
 export const truckService = {
-  getTrucks: (params?: { carrierId?: number }) =>
+  getTrucks: (params?: { carrierId?: number, available?: boolean, tripId?: number }) =>
     api.get<ApiResponse<Truck[]>>('/trucks', { params }),
   getTruck: (id: number) =>
     api.get<ApiResponse<Truck>>(`/trucks/${id}`),
