@@ -771,6 +771,7 @@ export const LoadsPage: React.FC = () => {
 
           carrierDrivers={carrierDrivers}
           carrierTrucks={carrierTrucks}
+          onFetchCarrierResources={fetchCarrierResources}
           onAssign={handleAssign}
           onAssignResources={async (driverId, truckId) => {
             if (!selectedLoad) return;

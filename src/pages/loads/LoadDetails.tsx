@@ -138,6 +138,7 @@ interface LoadDetailsProps {
   // Assignment resources props
   carrierDrivers: Driver[];
   carrierTrucks: Truck[];
+  onFetchCarrierResources?: () => void;
   onAssign: (appId?: number) => void;
   onAssignResources?: (driverId: number, truckId: number) => Promise<void>;
   submitLoading: boolean;
@@ -157,6 +158,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onUpdateLoad,
   carrierDrivers,
   carrierTrucks,
+  onFetchCarrierResources,
   onAssign,
   submitLoading,
 }) => {
@@ -1014,7 +1016,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <Button
                     variant="primary"
                     icon={Send}
-                    onClick={() => setShowPostulateModal(true)}
+                    onClick={() => {
+                      if (onFetchCarrierResources) {
+                        onFetchCarrierResources();
+                      }
+                      setShowPostulateModal(true);
+                    }}
                   >
                     Postularse a este viaje
                   </Button>
