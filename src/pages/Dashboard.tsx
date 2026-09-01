@@ -18,6 +18,9 @@ export const Dashboard: React.FC = () => {
   const canWrite = useAuthStore((state) => state.canWrite());
   const user = useAuthStore((state) => state.user);
   const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const isLogistics = user?.role === 'LOGISTICS';
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,7 +148,7 @@ export const Dashboard: React.FC = () => {
           title="Panel de Control"
           description={`Bienvenido, ${user?.name}. Consulta el estado de la operación logística.`}
         />
-        {canWrite && (
+        {canWrite && !isEmployee && !isPlayero && !isLogistics && (
           <Button variant="primary" icon={FilePlus} onClick={() => navigate('/loads')}>
             Publicar Nueva Carga
           </Button>
