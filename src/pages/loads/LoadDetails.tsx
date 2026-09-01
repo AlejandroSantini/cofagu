@@ -1765,7 +1765,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             {/* In progress: trip cannot be cancelled once started */}
                             {isTripInProgress &&
                               !isTripCompleted &&
-                              isCarrier && (
+                              (isCarrier || isLogistics) && (
                                 <Button
                                   variant="primary"
                                   size="sm"
