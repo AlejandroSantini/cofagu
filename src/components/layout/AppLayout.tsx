@@ -11,9 +11,11 @@ import {
   Users,
   Briefcase,
   FileText,
-  Layers
+  Layers,
+  Bell
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { notificationService } from '../../api/services';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,6 +30,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isStaff = useAuthStore((state) => state.isStaff());
   const isCarrier = user?.role === 'CARRIER';
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  React.useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await notificationService.getUnreadCount();
+        setUnreadCount(res.data.data.count);
+      } catch (err) {
+        // ignore
+      }
+    };
+    if (user) {
+      fetchUnread();
+      // Poll every 1 min
+      const interval = setInterval(fetchUnread, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const isOperator = user?.role === 'OPERATOR' || user?.role === 'PLAYERO';
 
@@ -52,7 +72,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       { label: 'Grupos', icon: Layers, path: '/groups' },
       { label: 'Personal / Usuarios', icon: Users, path: '/users' }
     ] : []),
-
+    { label: 'Notificaciones', icon: Bell, path: '/notifications' },
     { label: 'Configuración', icon: Settings, path: '/settings' },
   ];
 
@@ -116,7 +136,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   navigate(item.path);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative ${
                   isActive(item.path) 
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
                   : 'text-zinc-300 hover:bg-zinc-700 dark:hover:bg-white/5 hover:text-white'
@@ -127,7 +147,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   className={isActive(item.path) ? 'text-white' : 'text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-yellow-400'} 
                 />
                 <span className="font-bold text-sm">{item.label}</span>
-                {isActive(item.path) && <ChevronRight size={16} className="ml-auto opacity-50" />}
+                {item.path === '/notifications' && unreadCount > 0 && (
+                  <span className="absolute right-4 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+                {isActive(item.path) && item.path !== '/notifications' && <ChevronRight size={16} className="ml-auto opacity-50" />}
               </button>
             ))}
           </nav>

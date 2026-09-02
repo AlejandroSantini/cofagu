@@ -14,7 +14,8 @@ import {
   type CarrierDocument,
   type CarrierGroup,
   type Application,
-  type Invoice
+  type Invoice,
+  type Notification
 } from '../types';
 
 
@@ -218,3 +219,9 @@ export const invoiceService = {
 };
 
 
+export const notificationService = {
+  getNotifications: () => api.get<ApiResponse<Notification[]>>('/notifications'),
+  markAsRead: (id: string) => api.patch<ApiResponse<Notification>>(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch<ApiResponse<{ count: number }>>('/notifications/read-all'),
+  getUnreadCount: () => api.get<ApiResponse<{ count: number }>>('/notifications/unread-count'),
+};

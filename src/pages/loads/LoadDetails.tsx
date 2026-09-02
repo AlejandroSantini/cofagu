@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   type Load,
   type Driver,
@@ -174,10 +174,43 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [plantLoadedWeight, setPlantLoadedWeight] = useState("");
   // Local input states
   const [postulateNotes, setPostulateNotes] = useState("");
+  const [postulateCarrierId, setPostulateCarrierId] = useState("");
   const [postulateDriverId, setPostulateDriverId] = useState("");
   const [postulateTruckId, setPostulateTruckId] = useState("");
   const [contingencyDesc, setContingencyDesc] = useState("");
   const [contingencyReporter, setContingencyReporter] = useState("");
+  
+  const [managedCarriers, setManagedCarriers] = useState<Carrier[]>([]);
+  
+  const isAdmin = user?.role === "ADMIN";
+  const isOperator = user?.role === "OPERATOR";
+  const isLogistics = user?.role === "LOGISTICS";
+  const canUserWrite = isAdmin || isOperator || isLogistics;
+  const isCarrier = user?.role === "CARRIER";
+  // LOGISTICS se comporta como transportista en la vista (no ve panel admin, no ve balancera)
+  const isStaff =
+    isAdmin ||
+    isOperator ||
+    user?.role === "EMPLOYEE" ||
+    user?.role === "PLAYERO" ||
+    user?.role === "GAS_STATION";
+  const isBalancero =
+    isOperator ||
+    user?.role === "EMPLOYEE" ||
+    user?.role === "PLAYERO" ||
+    user?.role === "GAS_STATION";
+
+  useEffect(() => {
+    if (isLogistics) {
+      import('../../api/services').then(({ carrierService }) => {
+        carrierService.getCarriers().then(res => {
+          if (res.data.success) {
+            setManagedCarriers(res.data.data);
+          }
+        });
+      });
+    }
+  }, [isLogistics]);
   const [arrivedTrucksInput, setArrivedTrucksInput] = useState(
     load.maxTrucks || 1,
   );
@@ -204,23 +237,6 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       : 0);
   const maxCapacity = load.maxTrucks || 1;
 
-  const isAdmin = user?.role === "ADMIN";
-  const isOperator = user?.role === "OPERATOR";
-  const isLogistics = user?.role === "LOGISTICS";
-  const canUserWrite = isAdmin || isOperator || isLogistics;
-  const isCarrier = user?.role === "CARRIER";
-  // LOGISTICS se comporta como transportista en la vista (no ve panel admin, no ve balancera)
-  const isStaff =
-    isAdmin ||
-    isOperator ||
-    user?.role === "EMPLOYEE" ||
-    user?.role === "PLAYERO" ||
-    user?.role === "GAS_STATION";
-  const isBalancero =
-    isOperator ||
-    user?.role === "EMPLOYEE" ||
-    user?.role === "PLAYERO" ||
-    user?.role === "GAS_STATION";
 
   // Para LOGISTICS, el carrierId efectivo se resuelve desde los trucks cargados (user.carrierId es null)
   const effectiveCarrierId: number | null | undefined = isLogistics
@@ -463,17 +479,35 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         isConfirmDisabled={
           !postulateDriverId ||
           !postulateTruckId ||
-          availableTrucks.length === 0
+          availableTrucks.length === 0 ||
+          (isLogistics && !postulateCarrierId)
         }
       >
         <div className="space-y-4 pt-2">
-          {availableTrucks.length === 0 && carrierTrucks.length > 0 ? (
+          {isLogistics && (
+            <Select
+              label="Transportista"
+              icon={User}
+              options={managedCarriers.map(c => ({
+                value: String(c.id),
+                label: c.name
+              }))}
+              value={postulateCarrierId}
+              onChange={(e) => {
+                setPostulateCarrierId(e.target.value);
+                setPostulateDriverId("");
+                setPostulateTruckId("");
+              }}
+            />
+          )}
+
+          {(!isLogistics || postulateCarrierId) && availableTrucks.length === 0 && carrierTrucks.length > 0 ? (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-700 dark:text-amber-300 font-medium">
               ⚠️ Todos los camiones de tu flota ya están postulados a esta
               carga. Si tenés más camiones que no aparecen aquí, verificá que
               estén cargados en el sistema.
             </div>
-          ) : (
+          ) : (!isLogistics || postulateCarrierId) ? (
             <>
               <p className="text-sm text-slate-500">
                 ¿Deseas postularte a esta solicitud de carga? Por favor
@@ -482,7 +516,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <Select
                 label="Chofer Habilitado"
                 icon={User}
-                options={carrierDrivers.map((d) => {
+                options={carrierDrivers
+                  .filter(d => !isLogistics || d.carrierId === Number(postulateCarrierId))
+                  .map((d) => {
                   const isSuspended =
                     d.isSuspended ||
                     (d.suspendedUntil
@@ -503,7 +539,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <Select
                 label="Camión Flota"
                 icon={TruckIcon}
-                options={availableTrucks.map((t) => {
+                options={availableTrucks
+                  .filter(t => !isLogistics || t.carrierId === Number(postulateCarrierId))
+                  .map((t) => {
                   const plateText = t.chassisPlate || t.plate || "S/P";
                   const validInsurance = isTruckInsuranceValid(t);
                   const isSuspended =
@@ -543,7 +581,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 className="py-2.5"
               />
             </>
-          )}
+          ) : null}
         </div>
       </Modal>
 

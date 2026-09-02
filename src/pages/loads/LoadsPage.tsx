@@ -156,7 +156,8 @@ export const LoadsPage: React.FC = () => {
       const tripId = selectedLoad?.id ? Number(selectedLoad.id) : undefined;
       const params = {
         ...(selectedCarrierId ? { carrierId: selectedCarrierId } : {}),
-        ...(tripId ? { tripId } : {})
+        ...(tripId ? { tripId } : {}),
+        available: true // Siempre pedir solo los disponibles al postular
       };
       const [drvRes, trkRes] = await Promise.all([
         driverService.getDrivers(params),

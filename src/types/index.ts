@@ -60,6 +60,16 @@ export interface Truck {
   isSuspended?: boolean;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  link?: string;
+  createdAt: string;
+}
 
 export type LoadStatus = 'PENDING' | 'PUBLISHED' | 'ACCEPTED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED' | 'REJECTED' | 'ACTIVE';
 

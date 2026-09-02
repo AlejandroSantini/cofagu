@@ -24,6 +24,7 @@ import { InvoicesPage } from './pages/InvoicesPage';
 import { GroupsPage } from './pages/GroupsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 
 function App() {
@@ -77,6 +78,11 @@ function App() {
         <Route
           path="/loads/:id?"
           element={token ? <AppLayout><LoadsPage /></AppLayout> : <Navigate to="/login" />}
+        />
+
+        <Route
+          path="/notifications"
+          element={token ? <AppLayout><NotificationsPage /></AppLayout> : <Navigate to="/login" />}
         />
 
         <Route
