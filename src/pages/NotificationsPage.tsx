@@ -6,11 +6,15 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { notificationService } from '../api/services';
 import type { Notification } from '../types';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const decrementUnread = useNotificationStore(state => state.decrementUnread);
+  const resetUnread = useNotificationStore(state => state.resetUnread);
+  const setUnreadCount = useNotificationStore(state => state.setUnreadCount);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +38,7 @@ export default function NotificationsPage() {
       setNotifications(prev => 
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
+      decrementUnread();
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -44,6 +49,7 @@ export default function NotificationsPage() {
       setMarkingAll(true);
       await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      resetUnread();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     } finally {

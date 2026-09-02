@@ -15,6 +15,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useNotificationStore } from '../../store/useNotificationStore';
 import { notificationService } from '../../api/services';
 
 interface AppLayoutProps {
@@ -30,7 +31,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isStaff = useAuthStore((state) => state.isStaff());
   const isCarrier = user?.role === 'CARRIER';
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
 
   React.useEffect(() => {
     const fetchUnread = async () => {
@@ -47,7 +49,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       const interval = setInterval(fetchUnread, 60000);
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, setUnreadCount]);
 
   const isOperator = user?.role === 'OPERATOR' || user?.role === 'PLAYERO';
 

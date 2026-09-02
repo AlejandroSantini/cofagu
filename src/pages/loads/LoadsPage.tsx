@@ -28,8 +28,9 @@ import { Plus, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const id = routeId || searchParams.get('id');
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
   const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
@@ -574,8 +575,9 @@ export const LoadsPage: React.FC = () => {
       />
 
       {!(id && !selectedLoad && !loadError) && (
-        <div className="flex flex-col gap-6 mb-8">
-          <PageHeader
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+          <div className="flex-1">
+            <PageHeader
             title={
               isPlayero
                 ? 'Control de Combustible (Estación / Playero)'
@@ -598,31 +600,32 @@ export const LoadsPage: React.FC = () => {
                       ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
                       : 'Consulta cargas disponibles, postulaciones y estado operativo.'
             }
-          />
+            />
+          </div>
 
-          <div>
+          <div className="flex-shrink-0 mt-2 md:mt-0">
             {showForm || selectedLoad ? (
               <Button
-              variant="outline"
-              onClick={() => {
-                if (showForm) handleBack();
-                if (id) navigate('/loads');
-              }}
-              icon={ChevronLeft}
-              className="w-full md:w-fit px-8"
-            >
-              Volver al Listado
-            </Button>
-          ) : (
-            canWrite && !isEmployee && !isPlayero && !isLogistics && (
-              <Button 
-                variant="primary" 
-                icon={Plus} 
-                onClick={() => setShowForm(true)} 
+                variant="outline"
+                onClick={() => {
+                  if (showForm) handleBack();
+                  if (id) navigate('/loads');
+                }}
+                icon={ChevronLeft}
                 className="w-full md:w-fit px-8"
               >
-                Publicar Carga
+                Volver al Listado
               </Button>
+            ) : (
+              canWrite && !isEmployee && !isPlayero && !isLogistics && (
+                <Button 
+                  variant="primary" 
+                  icon={Plus} 
+                  onClick={() => setShowForm(true)} 
+                  className="w-full md:w-fit px-8"
+                >
+                  Publicar Carga
+                </Button>
               )
             )}
           </div>
