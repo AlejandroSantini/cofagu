@@ -1381,6 +1381,23 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   </Button>
                                 )}
 
+                              {/* ADMIN: CANCEL ACCEPTED ASSIGNMENT */}
+                              {isAccepted && !isBalancero && canUserWrite && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  icon={XCircle}
+                                  className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCancelAppId(app.id);
+                                    setShowCancelAppModal(true);
+                                  }}
+                                >
+                                  Cancelar Asignación / Viaje
+                                </Button>
+                              )}
+
                               {/* PENDING ACTIONS (APPROVE & REJECT) */}
                               {isPending && !isBalancero && canUserWrite && (() => {
                                 const proposedTruck =
@@ -1896,20 +1913,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             }
           }
         }}
-        title={isCarrier ? "Cancelar Postulación / Viaje" : "Rechazar Postulación"}
+        title={isCarrier ? "Cancelar Postulación / Viaje" : "Cancelar Asignación / Rechazar Postulación"}
         description={
           isCarrier
             ? "Por favor, especifica el motivo por el cual necesitas cancelar esta postulación. El sistema liberará el cupo y notificará a la administración."
-            : "Por favor, especifica el motivo por el cual rechazas esta postulación."
+            : "Por favor, especifica el motivo (ej: se cayeron los cupos, camión no apto) por el cual estás cancelando o rechazando esta postulación. Se le notificará al transportista."
         }
         type="danger"
-        confirmText={isCarrier ? "Confirmar Cancelación" : "Confirmar Rechazo"}
+        confirmText={isCarrier ? "Confirmar Cancelación" : "Confirmar"}
         isLoading={localSubmitLoading}
       >
         <div className="space-y-4 pt-2">
           <Input
-            label={isCarrier ? "Motivo de la Cancelación (Obligatorio)" : "Motivo del Rechazo (Obligatorio)"}
-            placeholder={isCarrier ? "Ej: Se rompió el camión en la ruta / Problema mecánico" : "Ej: Seguro vencido / Camión no apto"}
+            label={isCarrier ? "Motivo de la Cancelación (Obligatorio)" : "Motivo (Obligatorio)"}
+            placeholder={isCarrier ? "Ej: Se rompió el camión en la ruta / Problema mecánico" : "Ej: Se cayeron los cupos / Seguro vencido"}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             required
