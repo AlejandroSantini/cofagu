@@ -200,7 +200,6 @@ export const LoadsPage: React.FC = () => {
     try {
       const res = await loadService.createTrip({
         ...data,
-        rate: Number(data.rate),
         maxTrucks: Number(data.maxTrucks),
         loadingDate: new Date(data.loadingDate).toISOString(),
         quotaDate: new Date(data.quotaDate).toISOString(),
@@ -575,9 +574,8 @@ export const LoadsPage: React.FC = () => {
       />
 
       {!(id && !selectedLoad && !loadError) && (
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
-          <div className="flex-1">
-            <PageHeader
+        <div className="flex flex-col gap-6 mb-8">
+          <PageHeader
             title={
               isPlayero
                 ? 'Control de Combustible (Estación / Playero)'
@@ -600,10 +598,9 @@ export const LoadsPage: React.FC = () => {
                       ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
                       : 'Consulta cargas disponibles, postulaciones y estado operativo.'
             }
-            />
-          </div>
+          />
 
-          <div className="flex-shrink-0 mt-2 md:mt-0">
+          <div>
             {showForm || selectedLoad ? (
               <Button
                 variant="outline"

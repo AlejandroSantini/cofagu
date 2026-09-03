@@ -109,11 +109,11 @@ export interface Load {
   origin: string;
   destination: string;
   date: string;
-  rate: number;
-  status: LoadStatus;
+  rate?: number; // Pre-calculated for carriers, might be null if none matches.
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   notes?: string;
-  maxTrucks?: number;
-  arrivedTrucks?: number;
+  targetGroups?: { groupId: number, rate: number, group: { name: string, isGeneral: boolean } }[];
+  cuposPendientes?: number;
   carrierId?: number | null;
   driverId?: number | null;
   truckId?: number | null;

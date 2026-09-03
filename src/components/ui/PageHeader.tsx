@@ -20,7 +20,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const navigate = useNavigate();
 
   return (
-    <div className="mb-0 md:mb-2">
+    <div className="">
       {showBack && (
         <button 
           onClick={() => navigate(-1)}

@@ -710,7 +710,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         </div>
       </Modal>
 
-      <div className="max-w-5xl mx-auto space-y-6 w-full">
+      <div className="max-w-6xl mx-auto space-y-6 w-full">
         {/* Main Details Panel */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
           <div className="flex justify-between items-start">
@@ -908,6 +908,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           )}
 
           {(() => {
+            if (!isAdmin) return null;
+            
             const validTargetGroups = (load.targetGroups || []).filter(
               (tg) => tg.groupId !== null && tg.groupId !== undefined,
             );

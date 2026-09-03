@@ -20,10 +20,10 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   isLoading,
 }) => {
   const [groups, setGroups] = React.useState<CarrierGroup[]>([]);
-  const [isDirected, setIsDirected] = React.useState(false);
   const [selectedGroups, setSelectedGroups] = React.useState<
     Record<number, { checked: boolean; rate: string }>
   >({});
+  const [groupErrors, setGroupErrors] = React.useState<Record<number, string>>({});
 
   React.useEffect(() => {
     let active = true;
@@ -31,7 +31,22 @@ export const LoadForm: React.FC<LoadFormProps> = ({
       .getGroups()
       .then((res) => {
         if (active && res.data.success && res.data.data) {
-          setGroups(res.data.data);
+          const fetchedGroups = res.data.data;
+          fetchedGroups.sort((a: CarrierGroup, b: CarrierGroup) => {
+            if (a.isGeneral) return -1;
+            if (b.isGeneral) return 1;
+            return a.name.localeCompare(b.name);
+          });
+          setGroups(fetchedGroups);
+          
+          // Pre-select general group
+          const initialSelections: Record<number, { checked: boolean; rate: string }> = {};
+          fetchedGroups.forEach((g: CarrierGroup) => {
+            if (g.isGeneral) {
+              initialSelections[g.id] = { checked: true, rate: "" };
+            }
+          });
+          setSelectedGroups(initialSelections);
         }
       })
       .catch(() => {});
@@ -53,17 +68,28 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     },
   });
 
-  const mainRate = watch("rate") || "";
-
   const handleFormSubmit = (data: LoadFormValues) => {
-    const targetGroupsPayload = isDirected
-      ? Object.entries(selectedGroups)
-          .filter(([, val]) => val.checked)
-          .map(([groupId, val]) => ({
-            groupId: Number(groupId),
-            rate: Number(val.rate || mainRate || 0),
-          }))
-      : undefined;
+    const errors: Record<number, string> = {};
+    let hasError = false;
+
+    const targetGroupsPayload = Object.entries(selectedGroups)
+      .filter(([, val]) => val.checked)
+      .map(([groupId, val]) => {
+        const rate = Number(val.rate);
+        if (!val.rate || isNaN(rate) || rate <= 0) {
+          errors[Number(groupId)] = "La tarifa es inválida o requerida";
+          hasError = true;
+        }
+        return {
+          groupId: Number(groupId),
+          rate,
+        };
+      });
+
+    setGroupErrors(errors);
+
+    if (hasError) return;
+    if (targetGroupsPayload.length === 0) return; // Should not happen if general is required
 
     onSubmit({
       ...data,
@@ -122,24 +148,14 @@ export const LoadForm: React.FC<LoadFormProps> = ({
             error={errors.cereal?.message}
           />
           <Input
-            label="Tarifa ($)"
+            label="Cantidad de camiones necesarios"
             type="number"
-            placeholder="Ej: 500000"
-            icon={DollarSign}
-            {...register("rate")}
-            error={errors.rate?.message}
+            min="1"
+            placeholder="Ej: 1"
+            icon={Truck}
+            {...register("maxTrucks")}
+            error={errors.maxTrucks?.message}
           />
-          <div className="md:col-span-2">
-            <Input
-              label="Cantidad de camiones necesarios"
-              type="number"
-              min="1"
-              placeholder="Ej: 1"
-              icon={Truck}
-              {...register("maxTrucks")}
-              error={errors.maxTrucks?.message}
-            />
-          </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">
               Observaciones
@@ -152,129 +168,125 @@ export const LoadForm: React.FC<LoadFormProps> = ({
           </div>
         </div>
 
-        {/* Directed Publication Banner */}
+        {/* Groups Selection */}
         <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-4">
-          <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
-                <Users size={20} />
-              </div>
-              <div className="min-w-0">
-                <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate">
-                  Publicación Dirigida
-                </h4>
-                <p className="text-xs text-slate-400 dark:text-zinc-500 truncate">
-                  Enviar a grupos con tarifa personalizada
-                </p>
-              </div>
+          <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+              <DollarSign size={20} />
             </div>
-
-            {groups.length > 0 && (
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={isDirected}
-                  onChange={(e) => setIsDirected(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                <span className="hidden sm:inline-block ml-3 text-xs font-bold text-slate-600 dark:text-zinc-400">
-                  {isDirected ? "Activado" : "Desactivado"}
-                </span>
-              </label>
-            )}
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                Tarifas por Grupo
+              </h4>
+              <p className="text-xs text-slate-400 dark:text-zinc-500">
+                Asigne la tarifa correspondiente para cada grupo de transportistas.
+              </p>
+            </div>
           </div>
 
           {groups.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-zinc-550 italic bg-slate-50 dark:bg-zinc-900/30 p-3 rounded-lg border border-slate-150/50 dark:border-zinc-800">
-              No hay grupos de transportistas registrados. Puedes crearlos desde
-              la sección de transportistas para habilitar la publicación
-              dirigida.
+            <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-lg border border-slate-150/50">
+              Cargando grupos...
             </p>
           ) : (
-            isDirected && (
-              <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-4">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Seleccione los grupos y defina la tarifa correspondiente:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groups.map((group) => {
-                    const groupState = selectedGroups[group.id] || {
-                      checked: false,
-                      rate: "",
-                    };
-                    return (
-                      <div
-                        key={group.id}
-                        className={`flex flex-col p-4 rounded-xl border transition-all ${
-                          groupState.checked
-                            ? "bg-white dark:bg-zinc-900 border-emerald-500/30 shadow-sm"
-                            : "border-slate-200/60 dark:border-zinc-850 hover:bg-slate-100/40 dark:hover:bg-zinc-800/30"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-4">
+              <div className="flex flex-col gap-3">
+                {groups.map((group) => {
+                  const checkedGroupsCount = Object.values(selectedGroups).filter(s => s.checked).length;
+                  const isGeneral = group.isGeneral;
+                  const groupState = selectedGroups[group.id] || {
+                    checked: isGeneral,
+                    rate: "",
+                  };
+                  const isCheckboxDisabled = groupState.checked && checkedGroupsCount <= 1;
+                  const errorMsg = groupErrors[group.id];
+
+                  return (
+                    <div
+                      key={group.id}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all ${
+                        groupState.checked
+                          ? "bg-white dark:bg-zinc-900 border-emerald-500/30 shadow-sm"
+                          : "border-slate-200/60 dark:border-zinc-850 hover:bg-slate-100/40 dark:hover:bg-zinc-800/30"
+                      }`}
+                    >
+                      <label className={`flex items-center gap-3 select-none flex-1 ${isCheckboxDisabled ? "cursor-default" : "cursor-pointer"}`}>
+                        <input
+                          type="checkbox"
+                          checked={groupState.checked}
+                          disabled={isCheckboxDisabled}
+                          onChange={(e) => {
+                            setSelectedGroups((prev) => ({
+                              ...prev,
+                              [group.id]: {
+                                ...groupState,
+                                checked: e.target.checked,
+                              },
+                            }));
+                          }}
+                          className={`rounded h-4 w-4 shrink-0 ${
+                            isCheckboxDisabled
+                              ? "text-slate-400 border-slate-300 bg-slate-100 cursor-not-allowed"
+                              : "text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                          }`}
+                        />
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-zinc-200">
+                            {group.name} {isGeneral && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-2 uppercase">General</span>}
+                          </span>
+                          {group.description && (
+                            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                              {group.description}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+
+                      {groupState.checked && (
+                        <div className="mt-4 sm:mt-0 sm:ml-4 sm:w-1/3 shrink-0">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                              $
+                            </span>
                             <input
-                              type="checkbox"
-                              checked={groupState.checked}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder={"Ej: 500000"}
+                              value={groupState.rate}
                               onChange={(e) => {
                                 setSelectedGroups((prev) => ({
                                   ...prev,
                                   [group.id]: {
                                     ...groupState,
-                                    checked: e.target.checked,
-                                    rate: groupState.rate || mainRate,
+                                    rate: e.target.value,
                                   },
                                 }));
+                                if (groupErrors[group.id]) {
+                                  setGroupErrors(prev => {
+                                    const next = { ...prev };
+                                    delete next[group.id];
+                                    return next;
+                                  });
+                                }
                               }}
-                              className="rounded border-slate-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                              className={`w-full bg-slate-50 dark:bg-zinc-800/60 border rounded-lg pl-7 pr-3 py-1.5 text-sm text-slate-800 dark:text-white font-medium focus:ring-2 focus:outline-none transition-all ${
+                                errorMsg
+                                  ? "border-red-300 focus:ring-red-500"
+                                  : "border-slate-200 dark:border-zinc-700 focus:ring-emerald-500"
+                              }`}
                             />
-                            <div>
-                              <span className="font-bold text-slate-800 dark:text-zinc-200">
-                                {group.name}
-                              </span>
-                              {group.description && (
-                                <p className="text-xs text-slate-400 dark:text-zinc-500">
-                                  {group.description}
-                                </p>
-                              )}
-                            </div>
-                          </label>
-                        </div>
-
-                        {groupState.checked && (
-                          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 mb-1">
-                              Tarifa para este Grupo ($) *
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                                $
-                              </span>
-                              <input
-                                type="number"
-                                placeholder={mainRate || "0"}
-                                value={groupState.rate}
-                                onChange={(e) => {
-                                  setSelectedGroups((prev) => ({
-                                    ...prev,
-                                    [group.id]: {
-                                      ...groupState,
-                                      rate: e.target.value,
-                                    },
-                                  }));
-                                }}
-                                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-lg pl-7 pr-3 py-1.5 text-sm text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
-                              />
-                            </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                          {errorMsg && (
+                            <p className="text-red-500 text-[11px] mt-1 font-medium">{errorMsg}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            )
+            </div>
           )}
         </div>
 
