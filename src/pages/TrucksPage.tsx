@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
-import { truckService, carrierService, openSecureUrl } from '../api/services';
+import { truckService, carrierService } from '../api/services';
 import { type Truck, type Carrier } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -42,6 +42,7 @@ export const TrucksPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [error, setError] = useState('');
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -537,7 +538,7 @@ export const TrucksPage: React.FC = () => {
         )}
       </div>
 
-      <ErrorMessage message={error} className="mb-6" />
+      {error && <ErrorMessage message={error} className="mb-6" />}
 
       {showForm ? (
         <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">

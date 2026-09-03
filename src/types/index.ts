@@ -110,9 +110,10 @@ export interface Load {
   destination: string;
   date: string;
   rate?: number; // Pre-calculated for carriers, might be null if none matches.
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  status: 'ACTIVE' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   notes?: string;
-  targetGroups?: { groupId: number, rate: number, group: { name: string, isGeneral: boolean } }[];
+  targetGroups?: { groupId: number; rate: number; group?: CarrierGroup }[];
+  maxTrucks?: number;
   cuposPendientes?: number;
   carrierId?: number | null;
   driverId?: number | null;
@@ -131,14 +132,12 @@ export interface Load {
   mileage?: number;
   invoiceUrl?: string;
   waybillUrl?: string;
+  cereal?: string;
   loadingDate?: string;
   loadingTimeStart?: string;
   loadingTimeEnd?: string;
   quotaDate?: string;
-  cereal?: string;
-  cuposPendientes?: number;
   invoiceId?: number | null;
-  targetGroups?: { groupId: number; rate: number; group?: CarrierGroup }[];
   fuelAuthorized?: boolean;
   differenceAdjusted?: boolean;
 }
@@ -193,7 +192,6 @@ export interface CreateLoadPayload {
   origin: string;
   destination: string;
   date: string;
-  rate: number;
   maxTrucks?: number;
   notes?: string;
   loadingDate: string;
@@ -201,15 +199,14 @@ export interface CreateLoadPayload {
   loadingTimeEnd: string;
   quotaDate: string;
   cereal: string;
+  targetGroups?: { groupId: number; rate: number }[];
   ctg?: string;
   loadedWeight?: number;
   unloadedWeight?: number;
-  fuelConsumption?: number;
   mileage?: number;
   invoiceUrl?: string;
   waybillUrl?: string;
   status?: string;
-  targetGroups?: { groupId: number; rate: number }[];
 }
 
 export interface AssignLoadResponse {
@@ -257,6 +254,7 @@ export interface CarrierGroupMember {
 export interface CarrierGroup {
   id: number;
   name: string;
+  isGeneral?: boolean;
   description?: string;
   createdAt?: string;
   _count?: {

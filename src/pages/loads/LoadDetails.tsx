@@ -179,8 +179,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [postulateTruckId, setPostulateTruckId] = useState("");
   const [contingencyDesc, setContingencyDesc] = useState("");
   const [contingencyReporter, setContingencyReporter] = useState("");
-  
-  const [managedCarriers, setManagedCarriers] = useState<Carrier[]>([]);
+  // Carrier and Application selection states
+  const [managedCarriers, setManagedCarriers] = useState<any[]>([]);
   
   const isAdmin = user?.role === "ADMIN";
   const isOperator = user?.role === "OPERATOR";
@@ -723,11 +723,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </h2>
             </div>
             <Badge variant={getStatusBadgeVariant(estadoReal)}>
-              {estadoReal === "PUBLISHED" 
+              {estadoReal === "ACTIVE" 
                 ? "DISPONIBLE"
-                : estadoReal === "ACTIVE"
-                  ? "ACTIVO"
-                  : estadoReal === "ASSIGNED"
+                : estadoReal === "ASSIGNED"
                     ? "ASIGNADO"
                     : estadoReal === "IN_PROGRESS"
                       ? "EN VIAJE"
@@ -1052,7 +1050,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               )}
             {(isCarrier || isLogistics) && (
               <>
-                {(load.status === "PUBLISHED" || load.status === "ACTIVE") && !hasApplied && load.cuposPendientes !== 0 && (
+                {load.status === "ACTIVE" && !hasApplied && load.cuposPendientes !== 0 && (
                   <Button
                     variant="primary"
                     icon={Send}

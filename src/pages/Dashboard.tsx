@@ -69,7 +69,7 @@ export const Dashboard: React.FC = () => {
 
 
   // Compute logistics metrics
-  const pendingAssignments = loads.filter((l) => l.status === 'PUBLISHED' || l.status === 'PENDING').length;
+  const pendingAssignments = loads.filter((l) => l.status === 'ACTIVE').length;
   const activeTrips = loads.filter((l) => l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS').length;
   const completedTrips = loads.filter((l) => l.status === 'COMPLETED').length;
   
@@ -131,9 +131,8 @@ export const Dashboard: React.FC = () => {
       header: 'Estado',
       render: (l: Load) => (
         <Badge variant={getStatusBadgeVariant(l.status)}>
-          {l.status === 'PUBLISHED' || l.status === 'ACTIVE' ? 'DISPONIBLE' : 
-           l.status === 'PENDING' ? 'PENDIENTE' :
-           l.status === 'ASSIGNED' || l.status === 'ACCEPTED' ? 'ASIGNADO' : 
+          {l.status === 'ACTIVE' ? 'DISPONIBLE' : 
+           l.status === 'ASSIGNED' ? 'ASIGNADO' : 
            l.status === 'IN_PROGRESS' ? 'EN VIAJE' : 
            l.status === 'COMPLETED' ? 'COMPLETADO' : 'CANCELADO'}
         </Badge>

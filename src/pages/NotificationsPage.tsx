@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Bell, CheckCircle, Clock, Check, Loader2, ArrowRight } from 'lucide-react';
@@ -14,7 +14,6 @@ export default function NotificationsPage() {
   const [markingAll, setMarkingAll] = useState(false);
   const decrementUnread = useNotificationStore(state => state.decrementUnread);
   const resetUnread = useNotificationStore(state => state.resetUnread);
-  const setUnreadCount = useNotificationStore(state => state.setUnreadCount);
   const navigate = useNavigate();
 
   useEffect(() => {

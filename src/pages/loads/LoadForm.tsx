@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loadSchema, type LoadFormValues } from "../../schemas/load.schema";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
-import { MapPin, Calendar, DollarSign, Save, Truck, Users } from "lucide-react";
+import { MapPin, Calendar, DollarSign, Save, Truck } from "lucide-react";
 import { groupService } from "../../api/services";
 import { type CarrierGroup } from "../../types";
 
@@ -58,7 +58,6 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isValid },
   } = useForm<LoadFormValues>({
     resolver: zodResolver(loadSchema),
