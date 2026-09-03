@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
-import { truckService, carrierService } from '../api/services';
+import { truckService, carrierService, openSecureUrl } from '../api/services';
 import { type Truck, type Carrier } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -20,7 +20,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import { useAuthStore } from '../store/useAuthStore';
 import { Plus, ChevronLeft, Save, Trash2, TruckIcon, FileText, Scale, Building2, ShieldCheck, Download } from 'lucide-react';
 
-import { ImageUpload } from '../components/ui/ImageUpload';
+import { ImageUpload, SecureImage } from '../components/ui/ImageUpload';
 
 const TYPE_LABELS: Record<string, string> = {
   BATEA: 'Bateas',
@@ -47,7 +47,8 @@ export const TrucksPage: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>('');
 
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
@@ -399,26 +400,22 @@ export const TrucksPage: React.FC = () => {
               {(t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl) && (
                 <div className="flex gap-2 pt-1">
                   {t.cargoInsurancePhotoUrl && (
-                    <a
-                      href={t.cargoInsurancePhotoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline text-[10px] flex items-center gap-1"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); setPreviewUrl(t.cargoInsurancePhotoUrl!); setPreviewTitle('Foto Póliza Carga'); }}
                     >
                       <Download size={12} /> Foto Póliza Carga
-                    </a>
+                    </button>
                   )}
                   {t.insurancePolicyPhotoUrl && (
-                    <a
-                      href={t.insurancePolicyPhotoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[10px] flex items-center gap-1"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); setPreviewUrl(t.insurancePolicyPhotoUrl!); setPreviewTitle('Foto Seguro General'); }}
                     >
                       <Download size={12} /> Foto Seguro General
-                    </a>
+                    </button>
                   )}
                 </div>
               )}
@@ -487,6 +484,20 @@ export const TrucksPage: React.FC = () => {
         confirmText="Eliminar"
         isLoading={submitLoading}
       />
+
+      <Modal
+        isOpen={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        title={previewTitle}
+        cancelText="Cerrar"
+        imageOnly
+      >
+        <div className="flex justify-center items-center">
+          {previewUrl && (
+            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-xl shadow-2xl object-contain" />
+          )}
+        </div>
+      </Modal>
 
       <div className="flex flex-col gap-6 mb-8">
         <PageHeader

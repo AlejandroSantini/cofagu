@@ -5,7 +5,7 @@ import {
   carrierDocumentSchema,
   type CarrierDocumentFormValues,
 } from "../schemas/carrier-document.schema";
-import { truckService, carrierService } from "../api/services";
+import { carrierService, truckService } from '../api/services';
 import { type CarrierDocument, type Carrier } from "../types";
 
 import { getErrorMessage } from "../api/errorUtils";
@@ -22,63 +22,27 @@ import {
   Check,
   X,
   Calendar,
-  Download,
   AlertCircle,
   Clock,
   Building,
   CheckCircle2,
   AlertTriangle,
+  Eye,
 } from "lucide-react";
-import { ImageUpload } from "../components/ui/ImageUpload";
-import { api } from "../api/axios";
+import { ImageUpload, SecureImage } from "../components/ui/ImageUpload";
+import { Modal } from "../components/ui/Modal";
 
 const CURRENT_TIME = Date.now();
 
 export const CarrierDocumentsPage: React.FC = () => {
   const isAdmin = useAuthStore((state) => state.isAdmin());
 
-  const handleSecureView = async (fileUrl: string, shouldDownload = false) => {
-    if (!fileUrl || typeof fileUrl !== "string") {
-      showToast("El archivo no es válido o no existe.", "error");
-      return;
-    }
-    try {
-      const response = await api.get(fileUrl, { responseType: "blob" });
-      if (!response.data) {
-        showToast("No se pudo descargar el archivo.", "error");
-        return;
-      }
-      const blob = new Blob([response.data], { type: (response.headers["content-type"] as string) || "application/octet-stream" });
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      const filename = fileUrl.split("/").pop() || "archivo";
-      
-      if (shouldDownload) {
-        link.setAttribute("download", filename);
-      } else {
-        link.target = "_blank";
-      }
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      setTimeout(() => {
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      }, 100);
-    } catch (err) {
-      console.error("Error fetching secure file:", err);
-      showToast("Error al cargar el archivo de forma segura.", "error");
-    }
-  };
-
   const [documents, setDocuments] = useState<CarrierDocument[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -341,14 +305,16 @@ export const CarrierDocumentsPage: React.FC = () => {
     {
       header: "Documento",
       render: (doc: CarrierDocument) => (
-        <button
-          onClick={() => handleSecureView(doc.fileUrl)}
-          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold cursor-pointer"
-        >
-          <Download size={14} />
-          Ver Archivo
-        </button>
-      ),
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setPreviewUrl(doc.fileUrl); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-lg text-xs font-bold transition-colors"
+                >
+                  <Eye size={14} />
+                  Ver Documento
+                </button>
+              </div>),
     },
     {
       header: "Acciones de Auditoría",
@@ -432,11 +398,11 @@ export const CarrierDocumentsPage: React.FC = () => {
       header: "Archivo",
       render: (doc: CarrierDocument) => (
         <button
-          onClick={() => handleSecureView(doc.fileUrl, true)}
+          onClick={() => setPreviewUrl(doc.fileUrl)}
           className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline flex items-center gap-1 text-sm font-bold cursor-pointer"
         >
-          <Download size={14} />
-          Descargar
+          <Eye size={14} />
+          Ver Archivo
         </button>
       ),
     },
@@ -464,6 +430,20 @@ export const CarrierDocumentsPage: React.FC = () => {
       </div>
 
       <ErrorMessage message={error} className="mb-4" />
+
+      <Modal
+        isOpen={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        title="Ver Documento"
+        cancelText="Cerrar"
+        imageOnly
+      >
+        <div className="flex justify-center items-center">
+          {previewUrl && (
+            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-xl shadow-2xl object-contain" />
+          )}
+        </div>
+      </Modal>
 
       {isAdmin ? (
         // ================= ADMIN AUDIT VIEW =================

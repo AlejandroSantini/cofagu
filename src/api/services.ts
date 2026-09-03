@@ -225,3 +225,35 @@ export const notificationService = {
   markAllAsRead: () => api.patch<ApiResponse<{ count: number }>>('/notifications/read-all'),
   getUnreadCount: () => api.get<ApiResponse<{ count: number }>>('/notifications/unread-count'),
 };
+
+export const openSecureUrl = async (url: string, showToast?: (msg: string, type: 'success' | 'error' | 'info') => void) => {
+  if (!url) return;
+  if (!url.startsWith('/api') && !url.startsWith(import.meta.env.VITE_API_URL)) {
+    window.open(url, '_blank');
+    return;
+  }
+  
+  const newWindow = window.open('', '_blank');
+  if (newWindow) {
+    newWindow.document.write('<div style="font-family: sans-serif; padding: 20px;">Cargando documento...</div>');
+  }
+  
+  try {
+    const response = await api.get(url, { responseType: 'blob' });
+    const blobUrl = URL.createObjectURL(response.data);
+    if (newWindow) {
+      newWindow.location.href = blobUrl;
+    } else {
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = url.split('/').pop() || 'documento';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  } catch (error) {
+    if (newWindow) newWindow.close();
+    console.error('Error opening secure url:', error);
+    if (showToast) showToast('Error al cargar el documento (puede que no tengas permisos o ya no exista).', 'error');
+  }
+};

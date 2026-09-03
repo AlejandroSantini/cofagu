@@ -12,7 +12,7 @@ interface ImageUploadProps {
   error?: string;
 }
 
-const SecureImage: React.FC<{ src: string; alt?: string; className?: string }> = ({ src, alt, className }) => {
+export const SecureImage: React.FC<{ src: string; alt?: string; className?: string }> = ({ src, alt, className }) => {
   const [blobUrl, setBlobUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +24,12 @@ const SecureImage: React.FC<{ src: string; alt?: string; className?: string }> =
     let active = true;
     let currentBlobUrl = '';
     const fetchSecureImage = async () => {
+      // If the URL is an external URL (e.g. Cloudflare R2), don't try to fetch it securely, just use it directly
+      if (!src.startsWith('/api') && (!import.meta.env.VITE_API_URL || !src.startsWith(import.meta.env.VITE_API_URL))) {
+        setBlobUrl(src);
+        return;
+      }
+
       setLoading(true);
       try {
         const response = await api.get(src, { responseType: 'blob' });
@@ -42,7 +48,7 @@ const SecureImage: React.FC<{ src: string; alt?: string; className?: string }> =
 
     return () => {
       active = false;
-      if (currentBlobUrl) {
+      if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) {
         try {
           URL.revokeObjectURL(currentBlobUrl);
         } catch {
