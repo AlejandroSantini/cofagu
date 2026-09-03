@@ -145,18 +145,20 @@ export const UsersPage: React.FC = () => {
     setError('');
     
     try {
-      const payload = {
+      const payload: any = {
         name: formData.name,
+        email: formData.email,
         role: formData.role as any,
         carrierId: formData.role === 'CARRIER' && formData.carrierId ? Number(formData.carrierId) : null
       };
 
+      if (formData.password && formData.password.trim() !== '') {
+        payload.password = formData.password.trim();
+      }
+
       const response = editingId 
         ? await authService.updateUser(editingId, payload)
-        : await authService.register({
-            ...formData,
-            carrierId: formData.role === 'CARRIER' && formData.carrierId ? Number(formData.carrierId) : null
-          });
+        : await authService.register(payload);
 
       if (response.data.success) {
         loadUsers();
@@ -297,20 +299,17 @@ export const UsersPage: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 required
-                disabled={!!editingId}
               />
-              {!editingId && (
-                <Input 
-                  label="Contraseña"
-                  type="password"
-                  placeholder="••••••••"
-                  icon={Shield}
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  required={!editingId}
-                  autoComplete="new-password"
-                />
-              )}
+              <Input 
+                label={editingId ? "Nueva Contraseña (Opcional)" : "Contraseña"}
+                type="password"
+                placeholder={editingId ? "Dejar en blanco para mantener" : "••••••••"}
+                icon={Shield}
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                required={!editingId}
+                autoComplete="new-password"
+              />
               <Select 
                 label="Rol de Usuario"
                 icon={Shield}

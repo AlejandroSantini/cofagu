@@ -35,7 +35,7 @@ export const authService = {
   register: (data: unknown) => api.post<ApiResponse<User>>('/users/register', data),
 
   updateUser: (id: number, data: Partial<User>) => 
-    api.patch<ApiResponse<User>>(`/users/${id}`, data),
+    api.put<ApiResponse<User>>(`/users/${id}`, data),
 
   deleteUser: (id: number) => 
     api.delete<ApiResponse<void>>(`/users/${id}`),
