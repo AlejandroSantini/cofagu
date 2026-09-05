@@ -12,7 +12,10 @@ import {
   Briefcase,
   FileText,
   Layers,
-  Bell
+  Bell,
+  Search,
+  ParkingSquare,
+  Fuel
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
@@ -51,18 +54,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   }, [user, setUnreadCount]);
 
-  const isOperator = user?.role === 'OPERATOR' || user?.role === 'PLAYERO';
-
+  const isPlayeroYard = user?.role === 'PLAYERO';
+  const isPlayeroCombustible = user?.role === 'GAS_STATION';
+  const isControlViajes = user?.role === 'CONTROL_VIAJES';
   const isLogistics = user?.role === 'LOGISTICS';
+  const isRestricted = isPlayeroYard || isPlayeroCombustible || isControlViajes;
 
   const navItems = [
-    ...(!isOperator ? [{ label: 'Panel de Control', icon: Home, path: '/' }] : []),
-    { label: isOperator ? 'Cargas' : 'Cargas y Viajes', icon: Briefcase, path: '/loads' },
+    ...(!isRestricted ? [{ label: 'Panel de Control', icon: Home, path: '/' }] : []),
+    ...(isPlayeroCombustible ? [{ label: 'Control Combustible', icon: Fuel, path: '/loads' }] : []),
+    ...(!isRestricted ? [{ label: 'Cargas y Viajes', icon: Briefcase, path: '/loads' }] : []),
+    ...(isPlayeroYard ? [{ label: 'Playa de Camiones', icon: ParkingSquare, path: '/yard' }] : []),
+    ...((isControlViajes || user?.role === 'OPERATOR' || isAdmin) ? [{ label: 'Control de Viajes', icon: Search, path: '/control-viajes' }] : []),
 
-    ...(isStaff && !isOperator ? [
+    ...(isStaff && !isRestricted ? [
       { label: 'Transportistas', icon: Truck, path: '/carriers' },
     ] : []),
-    ...(isCarrier || isLogistics || isAdmin ? [
+    ...((isCarrier || isLogistics || isAdmin) && !isControlViajes ? [
       { label: 'Choferes', icon: Users, path: '/drivers' },
       { label: 'Camiones', icon: Truck, path: '/trucks' },
     ] : []),
@@ -77,11 +85,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { label: 'Notificaciones', icon: Bell, path: '/notifications' },
     { label: 'Configuración', icon: Settings, path: '/settings' },
   ];
-
-
-
-
-
 
 
   const isActive = (path: string) => location.pathname === path;

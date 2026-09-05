@@ -72,21 +72,33 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     },
     {
       header: 'Transportista',
-      render: (l: Load) => {
-        if (l.carrier?.name) {
-          return <span className="font-bold text-slate-800 dark:text-zinc-200">{l.carrier.name}</span>;
+      render: (l: any) => {
+        const carrier = l.carrier || 
+          l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED')?.carrier || 
+          l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED')?.carrier;
+
+        if (carrier?.name) {
+          return <span className="font-bold text-slate-800 dark:text-zinc-200">{carrier.name}</span>;
         }
         return <span className="text-xs text-slate-400 italic">Sin Asignar</span>;
       }
     },
     {
       header: 'Chofer / Camión',
-      render: (l: Load) => {
-        if (l.driver && l.truck) {
+      render: (l: any) => {
+        const driver = l.driver || 
+          l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED')?.driver || 
+          l.applications?.find((app: any) => app.driver && app.status === 'ACCEPTED')?.driver;
+
+        const truck = l.truck || 
+          l.loads?.find((load: any) => load.truck && load.status !== 'CANCELLED')?.truck || 
+          l.applications?.find((app: any) => app.truck && app.status === 'ACCEPTED')?.truck;
+
+        if (driver || truck) {
           return (
             <div className="flex flex-col">
-              <span className="font-bold text-slate-800 dark:text-zinc-200">{l.driver.name}</span>
-              <span className="text-slate-500 font-mono">{l.truck.plate}</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200">{driver?.name || 'N/D'}</span>
+              <span className="text-slate-500 font-mono uppercase">{truck?.chassisPlate || truck?.plate || 'S/P'}</span>
             </div>
           );
         }

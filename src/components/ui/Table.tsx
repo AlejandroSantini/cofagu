@@ -17,7 +17,7 @@ interface TableProps<T> {
 
 export function Table<T>({ 
   columns, 
-  data, 
+  data = [], 
   isLoading, 
   emptyMessage = "No hay registros disponibles.",
   onRowClick,

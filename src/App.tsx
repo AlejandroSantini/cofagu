@@ -25,6 +25,8 @@ import { GroupsPage } from './pages/GroupsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import NotificationsPage from './pages/NotificationsPage';
+import { YardPage } from './pages/YardPage';
+import { ControlViajesPage } from './pages/ControlViajesPage';
 
 
 function App() {
@@ -63,8 +65,12 @@ function App() {
           path="/"
           element={
             token ? (
-              user?.role === 'OPERATOR' || user?.role === 'PLAYERO' ? (
+              user?.role === 'PLAYERO' ? (
+                <Navigate to="/yard" replace />
+              ) : user?.role === 'GAS_STATION' ? (
                 <Navigate to="/loads" replace />
+              ) : user?.role === 'CONTROL_VIAJES' ? (
+                <Navigate to="/control-viajes" replace />
               ) : (
                 <AppLayout><Dashboard /></AppLayout>
               )
@@ -199,6 +205,32 @@ function App() {
         />
 
         <Route path="*" element={<Navigate to="/" />} />
+
+        <Route
+          path="/yard"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN', 'PLAYERO']}>
+                  <YardPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
+        />
+
+        <Route
+          path="/control-viajes"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['CONTROL_VIAJES', 'OPERATOR', 'ADMIN']}>
+                  <ControlViajesPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

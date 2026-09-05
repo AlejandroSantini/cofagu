@@ -1,49 +1,74 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { groupService, carrierService } from '../api/services';
-import { type CarrierGroup, type Carrier } from '../types';
-import { getErrorMessage } from '../api/errorUtils';
-import { Table } from '../components/ui/Table';
-import { PageHeader } from '../components/ui/PageHeader';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Modal } from '../components/ui/Modal';
-import { Select } from '../components/ui/Select';
-import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { Toast } from '../components/ui/Toast';
-import { useToast } from '../hooks/useToast';
-import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { useConfirm } from '../hooks/useConfirm';
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { groupService, carrierService, authService } from "../api/services";
 import {
-  ChevronLeft, Plus, Trash2, UserPlus, UserMinus,
-  Building, Briefcase, Search, RefreshCw, Save, Users
-} from 'lucide-react';
+  type CarrierGroup,
+  type Carrier,
+  type User,
+  type GroupMemberType,
+  type GroupMember,
+} from "../types";
+import { Badge } from "../components/ui/Badge";
+import { getErrorMessage } from "../api/errorUtils";
+import { Table } from "../components/ui/Table";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Modal } from "../components/ui/Modal";
+import { Select } from "../components/ui/Select";
+import { ErrorMessage } from "../components/ui/ErrorMessage";
+import { Toast } from "../components/ui/Toast";
+import { useToast } from "../hooks/useToast";
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useConfirm } from "../hooks/useConfirm";
+import {
+  ChevronLeft,
+  Plus,
+  Trash2,
+  UserPlus,
+  UserMinus,
+  Building,
+  Briefcase,
+  Search,
+  RefreshCw,
+  Save,
+  Users,
+} from "lucide-react";
 
 export const GroupsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [groups, setGroups] = useState<CarrierGroup[]>([]);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
+  const [logisticsUsers, setLogisticsUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Navigation View State: 'LIST' | 'FORM'
-  const [viewMode, setViewMode] = useState<'LIST' | 'FORM'>('LIST');
+  const [viewMode, setViewMode] = useState<"LIST" | "FORM">("LIST");
 
   // Form & Member Management State
   const [editingGroup, setEditingGroup] = useState<CarrierGroup | null>(null);
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
   const [groupDetailsLoading, setGroupDetailsLoading] = useState(false);
-  const [selectedCarrierToAdd, setSelectedCarrierToAdd] = useState('');
+  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState("");
+  const [selectedMemberType, setSelectedMemberType] =
+    useState<GroupMemberType>("carrier");
   const [isAddingMember, setIsAddingMember] = useState(false);
-  const [removingCarrierId, setRemovingCarrierId] = useState<number | null>(null);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const { toast, showToast, hideToast } = useToast();
-  const { isOpen: isDelOpen, data: delGroup, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<CarrierGroup>();
+  const {
+    isOpen: isDelOpen,
+    data: delGroup,
+    ask: askDelete,
+    confirm: confirmDelete,
+    cancel: cancelDelete,
+  } = useConfirm<CarrierGroup>();
 
   const fetchGroups = useCallback(async () => {
     try {
@@ -53,7 +78,7 @@ export const GroupsPage: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      setError('Error al cargar la lista de grupos de transportistas.');
+      setError("Error al cargar la lista de grupos de transportistas.");
     } finally {
       setLoading(false);
     }
@@ -66,13 +91,26 @@ export const GroupsPage: React.FC = () => {
         setCarriers(res.data.data);
       }
     } catch (err) {
-      console.error('Error fetching carriers', err);
+      console.error("Error fetching carriers", err);
+    }
+  }, []);
+
+  const fetchLogisticsUsers = useCallback(async () => {
+    try {
+      const res = await authService.getUsers();
+      if (res.data.success && res.data.data) {
+        setLogisticsUsers(
+          res.data.data.filter((u: User) => u.role === "LOGISTICS"),
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching logistics users", err);
     }
   }, []);
 
   const loadInitialData = useCallback(async () => {
-    await Promise.all([fetchGroups(), fetchCarriers()]);
-  }, [fetchGroups, fetchCarriers]);
+    await Promise.all([fetchGroups(), fetchCarriers(), fetchLogisticsUsers()]);
+  }, [fetchGroups, fetchCarriers, fetchLogisticsUsers]);
 
   useEffect(() => {
     loadInitialData();
@@ -85,7 +123,7 @@ export const GroupsPage: React.FC = () => {
     const loadSelectedGroup = async () => {
       if (!id) {
         if (active) {
-          setViewMode('LIST');
+          setViewMode("LIST");
           setEditingGroup(null);
         }
         return;
@@ -97,31 +135,36 @@ export const GroupsPage: React.FC = () => {
           const group = res.data.data;
           setEditingGroup(group);
           setGroupName(group.name);
-          setGroupDescription(group.description || '');
-          setSelectedCarrierToAdd('');
-          setViewMode('FORM');
+          setGroupDescription(group.description || "");
+          setSelectedMemberToAdd("");
+          setSelectedMemberType("carrier");
+          setViewMode("FORM");
         }
       } catch (err) {
         console.error(err);
-        if (active) showToast('Error al cargar integrantes del grupo.', 'error');
+        if (active)
+          showToast("Error al cargar integrantes del grupo.", "error");
       } finally {
         if (active) setGroupDetailsLoading(false);
       }
     };
     loadSelectedGroup();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [id, showToast]);
 
   // Open create group view
   const handleOpenCreate = () => {
     if (id) {
-      navigate('/groups');
+      navigate("/groups");
     }
     setEditingGroup(null);
-    setGroupName('');
-    setGroupDescription('');
-    setSelectedCarrierToAdd('');
-    setViewMode('FORM');
+    setGroupName("");
+    setGroupDescription("");
+    setSelectedMemberToAdd("");
+    setSelectedMemberType("carrier");
+    setViewMode("FORM");
   };
 
   // Open edit group view & load details
@@ -132,9 +175,9 @@ export const GroupsPage: React.FC = () => {
   // Return to group list view
   const handleBackToList = () => {
     if (id) {
-      navigate('/groups');
+      navigate("/groups");
     } else {
-      setViewMode('LIST');
+      setViewMode("LIST");
       setEditingGroup(null);
       fetchGroups();
     }
@@ -148,20 +191,22 @@ export const GroupsPage: React.FC = () => {
       if (editingGroup) {
         const res = await groupService.updateGroup(editingGroup.id, {
           name: groupName.trim(),
-          description: groupDescription.trim() || undefined
+          description: groupDescription.trim() || undefined,
         });
         if (res.data.success) {
-          showToast('Nombre y descripción actualizados con éxito');
+          showToast("Nombre y descripción actualizados con éxito");
           fetchGroups();
         }
       } else {
         const res = await groupService.createGroup({
           name: groupName.trim(),
-          description: groupDescription.trim() || undefined
+          description: groupDescription.trim() || undefined,
         });
         if (res.data.success && res.data.data) {
           const createdGroup = res.data.data;
-          showToast('Grupo creado con éxito. Ahora puedes asignar transportistas.');
+          showToast(
+            "Grupo creado con éxito. Ahora puedes asignar transportistas.",
+          );
           fetchGroups();
           // Transition into edit & member management mode directly
           setEditingGroup(createdGroup);
@@ -173,7 +218,7 @@ export const GroupsPage: React.FC = () => {
         }
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al guardar el grupo.'), 'error');
+      showToast(getErrorMessage(err, "Error al guardar el grupo."), "error");
     } finally {
       setFormSubmitting(false);
     }
@@ -183,7 +228,10 @@ export const GroupsPage: React.FC = () => {
   const handleDeleteGroup = async () => {
     if (!delGroup) return;
     if (delGroup._count?.loads && delGroup._count.loads > 0) {
-      showToast('No se puede eliminar un grupo que tiene cargas activas asignadas.', 'error');
+      showToast(
+        "No se puede eliminar un grupo que tiene cargas activas asignadas.",
+        "error",
+      );
       cancelDelete();
       return;
     }
@@ -192,33 +240,45 @@ export const GroupsPage: React.FC = () => {
     try {
       const res = await groupService.deleteGroup(delGroup.id);
       if (res.data.success) {
-        showToast('Grupo eliminado con éxito');
+        showToast("Grupo eliminado con éxito");
         confirmDelete();
         fetchGroups();
         if (id) {
-          navigate('/groups');
-        } else if (viewMode === 'FORM') {
-          setViewMode('LIST');
+          navigate("/groups");
+        } else if (viewMode === "FORM") {
+          setViewMode("LIST");
           setEditingGroup(null);
         }
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al eliminar el grupo. Compruebe si tiene cargas asignadas.'), 'error');
+      showToast(
+        getErrorMessage(
+          err,
+          "Error al eliminar el grupo. Compruebe si tiene cargas asignadas.",
+        ),
+        "error",
+      );
       cancelDelete();
     } finally {
       setFormSubmitting(false);
     }
   };
 
-  // Add carrier to group
-  const handleAddCarrier = async () => {
-    if (!editingGroup || !selectedCarrierToAdd) return;
+  // Add member to group (carrier or logistics)
+  const handleAddMember = async () => {
+    if (!editingGroup || !selectedMemberToAdd) return;
     setIsAddingMember(true);
     try {
-      const res = await groupService.addCarrierToGroup(editingGroup.id, Number(selectedCarrierToAdd));
+      const res = await groupService.addMemberToGroup(
+        editingGroup.id,
+        Number(selectedMemberToAdd),
+        selectedMemberType,
+      );
       if (res.data.success) {
-        showToast('Transportista asignado al grupo con éxito');
-        setSelectedCarrierToAdd('');
+        showToast(
+          `${selectedMemberType === "carrier" ? "Transportista" : "Logística"} asignado al grupo con éxito`,
+        );
+        setSelectedMemberToAdd("");
         // Refresh group detail
         const groupRes = await groupService.getGroup(editingGroup.id);
         if (groupRes.data.success && groupRes.data.data) {
@@ -227,20 +287,33 @@ export const GroupsPage: React.FC = () => {
         fetchGroups();
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al asignar transportista al grupo.'), 'error');
+      showToast(
+        getErrorMessage(err, "Error al asignar integrante al grupo."),
+        "error",
+      );
     } finally {
       setIsAddingMember(false);
     }
   };
 
-  // Remove carrier from group
-  const handleRemoveCarrier = async (carrierId: number) => {
+  // Remove member from group
+  const handleRemoveMember = async (
+    memberId: number,
+    memberType: GroupMemberType,
+  ) => {
     if (!editingGroup) return;
-    setRemovingCarrierId(carrierId);
+    const key = `${memberType}-${memberId}`;
+    setRemovingMemberId(key);
     try {
-      const res = await groupService.removeCarrierFromGroup(editingGroup.id, carrierId);
+      const res = await groupService.removeMemberFromGroup(
+        editingGroup.id,
+        memberId,
+        memberType,
+      );
       if (res.data.success) {
-        showToast(res.data.message || 'Transportista removido del grupo exitosamente');
+        showToast(
+          res.data.message || "Integrante removido del grupo exitosamente",
+        );
         // Refresh group detail
         const groupRes = await groupService.getGroup(editingGroup.id);
         if (groupRes.data.success && groupRes.data.data) {
@@ -249,58 +322,72 @@ export const GroupsPage: React.FC = () => {
         fetchGroups();
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al remover transportista.'), 'error');
+      showToast(getErrorMessage(err, "Error al remover integrante."), "error");
     } finally {
-      setRemovingCarrierId(null);
+      setRemovingMemberId(null);
     }
   };
 
-  const filteredGroups = groups.filter(g =>
-    g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (g.description && g.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredGroups = groups.filter(
+    (g) =>
+      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (g.description &&
+        g.description.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   const columns = [
     {
-      header: 'Nombre del Grupo',
+      header: "Nombre del Grupo",
       render: (g: CarrierGroup) => (
         <div className="flex flex-col">
-          <span className="font-bold text-slate-900 dark:text-white text-base">{g.name}</span>
+          <span className="font-bold text-slate-900 dark:text-white text-base">
+            {g.name}
+          </span>
           {g.description && (
-            <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">{g.description}</span>
+            <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+              {g.description}
+            </span>
           )}
         </div>
-      )
+      ),
     },
     {
-      header: 'Transportistas Integrantes',
+      header: "Integrantes",
       render: (g: CarrierGroup) => {
-        const count = g._count?.carriers ?? g.carriers?.length ?? 0;
+        const count =
+          g._count?.members ??
+          g._count?.carriers ??
+          g.members?.length ??
+          g.carriers?.length ??
+          0;
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-bold text-xs rounded-full border border-emerald-200/50 dark:border-emerald-800/30">
             <Building size={14} />
-            {count} {count === 1 ? 'empresa' : 'empresas'}
+            {count} {count === 1 ? "integrante" : "integrantes"}
           </span>
         );
-      }
+      },
     },
     {
-      header: 'Cargas Asignadas',
+      header: "Cargas Asignadas",
       render: (g: CarrierGroup) => {
         const count = g._count?.loads ?? 0;
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 font-bold text-xs rounded-full border border-blue-200/50 dark:border-blue-800/30">
             <Briefcase size={14} />
-            {count} {count === 1 ? 'carga' : 'cargas'}
+            {count} {count === 1 ? "carga" : "cargas"}
           </span>
         );
-      }
+      },
     },
     {
-      header: 'Acciones',
-      className: 'w-24 text-right',
+      header: "Acciones",
+      className: "w-24 text-right",
       render: (g: CarrierGroup) => (
-        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center justify-end"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -310,13 +397,18 @@ export const GroupsPage: React.FC = () => {
             title="Eliminar grupo"
           />
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
+      <Toast
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        type={toast.type}
+      />
 
       {/* Delete Group Confirmation Modal */}
       <Modal
@@ -332,10 +424,12 @@ export const GroupsPage: React.FC = () => {
         type="danger"
         confirmText="Eliminar"
         isLoading={formSubmitting}
-        isConfirmDisabled={Boolean(delGroup?._count?.loads && delGroup._count.loads > 0)}
+        isConfirmDisabled={Boolean(
+          delGroup?._count?.loads && delGroup._count.loads > 0,
+        )}
       />
 
-      {viewMode === 'FORM' ? (
+      {viewMode === "FORM" ? (
         /* --- FORM / EDIT VIEW --- */
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4">
@@ -366,10 +460,12 @@ export const GroupsPage: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">
-                {editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'}
+                {editingGroup ? "Editar Grupo" : "Nuevo Grupo"}
               </span>
               <h2 className="text-xl font-black text-slate-900 dark:text-white truncate">
-                {editingGroup ? (groupName || editingGroup.name) : (groupName.trim() || 'Nuevo Grupo de Transportistas')}
+                {editingGroup
+                  ? groupName || editingGroup.name
+                  : groupName.trim() || "Nuevo Grupo de Transportistas"}
               </h2>
             </div>
           </div>
@@ -378,7 +474,10 @@ export const GroupsPage: React.FC = () => {
             {/* Section 1: Basic Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
-                <Users size={18} className="text-emerald-600 dark:text-emerald-400" />
+                <Users
+                  size={18}
+                  className="text-emerald-600 dark:text-emerald-400"
+                />
                 <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200">
                   Información Principal
                 </h3>
@@ -415,7 +514,9 @@ export const GroupsPage: React.FC = () => {
                   disabled={!groupName.trim() || formSubmitting}
                   className="px-6"
                 >
-                  {editingGroup ? 'Guardar Cambios' : 'Crear y Continuar a Integrantes'}
+                  {editingGroup
+                    ? "Guardar Cambios"
+                    : "Crear y Continuar a Integrantes"}
                 </Button>
               </div>
             </div>
@@ -425,42 +526,124 @@ export const GroupsPage: React.FC = () => {
               <div className="border-t border-slate-200 dark:border-zinc-800 pt-6 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Building size={18} className="text-emerald-600 dark:text-emerald-400" />
+                    <Building
+                      size={18}
+                      className="text-emerald-600 dark:text-emerald-400"
+                    />
                     <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200">
-                      Transportistas Integrantes ({editingGroup.carriers?.length || 0})
+                      Integrantes (
+                      {
+                        (editingGroup.members || editingGroup.carriers || [])
+                          .length
+                      }
+                      )
                     </h3>
                   </div>
                 </div>
 
                 {groupDetailsLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <RefreshCw className="animate-spin text-emerald-500" size={24} />
+                    <RefreshCw
+                      className="animate-spin text-emerald-500"
+                      size={24}
+                    />
                   </div>
                 ) : (
                   <>
-                    {/* Add Carrier Form */}
+                    {/* Add Member Form */}
                     <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 space-y-3">
                       <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider block">
-                        Asignar Nuevo Transportista
+                        Asignar Nuevo Integrante
                       </span>
+
+                      {/* Member Type Toggle */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedMemberType("carrier");
+                            setSelectedMemberToAdd("");
+                          }}
+                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${
+                            selectedMemberType === "carrier"
+                              ? "bg-emerald-500 text-white border-emerald-500"
+                              : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-emerald-400"
+                          }`}
+                        >
+                          Transportista
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMemberType("logistics");
+                            setSelectedMemberToAdd("");
+                          }}
+                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${
+                            selectedMemberType === "logistics"
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-blue-400"
+                          }`}
+                        >
+                          Logística
+                        </button>
+                      </div>
+
                       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                         <div className="flex-1 w-full">
                           <Select
                             label=""
                             icon={Building}
-                            options={carriers
-                              .filter(c => !editingGroup.carriers?.some(m => m.carrierId === c.id))
-                              .map(c => ({ value: String(c.id), label: `${c.name} (${c.cuit})` }))
+                            options={
+                              selectedMemberType === "carrier"
+                                ? carriers
+                                    .filter((c) => {
+                                      const members =
+                                        editingGroup.members || [];
+                                      const legacyCarriers =
+                                        editingGroup.carriers || [];
+                                      return (
+                                        !members.some(
+                                          (m) =>
+                                            m.member_type === "carrier" &&
+                                            m.id === c.id,
+                                        ) &&
+                                        !legacyCarriers.some(
+                                          (m) => m.carrierId === c.id,
+                                        )
+                                      );
+                                    })
+                                    .map((c) => ({
+                                      value: String(c.id),
+                                      label: `${c.name} (${c.cuit})`,
+                                    }))
+                                : logisticsUsers
+                                    .filter((u) => {
+                                      const members =
+                                        editingGroup.members || [];
+                                      return !members.some(
+                                        (m) =>
+                                          m.member_type === "logistics" &&
+                                          m.id === u.id,
+                                      );
+                                    })
+                                    .map((u) => ({
+                                      value: String(u.id),
+                                      label: `${u.name} (${u.email})`,
+                                    }))
                             }
-                            value={selectedCarrierToAdd}
-                            onChange={(e) => setSelectedCarrierToAdd(e.target.value)}
+                            value={selectedMemberToAdd}
+                            onChange={(e) =>
+                              setSelectedMemberToAdd(e.target.value)
+                            }
                           />
                         </div>
                         <Button
                           variant="primary"
                           icon={UserPlus}
-                          onClick={handleAddCarrier}
-                          disabled={!selectedCarrierToAdd || isAddingMember || removingCarrierId !== null}
+                          onClick={handleAddMember}
+                          disabled={
+                            !selectedMemberToAdd ||
+                            isAddingMember ||
+                            removingMemberId !== null
+                          }
                           isLoading={isAddingMember}
                           className="w-full sm:w-auto whitespace-nowrap justify-center"
                         >
@@ -469,45 +652,103 @@ export const GroupsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Member Carriers List */}
-                    {!editingGroup.carriers || editingGroup.carriers.length === 0 ? (
-                      <p className="text-sm text-slate-500 dark:text-zinc-500 italic p-6 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800">
-                        Este grupo aún no tiene transportistas asignados. Utiliza el selector superior para añadir el primero.
-                      </p>
-                    ) : (
-                      <div className="space-y-2.5">
-                        {editingGroup.carriers.map((member) => (
-                          <div
-                            key={member.carrierId}
-                            className="flex items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
-                          >
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
-                                <Building size={18} />
+                    {/* Members List */}
+                    {(() => {
+                      // Use members array if available, fall back to carriers
+                      const membersList: GroupMember[] = editingGroup.members
+                        ? editingGroup.members
+                        : (editingGroup.carriers || []).map((c) => ({
+                            id: c.carrier?.id || c.carrierId,
+                            member_type: "carrier" as GroupMemberType,
+                            name:
+                              c.carrier?.name ||
+                              `Transportista #${c.carrierId}`,
+                            cuit: c.carrier?.cuit,
+                          }));
+
+                      if (membersList.length === 0) {
+                        return (
+                          <p className="text-sm text-slate-500 dark:text-zinc-500 italic p-6 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800">
+                            Este grupo aún no tiene integrantes asignados.
+                            Utiliza el selector superior para añadir el primero.
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2.5">
+                          {membersList.map((member) => {
+                            const key = `${member.member_type}-${member.id}`;
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
+                              >
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
+                                      member.member_type === "carrier"
+                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                    }`}
+                                  >
+                                    <Building size={18} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate">
+                                        {member.name}
+                                      </p>
+                                      <Badge
+                                        variant={
+                                          member.member_type === "carrier"
+                                            ? "success"
+                                            : "info"
+                                        }
+                                        size="xs"
+                                      >
+                                        {member.member_type === "carrier"
+                                          ? "Transportista"
+                                          : "Logística"}
+                                      </Badge>
+                                    </div>
+                                    {member.cuit && (
+                                      <p className="text-xs text-slate-400 font-mono">
+                                        CUIT: {member.cuit}
+                                      </p>
+                                    )}
+                                    {member.email && (
+                                      <p className="text-xs text-slate-400">
+                                        {member.email}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="danger"
+                                  onClick={() =>
+                                    handleRemoveMember(
+                                      member.id,
+                                      member.member_type,
+                                    )
+                                  }
+                                  isLoading={removingMemberId === key}
+                                  disabled={
+                                    isAddingMember ||
+                                    (removingMemberId !== null &&
+                                      removingMemberId !== key)
+                                  }
+                                  icon={UserMinus}
+                                  className="shrink-0 !px-3 !py-1.5 text-xs whitespace-nowrap"
+                                >
+                                  Quitar
+                                </Button>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate">
-                                  {member.carrier?.name || `Transportista #${member.carrierId}`}
-                                </p>
-                                {member.carrier?.cuit && (
-                                  <p className="text-xs text-slate-400 font-mono">CUIT: {member.carrier.cuit}</p>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              variant="danger"
-                              onClick={() => handleRemoveCarrier(member.carrierId)}
-                              isLoading={removingCarrierId === member.carrierId}
-                              disabled={isAddingMember || (removingCarrierId !== null && removingCarrierId !== member.carrierId)}
-                              icon={UserMinus}
-                              className="shrink-0 !px-3 !py-1.5 text-xs whitespace-nowrap"
-                            >
-                              Quitar
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -523,7 +764,12 @@ export const GroupsPage: React.FC = () => {
               title="Grupos de Transportistas"
               description="Segmenta y administra grupos personalizados para publicaciones dirigidas y tarifas diferenciadas."
             />
-            <Button variant="primary" icon={Plus} onClick={handleOpenCreate} className="w-full md:w-auto px-6">
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={handleOpenCreate}
+              className="w-full md:w-auto px-6"
+            >
               Nuevo Grupo
             </Button>
           </div>
@@ -533,7 +779,10 @@ export const GroupsPage: React.FC = () => {
           {/* Search Filter */}
           <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
             <div className="relative w-full">
-              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search
+                size={18}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 placeholder="Buscar grupo por nombre o descripción..."

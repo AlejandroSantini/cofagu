@@ -26,6 +26,7 @@ import {
   Layers,
   Clock,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 
 import { api } from "../../api/axios";
@@ -181,6 +182,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [contingencyReporter, setContingencyReporter] = useState("");
   // Carrier and Application selection states
   const [managedCarriers, setManagedCarriers] = useState<any[]>([]);
+  // Cascade state for logistics postulation
+  const [cascadeDrivers, setCascadeDrivers] = useState<Driver[]>([]);
+  const [cascadeTrucks, setCascadeTrucks] = useState<Truck[]>([]);
+  const [cascadeLoading, setCascadeLoading] = useState(false);
   
   const isAdmin = user?.role === "ADMIN";
   const isOperator = user?.role === "OPERATOR";
@@ -260,17 +265,30 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   );
   // Mostrar botón siempre que haya camiones disponibles en la página cargada,
   // o si aún no se cargaron camiones (loading), o si hay 0 aplicaciones propias (primer postulación).
-  const myActiveApps = (load.applications || []).filter(
-    (a) => a.carrierId === effectiveCarrierId && a.status !== "CANCELLED",
+  const managedCarrierIds = new Set([
+    ...(managedCarriers || []).map((c: any) => c.id),
+    ...(carrierTrucks || []).map((t: any) => t.carrierId),
+    ...(cascadeTrucks || []).map((t: any) => t.carrierId),
+  ]);
+
+  const myTrips = (load?.applications || []).filter((app) => {
+    if (isLogistics) {
+      if ((app as any).logisticsId && (app as any).logisticsId === user?.id) return true;
+      if (app.createdByUser?.id === user?.id) return true;
+      return managedCarrierIds.has(app.carrierId);
+    }
+    return app.carrierId === effectiveCarrierId;
+  });
+
+  const myActiveApps = myTrips.filter(
+    (a) => a.status !== "CANCELLED",
   );
+
   const hasApplied =
+    !isLogistics &&
     myActiveApps.length > 0 &&
     availableTrucks.length === 0 &&
     carrierTrucks.length > 0;
-
-  const myTrips = (load?.applications || []).filter(
-    (app) => app.carrierId === effectiveCarrierId,
-  );
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -313,7 +331,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     const selectedTruck = carrierTrucks.find(
       (t) => String(t.id) === postulateTruckId,
     );
-    if (selectedTruck && !isTruckInsuranceValid(selectedTruck)) {
+    if (selectedTruck && !isLogistics && !isTruckInsuranceValid(selectedTruck)) {
       alert(
         "El seguro de carga del camión seleccionado está vencido o incompleto. Debe actualizar los datos del camión para poder viajar.",
       );
@@ -493,19 +511,47 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 label: c.name
               }))}
               value={postulateCarrierId}
-              onChange={(e) => {
-                setPostulateCarrierId(e.target.value);
+              onChange={async (e) => {
+                const cId = e.target.value;
+                setPostulateCarrierId(cId);
                 setPostulateDriverId("");
                 setPostulateTruckId("");
+                setCascadeDrivers([]);
+                setCascadeTrucks([]);
+                if (cId) {
+                  setCascadeLoading(true);
+                  try {
+                    const { carrierService } = await import('../../api/services');
+                    const [driversRes, trucksRes] = await Promise.all([
+                      carrierService.getCarrierDrivers(Number(cId)),
+                      carrierService.getCarrierTrucks(Number(cId))
+                    ]);
+                    if (driversRes.data.success && driversRes.data.data) {
+                      setCascadeDrivers(driversRes.data.data);
+                    }
+                    if (trucksRes.data.success && trucksRes.data.data) {
+                      setCascadeTrucks(trucksRes.data.data);
+                    }
+                  } catch (err) {
+                    console.error('Error fetching cascade resources', err);
+                  } finally {
+                    setCascadeLoading(false);
+                  }
+                }
               }}
             />
           )}
 
-          {(!isLogistics || postulateCarrierId) && availableTrucks.length === 0 && carrierTrucks.length > 0 ? (
+          {(!isLogistics || postulateCarrierId) && availableTrucks.length === 0 && carrierTrucks.length > 0 && !isLogistics ? (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-700 dark:text-amber-300 font-medium">
               ⚠️ Todos los camiones de tu flota ya están postulados a esta
               carga. Si tenés más camiones que no aparecen aquí, verificá que
               estén cargados en el sistema.
+            </div>
+          ) : cascadeLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-sm text-slate-400">
+              <RefreshCw size={16} className="animate-spin" />
+              Cargando recursos del transportista...
             </div>
           ) : (!isLogistics || postulateCarrierId) ? (
             <>
@@ -516,8 +562,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <Select
                 label="Chofer Habilitado"
                 icon={User}
-                options={carrierDrivers
-                  .filter(d => !isLogistics || d.carrierId === Number(postulateCarrierId))
+                options={(isLogistics ? cascadeDrivers : carrierDrivers)
                   .map((d) => {
                   const isSuspended =
                     d.isSuspended ||
@@ -539,11 +584,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <Select
                 label="Camión Flota"
                 icon={TruckIcon}
-                options={availableTrucks
-                  .filter(t => !isLogistics || t.carrierId === Number(postulateCarrierId))
+                options={(isLogistics ? cascadeTrucks : availableTrucks)
                   .map((t) => {
                   const plateText = t.chassisPlate || t.plate || "S/P";
-                  const validInsurance = isTruckInsuranceValid(t);
+                  const validInsurance = isLogistics ? true : isTruckInsuranceValid(t);
                   const isSuspended =
                     t.isSuspended ||
                     (t.suspendedUntil
@@ -1261,17 +1305,40 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         user?.role === "PLAYERO" ||
                         user?.role === "GAS_STATION");
 
+                    const isAppliedByLogistics = 
+                      app.appliedByLogistics ||
+                      (app as any).logisticsId != null ||
+                      app.createdByUser?.role === 'LOGISTICS' ||
+                      (app as any).user?.role === 'LOGISTICS' ||
+                      app.logisticsUser != null ||
+                      (typeof app.appliedBy === 'object' && app.appliedBy?.role === 'LOGISTICS') ||
+                      (typeof app.appliedBy === 'string' && (app.appliedBy.toLowerCase().includes('logistica') || app.appliedBy.toLowerCase().includes('logística')));
+
+                    const logisticsCreatorName = 
+                      app.createdByUser?.name || 
+                      app.logisticsUser?.name || 
+                      (typeof app.appliedBy === 'object' ? app.appliedBy?.name : '') || 
+                      (typeof app.appliedBy === 'string' ? app.appliedBy : '');
+
                     return (
                       <div
                         key={app.id}
                         className={`p-4 border rounded-xl border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 ${!isPending && !isAccepted ? "opacity-60" : ""}`}
                       >
-                        <div className="flex justify-between items-center mb-1 border-b border-slate-200/60 dark:border-zinc-700 pb-2">
-                          <span className="font-bold text-sm text-slate-900 dark:text-white">
-                            {app.carrier?.name ||
-                              load.carrier?.name ||
-                              "Transportista"}
-                          </span>
+                        <div className="flex justify-between items-start mb-1 border-b border-slate-200/60 dark:border-zinc-700 pb-2 gap-2">
+                          <div>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white block">
+                              {app.carrier?.name ||
+                                load.carrier?.name ||
+                                "Transportista"}
+                            </span>
+                            {isAppliedByLogistics && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                                <Layers size={10} className="shrink-0" />
+                                Postulado por Logística {logisticsCreatorName ? `(${logisticsCreatorName})` : ''}
+                              </span>
+                            )}
+                          </div>
                           <Badge
                             variant={
                               isAccepted
@@ -1403,7 +1470,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   carrierTrucks.find(
                                     (t) => t.id === app?.truckId,
                                   );
-                                const isProposedTruckInvalid = proposedTruck
+                                const isProposedTruckInvalid = proposedTruck && !isLogistics && !isAppliedByLogistics
                                   ? !isTruckInsuranceValid(proposedTruck)
                                   : false;
 

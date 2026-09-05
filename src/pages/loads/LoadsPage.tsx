@@ -33,7 +33,7 @@ export const LoadsPage: React.FC = () => {
   const id = routeId || searchParams.get('id');
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
-  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
+  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
   const isEmployee = user?.role === 'EMPLOYEE';
   const canWrite = useAuthStore((state) => state.canWrite()) && !isPlayero;
 
@@ -449,6 +449,7 @@ export const LoadsPage: React.FC = () => {
     try {
       const res = await loadService.postCompletionData(targetId, {
         unloadedWeight: data.unloadedWeight,
+        kg_discharge: data.unloadedWeight,
         fuelConsumption: data.fuelConsumption,
         mileage: data.mileage,
         invoiceUrl: data.invoiceUrl,
@@ -483,21 +484,62 @@ export const LoadsPage: React.FC = () => {
 
   const [plateSearch, setPlateSearch] = useState('');
 
+  // Flatten trips into individual assigned loads for fuel control
+  const assignedFuelLoads = React.useMemo(() => {
+    if (!isPlayero) return loads;
+    const result: any[] = [];
+    loads.forEach((trip: any) => {
+      const activeLoads = trip.loads?.filter((l: any) => l.status !== 'CANCELLED' && (l.carrier || l.truck || l.driver)) || [];
+      const activeApps = trip.applications?.filter((a: any) => a.status === 'ACCEPTED' && (a.carrier || a.truck || a.driver)) || [];
+
+      if (activeLoads.length > 0) {
+        activeLoads.forEach((loadItem: any) => {
+          result.push({
+            ...trip,
+            ...loadItem,
+            id: loadItem.id || trip.id,
+            carrier: loadItem.carrier || trip.carrier,
+            driver: loadItem.driver || trip.driver,
+            truck: loadItem.truck || trip.truck,
+            loadingTimeStart: trip.loadingTimeStart || loadItem.loadingTimeStart,
+            loadingTimeEnd: trip.loadingTimeEnd || loadItem.loadingTimeEnd,
+            cereal: trip.cereal || loadItem.cereal,
+          });
+        });
+      } else if (activeApps.length > 0) {
+        activeApps.forEach((appItem: any) => {
+          result.push({
+            ...trip,
+            ...appItem,
+            id: appItem.id || trip.id,
+            carrier: appItem.carrier || trip.carrier,
+            driver: appItem.driver || trip.driver,
+            truck: appItem.truck || trip.truck,
+            loadingTimeStart: trip.loadingTimeStart || appItem.loadingTimeStart,
+            loadingTimeEnd: trip.loadingTimeEnd || appItem.loadingTimeEnd,
+            cereal: trip.cereal || appItem.cereal,
+          });
+        });
+      } else if (trip.carrier || trip.truck || trip.driver) {
+        result.push(trip);
+      }
+    });
+    return result;
+  }, [loads, isPlayero]);
 
   // Loads filtered for playero fuel search (search input only)
   const fuelFilteredLoads = isPlayero 
-    ? loads.filter(l => {
+    ? assignedFuelLoads.filter(l => {
         if (!plateSearch) return true;
-        const q = plateSearch.toLowerCase();
+        const q = plateSearch.toLowerCase().trim();
         const chassis = l.truck?.chassisPlate?.toLowerCase() || '';
         const trailer = l.truck?.trailerPlate?.toLowerCase() || '';
         const plate = l.truck?.plate?.toLowerCase() || '';
-        const driver = l.driver?.name?.toLowerCase() || '';
-        const carrier = l.carrier?.name?.toLowerCase() || '';
-        return chassis.includes(q) || trailer.includes(q) || plate.includes(q) || driver.includes(q) || carrier.includes(q);
+        const driverName = l.driver?.name?.toLowerCase() || '';
+        const carrierName = l.carrier?.name?.toLowerCase() || '';
+        return chassis.includes(q) || trailer.includes(q) || plate.includes(q) || driverName.includes(q) || carrierName.includes(q);
       })
     : loads;
-
 
   const [noShowModalLoad, setNoShowModalLoad] = useState<{ loadId: number; appId?: number } | null>(null);
 
@@ -665,7 +707,7 @@ export const LoadsPage: React.FC = () => {
               columns={[
                 {
                   header: 'Patente (Chasis / Acoplado)',
-                  render: (loadItem: Load) => (
+                  render: (loadItem: any) => (
                     <div className="flex flex-col">
                       <span className="font-bold font-mono text-slate-900 dark:text-white uppercase">
                         {loadItem.truck?.chassisPlate || loadItem.truck?.plate || 'S/P'}
@@ -680,7 +722,7 @@ export const LoadsPage: React.FC = () => {
                 },
                 {
                   header: 'Chofer',
-                  render: (loadItem: Load) => (
+                  render: (loadItem: any) => (
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-800 dark:text-zinc-200">
                         {loadItem.driver?.name || 'N/D'}
@@ -695,7 +737,7 @@ export const LoadsPage: React.FC = () => {
                 },
                 {
                   header: 'Transportista',
-                  render: (loadItem: Load) => (
+                  render: (loadItem: any) => (
                     <span className="font-semibold text-slate-700 dark:text-zinc-300">
                       {loadItem.carrier?.name || 'N/D'}
                     </span>

@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER' | 'PLAYERO' | 'GAS_STATION' | 'LOGISTICS' | 'TECHNICAL_CENTER';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE' | 'CARRIER' | 'PLAYERO' | 'GAS_STATION' | 'LOGISTICS' | 'TECHNICAL_CENTER' | 'CONTROL_VIAJES';
 
 
 
@@ -91,6 +91,10 @@ export interface Application {
   waybillUrl?: string;
   fuelConsumption?: number;
   mileage?: number;
+  createdByUser?: User;
+  appliedBy?: User | string | any;
+  logisticsUser?: User;
+  appliedByLogistics?: boolean;
 }
 
 
@@ -251,6 +255,16 @@ export interface CarrierGroupMember {
   };
 }
 
+export type GroupMemberType = 'carrier' | 'logistics';
+
+export interface GroupMember {
+  id: number;
+  member_type: GroupMemberType;
+  name: string;
+  cuit?: string;
+  email?: string;
+}
+
 export interface CarrierGroup {
   id: number;
   name: string;
@@ -259,9 +273,11 @@ export interface CarrierGroup {
   createdAt?: string;
   _count?: {
     carriers: number;
+    members?: number;
     loads: number;
   };
   carriers?: CarrierGroupMember[];
+  members?: GroupMember[];
 }
 
 export interface Invoice {

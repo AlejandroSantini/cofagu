@@ -18,7 +18,7 @@ export const Dashboard: React.FC = () => {
   const canWrite = useAuthStore((state) => state.canWrite());
   const user = useAuthStore((state) => state.user);
   const isAdmin = useAuthStore((state) => state.isAdmin());
-  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION' || user?.role === 'OPERATOR';
+  const isPlayero = user?.role === 'PLAYERO' || user?.role === 'GAS_STATION';
   const isEmployee = user?.role === 'EMPLOYEE';
   const isLogistics = user?.role === 'LOGISTICS';
 

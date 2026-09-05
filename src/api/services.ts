@@ -1,7 +1,7 @@
-import { api } from './axios';
-import { 
-  type ApiResponse, 
-  type User, 
+import { api } from "./axios";
+import {
+  type ApiResponse,
+  type User,
   type Carrier,
   type Driver,
   type Truck,
@@ -15,152 +15,219 @@ import {
   type CarrierGroup,
   type Application,
   type Invoice,
-  type Notification
-} from '../types';
-
-
-
+  type Notification,
+  type GroupMemberType,
+} from "../types";
 
 // --- AUTH & USERS ---
 export const authService = {
-  login: (email: string, password: string) => 
-    api.post<ApiResponse<{ user: User; token: string }>>('/users/login', { email, password }),
-  
-  getMe: () => api.get<ApiResponse<User>>('/users/me'),
+  login: (email: string, password: string) =>
+    api.post<ApiResponse<{ user: User; token: string }>>("/users/login", {
+      email,
+      password,
+    }),
 
-  getUsers: () => api.get<ApiResponse<User[]>>('/users'),
-  
+  getMe: () => api.get<ApiResponse<User>>("/users/me"),
+
+  getUsers: () => api.get<ApiResponse<User[]>>("/users"),
+
   getUser: (id: number) => api.get<ApiResponse<User>>(`/users/${id}`),
-  
-  register: (data: unknown) => api.post<ApiResponse<User>>('/users/register', data),
 
-  updateUser: (id: number, data: Partial<User>) => 
+  register: (data: unknown) =>
+    api.post<ApiResponse<User>>("/users/register", data),
+
+  updateUser: (id: number, data: Partial<User>) =>
     api.put<ApiResponse<User>>(`/users/${id}`, data),
 
-  deleteUser: (id: number) => 
-    api.delete<ApiResponse<void>>(`/users/${id}`),
+  deleteUser: (id: number) => api.delete<ApiResponse<void>>(`/users/${id}`),
 
-  changePassword: (newPassword: string) => 
-    api.post<ApiResponse<void>>('/users/change-password', { newPassword }),
+  changePassword: (newPassword: string) =>
+    api.post<ApiResponse<void>>("/users/change-password", { newPassword }),
 
   forgotPassword: (email: string) =>
-    api.post<ApiResponse<void>>('/users/forgot-password', { email }),
+    api.post<ApiResponse<void>>("/users/forgot-password", { email }),
 
   resetPassword: (token: string, newPassword: string) =>
-    api.post<ApiResponse<void>>('/users/reset-password', { token, newPassword }),
+    api.post<ApiResponse<void>>("/users/reset-password", {
+      token,
+      newPassword,
+    }),
 
   registerFcmToken: (fcmToken: string) =>
-    api.post<ApiResponse<void>>('/users/fcm-token', { fcmToken }),
+    api.post<ApiResponse<void>>("/users/fcm-token", { fcmToken }),
 };
 
 // --- CARRIERS ---
 export const carrierService = {
-  getCarriers: () =>
-    api.get<ApiResponse<Carrier[]>>('/carriers'),
-  getCarrier: (id: number) =>
-    api.get<ApiResponse<Carrier>>(`/carriers/${id}`),
+  getCarriers: () => api.get<ApiResponse<Carrier[]>>("/carriers"),
+  getCarrier: (id: number) => api.get<ApiResponse<Carrier>>(`/carriers/${id}`),
   createCarrier: (data: CreateCarrierPayload) =>
-    api.post<ApiResponse<Carrier>>('/carriers', data),
+    api.post<ApiResponse<Carrier>>("/carriers", data),
   updateCarrier: (id: number, data: Partial<CreateCarrierPayload>) =>
     api.put<ApiResponse<Carrier>>(`/carriers/${id}`, data),
   deleteCarrier: (id: number) =>
     api.delete<ApiResponse<void>>(`/carriers/${id}`),
   getCarrierHistory: (id: number) =>
     api.get<ApiResponse<Application[]>>(`/carriers/${id}/history`),
+  getCarrierDrivers: (carrierId: number) =>
+    api.get<ApiResponse<Driver[]>>(`/carriers/${carrierId}/drivers`),
+  getCarrierTrucks: (carrierId: number) =>
+    api.get<ApiResponse<Truck[]>>(`/carriers/${carrierId}/trucks`),
 };
-
 
 // --- DRIVERS ---
 export const driverService = {
-  getDrivers: (params?: { carrierId?: number, available?: boolean, tripId?: number }) =>
-    api.get<ApiResponse<Driver[]>>('/drivers', { params }),
-  getDriver: (id: number) =>
-    api.get<ApiResponse<Driver>>(`/drivers/${id}`),
+  getDrivers: (params?: {
+    carrierId?: number;
+    available?: boolean;
+    tripId?: number;
+  }) => api.get<ApiResponse<Driver[]>>("/drivers", { params }),
+  getDriver: (id: number) => api.get<ApiResponse<Driver>>(`/drivers/${id}`),
   createDriver: (data: CreateDriverPayload) =>
-    api.post<ApiResponse<Driver>>('/drivers', data),
+    api.post<ApiResponse<Driver>>("/drivers", data),
   updateDriver: (id: number, data: Partial<CreateDriverPayload>) =>
     api.put<ApiResponse<Driver>>(`/drivers/${id}`, data),
-  deleteDriver: (id: number) =>
-    api.delete<ApiResponse<void>>(`/drivers/${id}`),
+  deleteDriver: (id: number) => api.delete<ApiResponse<void>>(`/drivers/${id}`),
 };
 
 // --- TRUCKS ---
 export const truckService = {
-  getTrucks: (params?: { carrierId?: number, available?: boolean, tripId?: number }) =>
-    api.get<ApiResponse<Truck[]>>('/trucks', { params }),
-  getTruck: (id: number) =>
-    api.get<ApiResponse<Truck>>(`/trucks/${id}`),
+  getTrucks: (params?: {
+    carrierId?: number;
+    available?: boolean;
+    tripId?: number;
+  }) => api.get<ApiResponse<Truck[]>>("/trucks", { params }),
+  getTruck: (id: number) => api.get<ApiResponse<Truck>>(`/trucks/${id}`),
   createTruck: (data: CreateTruckPayload) =>
-    api.post<ApiResponse<Truck>>('/trucks', data),
+    api.post<ApiResponse<Truck>>("/trucks", data),
   updateTruck: (id: number, data: Partial<CreateTruckPayload>) =>
     api.put<ApiResponse<Truck>>(`/trucks/${id}`, data),
-  deleteTruck: (id: number) =>
-    api.delete<ApiResponse<void>>(`/trucks/${id}`),
+  deleteTruck: (id: number) => api.delete<ApiResponse<void>>(`/trucks/${id}`),
 };
 
 // --- LOADS & APPLICATIONS ---
 export const loadService = {
   getLoads: (params?: { status?: string; carrierId?: number }) =>
-    api.get<ApiResponse<Load[]>>('/loads', { params }),
+    api.get<ApiResponse<Load[]>>("/loads", { params }),
   getTrips: (params?: { status?: string; carrierId?: number }) =>
-    api.get<ApiResponse<Load[]>>('/trips', { params }),
-  getTrip: (id: number | string) =>
-    api.get<ApiResponse<Load>>(`/trips/${id}`),
-  getLoad: (id: number | string) =>
-    api.get<ApiResponse<Load>>(`/loads/${id}`),
+    api.get<ApiResponse<Load[]>>("/trips", { params }),
+  getTrip: (id: number | string) => api.get<ApiResponse<Load>>(`/trips/${id}`),
+  getLoad: (id: number | string) => api.get<ApiResponse<Load>>(`/loads/${id}`),
   deleteTrip: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/trips/${id}`),
   getApplication: (id: number) =>
     api.get<ApiResponse<Application>>(`/loads/applications/${id}`),
   getContingency: (id: number) =>
     api.get<ApiResponse<any>>(`/loads/contingencies/${id}`),
-  getNoShow: (id: number) =>
-    api.get<ApiResponse<any>>(`/noshows/${id}`),
+  getNoShow: (id: number) => api.get<ApiResponse<any>>(`/noshows/${id}`),
   createTrip: (data: CreateLoadPayload) =>
-    api.post<ApiResponse<Load>>('/trips', data),
-  updateLoad: (id: number | string, data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean }) =>
-    api.put<ApiResponse<Load>>(`/loads/${id}`, data),
+    api.post<ApiResponse<Load>>("/trips", data),
+  updateLoad: (
+    id: number | string,
+    data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean },
+  ) => api.put<ApiResponse<Load>>(`/loads/${id}`, data),
   deleteLoad: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/loads/${id}`),
   patchLoadStatus: (id: number | string, status: string) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
-  confirmDeparture: (id: number | string, data: { ctg: string; loadedWeight: number }) =>
-    api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
-  confirmDepartureByApp: (appId: number, data: { ctg: string; loadedWeight: number }) =>
-    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/confirm-departure`, data),
-  applyToTrip: (id: number | string, data: { carrierId: number; notes?: string; driverId: number; truckId: number }) =>
-    api.post<ApiResponse<void>>(`/trips/${id}/apply`, data),
-  acceptTripApplication: (appId: number | string, data: { driverId: number; truckId: number }) =>
-    api.post<ApiResponse<AssignLoadResponse>>(`/trips/applications/${appId}/accept`, data),
-  assignResources: (id: number | string, data: { driverId: number; truckId: number }) =>
-    api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
-  reportContingency: (id: number | string, data: { description: string; reportedBy: string }) =>
-    api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
+  confirmDeparture: (
+    id: number | string,
+    data: { ctg: string; loadedWeight: number },
+  ) => api.post<ApiResponse<void>>(`/loads/${id}/confirm-departure`, data),
+  confirmDepartureByApp: (
+    appId: number,
+    data: { ctg: string; loadedWeight: number },
+  ) =>
+    api.post<ApiResponse<Application>>(
+      `/loads/applications/${appId}/confirm-departure`,
+      data,
+    ),
+  applyToTrip: (
+    id: number | string,
+    data: {
+      carrierId: number;
+      notes?: string;
+      driverId: number;
+      truckId: number;
+    },
+  ) => api.post<ApiResponse<void>>(`/trips/${id}/apply`, data),
+  acceptTripApplication: (
+    appId: number | string,
+    data: { driverId: number; truckId: number },
+  ) =>
+    api.post<ApiResponse<AssignLoadResponse>>(
+      `/trips/applications/${appId}/accept`,
+      data,
+    ),
+  assignResources: (
+    id: number | string,
+    data: { driverId: number; truckId: number },
+  ) => api.patch<ApiResponse<void>>(`/loads/${id}/resources`, data),
+  reportContingency: (
+    id: number | string,
+    data: { description: string; reportedBy: string },
+  ) => api.post<ApiResponse<void>>(`/loads/${id}/contingencies`, data),
   postCompletionData: (id: number | string, data: unknown) =>
     api.post<ApiResponse<void>>(`/loads/${id}/completion-data`, data),
-  postCompletionDataByApp: (appId: number, data: { unloadedWeight: number; waybillUrl?: string; fuelConsumption?: number; mileage?: number }) =>
-    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/complete-data`, data),
+  postCompletionDataByApp: (
+    appId: number,
+    data: {
+      unloadedWeight: number;
+      waybillUrl?: string;
+      fuelConsumption?: number;
+      mileage?: number;
+    },
+  ) =>
+    api.post<ApiResponse<Application>>(
+      `/loads/applications/${appId}/complete-data`,
+      data,
+    ),
   reportNoShow: (id: number | string, payload?: { applicationId?: number }) =>
     api.post<ApiResponse<void>>(`/loads/${id}/no-show`, payload || {}),
   cancelApplication: (appId: number, reason: string) =>
-    api.post<ApiResponse<void>>(`/loads/applications/${appId}/cancel`, { reason }),
+    api.post<ApiResponse<void>>(`/loads/applications/${appId}/cancel`, {
+      reason,
+    }),
   startTrip: (appId: number, data?: { ctg?: string }) =>
-    api.post<ApiResponse<Application>>(`/loads/applications/${appId}/start-trip`, data || {}),
+    api.post<ApiResponse<Application>>(
+      `/loads/applications/${appId}/start-trip`,
+      data || {},
+    ),
   getCancelledApplications: () =>
-    api.get<ApiResponse<Application[]>>('/loads/applications/cancelled'),
+    api.get<ApiResponse<Application[]>>("/loads/applications/cancelled"),
+  // --- YARD (Playa de Camiones) ---
+  getYardLoads: (params?: {
+    search?: string;
+    license_plate?: string;
+    carrier?: string;
+    driver?: string;
+  }) => api.get<ApiResponse<Load[]>>("/loads/yard/loads", { params }),
+  searchFuelLoads: (search: string) =>
+    api.get<ApiResponse<Load[]>>("/loads/fuel/loads/search", { params: { search } }),
+  searchYardLoads: (search: string) =>
+    api.get<ApiResponse<Load[]>>("/loads/yard/loads/search", { params: { search } }),
+  cancelYardAssignment: (id: number | string) =>
+    api.post<ApiResponse<void>>(`/loads/yard/${id}/cancel-assignment`),
+  rejectLoad: (id: number | string, reason: string) =>
+    api.post<ApiResponse<void>>(`/loads/${id}/reject`, { reason }),
+  // --- CTG Search (Control de Viajes) ---
+  getLoadByCTG: (ctgNumber: string) =>
+    api.get<ApiResponse<Load>>(`/loads/ctg/${ctgNumber}`),
 };
-
-
-
 
 // --- CARRIER DOCUMENTS ---
 export const carrierDocumentService = {
   getDocuments: (params?: { carrierId?: number }) =>
-    api.get<ApiResponse<CarrierDocument[]>>('/carrier-documents', { params }),
+    api.get<ApiResponse<CarrierDocument[]>>("/carrier-documents", { params }),
   getDocument: (id: number) =>
     api.get<ApiResponse<CarrierDocument>>(`/carrier-documents/${id}`),
-  createDocument: (data: { type: 'SEGURO_CARGA'; fileUrl: string; expirationDate: string; carrierId?: number; status?: 'PENDING' | 'APPROVED' | 'REJECTED' }) =>
-    api.post<ApiResponse<CarrierDocument>>('/carrier-documents', data),
+  createDocument: (data: {
+    type: "SEGURO_CARGA";
+    fileUrl: string;
+    expirationDate: string;
+    carrierId?: number;
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+  }) => api.post<ApiResponse<CarrierDocument>>("/carrier-documents", data),
   updateDocument: (id: number, data: Partial<CarrierDocument>) =>
     api.put<ApiResponse<CarrierDocument>>(`/carrier-documents/${id}`, data),
   deleteDocument: (id: number) =>
@@ -168,7 +235,6 @@ export const carrierDocumentService = {
 };
 
 // --- FILE UPLOADS ---
-
 
 export interface UploadResponse {
   success: boolean;
@@ -183,77 +249,117 @@ export interface UploadResponse {
 export const uploadService = {
   uploadFile: (file: File) => {
     const formData = new FormData();
-    formData.append('file', file);
-    return api.post<UploadResponse>('/uploads', formData, {
+    formData.append("file", file);
+    return api.post<UploadResponse>("/uploads", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
   },
 };
 
 export const groupService = {
-  getGroups: () =>
-    api.get<ApiResponse<CarrierGroup[]>>('/groups'),
-  getGroup: (id: number) =>
-    api.get<ApiResponse<CarrierGroup>>(`/groups/${id}`),
+  getGroups: () => api.get<ApiResponse<CarrierGroup[]>>("/groups"),
+  getGroup: (id: number) => api.get<ApiResponse<CarrierGroup>>(`/groups/${id}`),
   createGroup: (data: { name: string; description?: string }) =>
-    api.post<ApiResponse<CarrierGroup>>('/groups', data),
+    api.post<ApiResponse<CarrierGroup>>("/groups", data),
   updateGroup: (id: number, data: { name: string; description?: string }) =>
     api.put<ApiResponse<CarrierGroup>>(`/groups/${id}`, data),
-  deleteGroup: (id: number) =>
-    api.delete<ApiResponse<void>>(`/groups/${id}`),
+  deleteGroup: (id: number) => api.delete<ApiResponse<void>>(`/groups/${id}`),
+  // Legacy carrier-only endpoints
   addCarrierToGroup: (groupId: number, carrierId: number) =>
     api.post<ApiResponse<void>>(`/groups/${groupId}/carriers`, { carrierId }),
   removeCarrierFromGroup: (groupId: number, carrierId: number) =>
-    api.delete<ApiResponse<{ success: boolean; message: string }>>(`/groups/${groupId}/carriers/${carrierId}`),
+    api.delete<ApiResponse<{ success: boolean; message: string }>>(
+      `/groups/${groupId}/carriers/${carrierId}`,
+    ),
+  // Mixed member endpoints
+  addMemberToGroup: (
+    groupId: number,
+    memberId: number,
+    memberType: GroupMemberType,
+  ) =>
+    api.post<ApiResponse<void>>(`/groups/${groupId}/members`, {
+      memberId,
+      memberType,
+    }),
+  removeMemberFromGroup: (
+    groupId: number,
+    memberId: number,
+    memberType: GroupMemberType,
+  ) =>
+    api.delete<ApiResponse<{ success: boolean; message: string }>>(
+      `/groups/${groupId}/members/${memberId}?memberType=${memberType}`,
+    ),
 };
 
 export const invoiceService = {
-  createInvoice: (data: { number?: string; fileUrl?: string; invoiceNumber?: string; invoicePhotoUrl?: string; loadIds: (number | string)[] }) =>
-    api.post<ApiResponse<Invoice>>('/invoices', data),
-  getInvoices: () =>
-    api.get<ApiResponse<Invoice[]>>('/invoices'),
-  getInvoice: (id: number) =>
-    api.get<ApiResponse<Invoice>>(`/invoices/${id}`),
+  createInvoice: (data: {
+    number?: string;
+    fileUrl?: string;
+    invoiceNumber?: string;
+    invoicePhotoUrl?: string;
+    loadIds: (number | string)[];
+  }) => api.post<ApiResponse<Invoice>>("/invoices", data),
+  getInvoices: () => api.get<ApiResponse<Invoice[]>>("/invoices"),
+  getInvoice: (id: number) => api.get<ApiResponse<Invoice>>(`/invoices/${id}`),
+  downloadInvoice: (invoiceId: number) =>
+    api.get<ApiResponse<{ success: boolean; downloadUrl: string }>>(
+      `/invoices/${invoiceId}/download`,
+    ),
 };
-
 
 export const notificationService = {
-  getNotifications: () => api.get<ApiResponse<Notification[]>>('/notifications'),
-  markAsRead: (id: string) => api.patch<ApiResponse<Notification>>(`/notifications/${id}/read`),
-  markAllAsRead: () => api.patch<ApiResponse<{ count: number }>>('/notifications/read-all'),
-  getUnreadCount: () => api.get<ApiResponse<{ count: number }>>('/notifications/unread-count'),
+  getNotifications: () =>
+    api.get<ApiResponse<Notification[]>>("/notifications"),
+  markAsRead: (id: string) =>
+    api.patch<ApiResponse<Notification>>(`/notifications/${id}/read`),
+  markAllAsRead: () =>
+    api.patch<ApiResponse<{ count: number }>>("/notifications/read-all"),
+  getUnreadCount: () =>
+    api.get<ApiResponse<{ count: number }>>("/notifications/unread-count"),
 };
 
-export const openSecureUrl = async (url: string, showToast?: (msg: string, type: 'success' | 'error' | 'info') => void) => {
+export const openSecureUrl = async (
+  url: string,
+  showToast?: (msg: string, type: "success" | "error" | "info") => void,
+) => {
   if (!url) return;
-  if (!url.startsWith('/api') && !url.startsWith(import.meta.env.VITE_API_URL)) {
-    window.open(url, '_blank');
+  if (
+    !url.startsWith("/api") &&
+    !url.startsWith(import.meta.env.VITE_API_URL)
+  ) {
+    window.open(url, "_blank");
     return;
   }
-  
-  const newWindow = window.open('', '_blank');
+
+  const newWindow = window.open("", "_blank");
   if (newWindow) {
-    newWindow.document.write('<div style="font-family: sans-serif; padding: 20px;">Cargando documento...</div>');
+    newWindow.document.write(
+      '<div style="font-family: sans-serif; padding: 20px;">Cargando documento...</div>',
+    );
   }
-  
+
   try {
-    const response = await api.get(url, { responseType: 'blob' });
+    const response = await api.get(url, { responseType: "blob" });
     const blobUrl = URL.createObjectURL(response.data);
     if (newWindow) {
       newWindow.location.href = blobUrl;
     } else {
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = url.split('/').pop() || 'documento';
+      a.download = url.split("/").pop() || "documento";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     }
   } catch (error) {
     if (newWindow) newWindow.close();
-    console.error('Error opening secure url:', error);
-    if (showToast) showToast('Error al cargar el documento (puede que no tengas permisos o ya no exista).', 'error');
+    console.error("Error opening secure url:", error);
+    if (showToast)
+      showToast(
+        "Error al cargar el documento (puede que no tengas permisos o ya no exista).",
+        "error",
+      );
   }
 };

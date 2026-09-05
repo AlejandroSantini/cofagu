@@ -204,19 +204,15 @@ export const UsersPage: React.FC = () => {
           u.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
           u.role === 'LOGISTICS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' :
           u.role === 'TECHNICAL_CENTER' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-400' :
-          u.role === 'OPERATOR' || u.role === 'PLAYERO' || u.role === 'GAS_STATION' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
+          u.role === 'CONTROL_VIAJES' || u.role === 'OPERATOR' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400' :
+          u.role === 'PLAYERO' || u.role === 'GAS_STATION' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
           u.role === 'CARRIER' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' :
           'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
         }`}>
-          {u.role === 'LOGISTICS' ? 'LOGÍSTICA' : u.role === 'TECHNICAL_CENTER' ? 'CENTRO TÉCNICO' : u.role === 'OPERATOR' ? 'OPERADOR' : u.role === 'PLAYERO' ? 'PLAYERO (PLAYA)' : u.role === 'GAS_STATION' ? 'PLAYERO (COMBUSTIBLE)' : u.role === 'EMPLOYEE' ? 'BALANCERO / EMPLEADO' : u.role}
+          {u.role === 'ADMIN' ? 'ADMINISTRADOR' : u.role === 'EMPLOYEE' ? 'EMPLEADO: BALANZA' : u.role === 'PLAYERO' ? 'PLAYA DE CAMIONES' : u.role === 'GAS_STATION' ? 'COMBUSTIBLES' : u.role === 'TECHNICAL_CENTER' ? 'CENTRO AGROTÉCNICO' : u.role === 'OPERATOR' || u.role === 'CONTROL_VIAJES' ? 'CONTROL DE FLETES' : u.role === 'LOGISTICS' ? 'LOGÍSTICA' : u.role === 'CARRIER' ? 'TRANSPORTISTA' : u.role}
         </span>
-
       )
     },
-
-
-
-
     {
       header: 'Acciones',
       className: 'w-20',
@@ -314,23 +310,19 @@ export const UsersPage: React.FC = () => {
                 label="Rol de Usuario"
                 icon={Shield}
                 options={[
-                  { value: 'EMPLOYEE', label: 'Empleado / Balancero (Cooperativa)' },
-                  { value: 'OPERATOR', label: 'Operador (Cooperativa)' },
-                  { value: 'LOGISTICS', label: 'Logística (Gestión de Flotas)' },
-                  { value: 'PLAYERO', label: 'Playero (Playa de Camiones)' },
-                  { value: 'GAS_STATION', label: 'Playero (Combustible)' },
-                  { value: 'TECHNICAL_CENTER', label: 'Centro Técnico (Visualización)' },
-                  { value: 'ADMIN', label: 'Administrador (Cooperativa)' },
-                  { value: 'CARRIER', label: 'Transportista (Externo)' }
+                  { value: 'ADMIN', label: 'Empleado: Administrador' },
+                  { value: 'EMPLOYEE', label: 'Empleado: Balanza (Carga)' },
+                  { value: 'PLAYERO', label: 'Empleado: Playa de Camiones' },
+                  { value: 'GAS_STATION', label: 'Empleado: Combustibles' },
+                  { value: 'TECHNICAL_CENTER', label: 'Empleado: Centro Agrotécnico (Visualización)' },
+                  { value: 'OPERATOR', label: 'Empleado: Control de Fletes (Descarga / CTG)' },
+                  { value: 'CARRIER', label: 'Transportistas' },
+                  { value: 'LOGISTICS', label: 'Logísticas' }
                 ]}
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
                 required
               />
-
-
-
-
 
 
 
