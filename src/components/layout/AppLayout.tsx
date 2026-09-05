@@ -198,8 +198,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-y-auto w-full dark:bg-zinc-950 transition-colors duration-300">
-        <div className="px-3 py-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+      <main className="flex-1 overflow-y-auto w-full min-w-0 max-w-full overflow-x-hidden dark:bg-zinc-950 transition-colors duration-300">
+        <div className="px-3 py-4 md:p-8 lg:p-12 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
           {children}
         </div>
       </main>

@@ -11,7 +11,7 @@ import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
-  Search, Truck, User, Building, XCircle, RefreshCw, Clock
+  Search, User, Building, XCircle, RefreshCw, Clock
 } from 'lucide-react';
 
 export const YardPage: React.FC = () => {
