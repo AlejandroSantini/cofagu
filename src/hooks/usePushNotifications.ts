@@ -12,7 +12,9 @@ export function usePushNotifications(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    if (!isFirebaseConfigured || !VAPID_KEY || VAPID_KEY === 'TU_VAPID_KEY') {
+    const msg = messaging;
+
+    if (!isFirebaseConfigured || !msg || !VAPID_KEY || VAPID_KEY === 'TU_VAPID_KEY') {
       console.warn('[FCM] Push notifications are pending configuration in .env');
       return;
     }
@@ -24,7 +26,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           console.log('[FCM] Notification permission granted.');
-          const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+          const currentToken = await getToken(msg, { vapidKey: VAPID_KEY });
           if (currentToken) {
             console.log('[FCM] Token retrieved successfully.');
             // Send token to backend
@@ -44,7 +46,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
 
     // Listen to foreground messages
     try {
-      unsubscribeOnMessage = onMessage(messaging, (payload) => {
+      unsubscribeOnMessage = onMessage(msg, (payload) => {
         console.log('[FCM] Message received in foreground:', payload);
         
         const title = payload.notification?.title || payload.data?.title || 'Nueva Notificación';

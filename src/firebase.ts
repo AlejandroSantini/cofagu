@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getMessaging } from 'firebase/messaging';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getMessaging, type Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
@@ -14,11 +14,20 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && 
   firebaseConfig.apiKey !== "TU_API_KEY" && 
   firebaseConfig.projectId &&
-  firebaseConfig.projectId !== "TU_PROJECT_ID"
+  firebaseConfig.projectId !== "TU_PROJECT_ID" &&
+  firebaseConfig.appId
 );
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+let app: FirebaseApp | null = null;
+let messaging: Messaging | null = null;
 
-// Initialize Firebase Cloud Messaging and get a reference to the service
-export const messaging = getMessaging(app);
+if (isFirebaseConfigured) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    messaging = getMessaging(app);
+  } catch (err) {
+    console.warn('[Firebase] Error initializing Messaging:', err);
+  }
+}
+
+export { messaging };
