@@ -221,6 +221,29 @@ export const LoadsPage: React.FC = () => {
     if (!delId) return;
     setSubmitLoading(true);
     try {
+      const targetLoad = (selectedLoad && (selectedLoad.id === delId || String(selectedLoad.id) === String(delId))) 
+        ? selectedLoad 
+        : loads.find(l => l.id === delId || String(l.id) === String(delId));
+
+      if (targetLoad && targetLoad.loads && targetLoad.loads.length > 0) {
+        const completedSubloads = targetLoad.loads.filter((l: any) => l.status === 'COMPLETED');
+        const nonCompletedSubloads = targetLoad.loads.filter((l: any) => l.status !== 'COMPLETED' && l.status !== 'CANCELLED');
+
+        if (completedSubloads.length > 0) {
+          if (nonCompletedSubloads.length > 0) {
+            await Promise.all(
+              nonCompletedSubloads.map((l: any) => loadService.deleteLoad(l.id))
+            );
+            showToast(`Se cancelaron ${nonCompletedSubloads.length} cupo(s) pendiente(s). Los ${completedSubloads.length} cupo(s) completado(s) se mantuvieron intactos.`, 'success');
+          } else {
+            showToast('No hay cupos pendientes para cancelar. Todos los cupos de este viaje ya fueron completados.');
+          }
+          confirmDelete();
+          triggerRefresh();
+          return;
+        }
+      }
+
       let isTrip = activeTab === 'ACTIVE';
       if (selectedLoad) {
         // En vista de detalle, sabemos si es viaje porque tiene array de loads/applications

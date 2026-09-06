@@ -757,12 +757,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
       <div className="max-w-6xl mx-auto space-y-6 w-full">
         {/* Main Details Panel */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 w-full">
             <div>
               <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
                 Detalles de Ruta
               </span>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 break-words">
                 {load.origin} → {load.destination}
               </h2>
             </div>
@@ -1070,18 +1070,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           )}
 
           {/* Actions Triggers */}
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50 w-full">
             {(isAdmin || isOperator) &&
               load.status !== "CANCELLED" &&
               load.status !== "COMPLETED" && (
                 <Button
                   variant="danger"
                   icon={Trash2}
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     if (load.loads !== undefined) {
-                      const hasActive = load.loads.some(l => l.status === 'IN_PROGRESS' || l.status === 'COMPLETED');
+                      const hasActive = load.loads.some(l => l.status === 'IN_PROGRESS');
                       if (hasActive) {
-                        if (!window.confirm("ADVERTENCIA: Este viaje ya tiene camiones en curso o completados. Cancelar el viaje principal podría afectar la trazabilidad de esos camiones. ¿Está COMPLETAMENTE seguro de cancelar el viaje entero?")) {
+                        if (!window.confirm("ADVERTENCIA: Este viaje ya tiene camiones en curso. Cancelar el viaje principal afectará esos traslados. ¿Está seguro de continuar?")) {
                           return;
                         }
                       }
@@ -1098,6 +1099,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <Button
                     variant="primary"
                     icon={Send}
+                    className="w-full sm:w-auto font-bold"
                     onClick={() => {
                       if (onFetchCarrierResources) {
                         onFetchCarrierResources();
@@ -1122,7 +1124,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   <Button
                     variant="outline"
                     icon={AlertTriangle}
-                    className="border-amber-500/30 text-amber-600 hover:bg-amber-50"
+                    className="w-full sm:w-auto border-amber-500/30 text-amber-600 hover:bg-amber-50 font-bold"
                     onClick={() => setShowContingencyModal(true)}
                   >
                     Reportar Contingencia
@@ -1133,7 +1135,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       <Button
                         variant="outline"
                         icon={Clock}
-                        className="border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold"
+                        className="w-full sm:w-auto border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold"
                         onClick={() => setShowDelayedModal(true)}
                       >
                         Reportar Demorado
@@ -1141,7 +1143,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       <Button
                         variant="outline"
                         icon={XCircle}
-                        className="border-rose-500/50 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold"
+                        className="w-full sm:w-auto border-rose-500/50 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold"
                         onClick={() => setShowRejectedModal(true)}
                       >
                         Reportar Rechazado
@@ -1297,6 +1299,13 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     const tripCtg = matchedLoad?.ctg || app.ctg || load.ctg || "";
                     const loadedW = matchedLoad?.loadedWeight ?? app.loadedWeight ?? load.loadedWeight;
                     const unloadedW = matchedLoad?.unloadedWeight ?? app.unloadedWeight ?? load.unloadedWeight;
+                    const isCompletedTrip =
+                      tripStatus === "COMPLETED" ||
+                      (app.status as string) === "COMPLETED" ||
+                      app.tripStatus === "COMPLETED" ||
+                      load.status === "COMPLETED" ||
+                      matchedLoad?.status === "COMPLETED" ||
+                      (unloadedW != null && Number(unloadedW) > 0);
                     const canManageCtg =
                       user?.role !== "ADMIN" &&
                       (isStaff ||
@@ -1342,7 +1351,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           <Badge
                             variant={
                               isAccepted
-                                ? tripStatus === "COMPLETED"
+                                ? isCompletedTrip
                                   ? "success"
                                   : tripStatus === "IN_PROGRESS"
                                     ? "primary"
@@ -1353,7 +1362,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             }
                           >
                             {isAccepted
-                              ? tripStatus === "COMPLETED"
+                              ? isCompletedTrip
                                 ? "COMPLETADO"
                                 : tripStatus === "IN_PROGRESS"
                                   ? "EN VIAJE"
@@ -1447,7 +1456,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 )}
 
                               {/* ADMIN: CANCEL ACCEPTED ASSIGNMENT */}
-                              {isAccepted && !isBalancero && canUserWrite && (
+                              {isAccepted && !isBalancero && canUserWrite && !isCompletedTrip && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1719,11 +1728,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         const isTripInProgress =
                           effectiveTripStatus === "IN_PROGRESS" ||
                           load.status === "IN_PROGRESS";
-                        const isTripCompleted =
-                          effectiveTripStatus === "COMPLETED" ||
-                          load.status === "COMPLETED";
                         const tripCtg = matchedLoad?.ctg || trip.ctg || "";
                         const loadedW = matchedLoad?.loadedWeight ?? trip.loadedWeight;
+                        const unloadedW = matchedLoad?.unloadedWeight ?? trip.unloadedWeight ?? load.unloadedWeight;
+                        const isTripCompleted =
+                          effectiveTripStatus === "COMPLETED" ||
+                          load.status === "COMPLETED" ||
+                          trip.tripStatus === "COMPLETED" ||
+                          (unloadedW != null && Number(unloadedW) > 0);
 
                         const driverName =
                           trip.driver?.name ||
