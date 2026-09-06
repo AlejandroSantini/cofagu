@@ -1,18 +1,21 @@
 import { useEffect } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
-import { messaging } from '../firebase';
+import { messaging, isFirebaseConfigured } from '../firebase';
 import { authService } from '../api/services';
 import { useToast } from './useToast';
 
-
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'TU_VAPID_KEY';
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
 export function usePushNotifications(isAuthenticated: boolean) {
   const { showToast } = useToast();
-  // const navigate = useNavigate(); // Could be used if toast allowed passing a callback for onClick
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    if (!isFirebaseConfigured || !VAPID_KEY || VAPID_KEY === 'TU_VAPID_KEY') {
+      console.warn('[FCM] Push notifications are pending configuration in .env');
+      return;
+    }
 
     let unsubscribeOnMessage: () => void;
 
@@ -27,7 +30,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
             // Send token to backend
             await authService.registerFcmToken(currentToken);
           } else {
-            console.log('[FCM] No registration token available. Request permission to generate one.');
+            console.log('[FCM] No registration token available.');
           }
         } else {
           console.log('[FCM] Notification permission not granted.', permission);
@@ -47,13 +50,8 @@ export function usePushNotifications(isAuthenticated: boolean) {
         const title = payload.notification?.title || payload.data?.title || 'Nueva Notificación';
         const body = payload.notification?.body || payload.data?.body;
 
-        // Show toast that navigates when clicked
-        // We simulate an interactive toast using the message body and adding deep linking logic
         showToast(`${title}: ${body}`, 'success');
 
-        // Optional: If you want to automatically navigate or have a specific button in the toast,
-        // you would need to extend your Toast component to support onClick or actions.
-        // Currently, we just show the message. But let's log the target URL if they were to click.
         let targetUrl = '/';
         const payloadData = payload.data;
         if (payloadData) {
@@ -66,7 +64,6 @@ export function usePushNotifications(isAuthenticated: boolean) {
           }
         }
         console.log('[FCM] Suggested deep link from payload:', targetUrl);
-        
       });
     } catch (err) {
       console.error('[FCM] Error setting up onMessage listener', err);
