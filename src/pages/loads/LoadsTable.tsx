@@ -44,27 +44,32 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
   const columns = [
     {
       header: 'Fecha',
+      className: 'min-w-[100px]',
       render: (l: Load) => (
-        <span className="font-bold text-slate-900 dark:text-white">
+        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
           {new Date(l.loadingDate || l.date).toLocaleDateString('es-AR')}
         </span>
       )
     },
     {
       header: 'Ruta',
+      className: 'min-w-[170px]',
       render: (l: Load) => (
-        <span className="text-slate-700 dark:text-zinc-300 font-semibold">
-          {l.origin} → {l.destination}
-        </span>
+        <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap">
+          <span>{l.origin}</span>
+          <span className="text-emerald-500 font-black shrink-0">→</span>
+          <span>{l.destination}</span>
+        </div>
       )
     },
     {
       header: 'Tarifa',
+      className: 'min-w-[110px]',
       render: (l: Load) => {
         const rateValue = l.rate ?? (l as any).trip?.rate;
         const baseRate = Number(rateValue);
         return (
-          <span className="text-emerald-600 dark:text-emerald-400 font-black">
+          <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs sm:text-sm">
             {!isNaN(baseRate) && baseRate > 0 ? `$${baseRate.toLocaleString('es-AR')}` : 'Consultar'}
           </span>
         );
@@ -72,19 +77,21 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     },
     {
       header: 'Transportista',
+      className: 'min-w-[140px]',
       render: (l: any) => {
         const carrier = l.carrier || 
           l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED')?.carrier || 
           l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED')?.carrier;
 
         if (carrier?.name) {
-          return <span className="font-bold text-slate-800 dark:text-zinc-200">{carrier.name}</span>;
+          return <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-sm">{carrier.name}</span>;
         }
         return <span className="text-xs text-slate-400 italic">Sin Asignar</span>;
       }
     },
     {
       header: 'Chofer / Camión',
+      className: 'min-w-[140px]',
       render: (l: any) => {
         const driver = l.driver || 
           l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED')?.driver || 
@@ -96,9 +103,9 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
 
         if (driver || truck) {
           return (
-            <div className="flex flex-col">
+            <div className="flex flex-col text-xs sm:text-sm">
               <span className="font-bold text-slate-800 dark:text-zinc-200">{driver?.name || 'N/D'}</span>
-              <span className="text-slate-500 font-mono uppercase">{truck?.chassisPlate || truck?.plate || 'S/P'}</span>
+              <span className="text-slate-500 font-mono uppercase text-xs">{truck?.chassisPlate || truck?.plate || 'S/P'}</span>
             </div>
           );
         }
@@ -107,6 +114,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     },
     {
       header: 'Estado',
+      className: 'min-w-[120px]',
       render: (l: Load) => (
         <Badge variant={getStatusBadgeVariant(l.status)}>
           {getStatusLabel(l.status)}

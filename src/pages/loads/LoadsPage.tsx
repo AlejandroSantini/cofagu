@@ -882,7 +882,7 @@ export const LoadsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {/* Tab Filters Navigation */}
-          <div className="flex border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
+          <div className="flex items-center gap-1 border-b border-slate-200 dark:border-zinc-800 overflow-x-auto pb-0.5 no-scrollbar scroll-smooth w-full">
             {(isCarrier ? [
               { id: 'ACTIVE', label: 'Disponibles' },
               { id: 'ASSIGNED', label: 'Asignados' },
@@ -903,10 +903,10 @@ export const LoadsPage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id as any)}
-                className={`px-4 py-2 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                   activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                    : 'border-transparent text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
                 }`}
               >
                 {tab.label}

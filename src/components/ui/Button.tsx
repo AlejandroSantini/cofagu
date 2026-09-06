@@ -49,14 +49,15 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={isLoading || disabled}
       {...props}
     >
-      {isLoading ? (
-        <Loader2 className="animate-spin" size={iconSizes[size]} />
-      ) : (
-        <>
-          {Icon && <Icon size={iconSizes[size]} className={`flex-shrink-0 ${iconClassName}`} />}
-          {children && <span className="truncate">{children}</span>}
-        </>
+      {isLoading && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="animate-spin" size={iconSizes[size]} />
+        </span>
       )}
+      <span className={`inline-flex items-center justify-center gap-2 ${isLoading ? 'invisible' : ''}`}>
+        {Icon && <Icon size={iconSizes[size]} className={`flex-shrink-0 ${iconClassName}`} />}
+        {children && <span className="truncate">{children}</span>}
+      </span>
     </button>
   );
 };

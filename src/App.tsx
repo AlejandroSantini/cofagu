@@ -96,7 +96,7 @@ function App() {
           element={
             token ? (
               <AppLayout>
-                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'EMPLOYEE', 'LOGISTICS']}>
+                <RoleGate allowedRoles={['ADMIN', 'OPERATOR', 'LOGISTICS']}>
                   <CarriersPage />
                 </RoleGate>
               </AppLayout>

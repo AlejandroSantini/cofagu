@@ -103,10 +103,10 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
       ) : (
         <div className="space-y-6">
           {/* Tab Headers */}
-          <div className="flex border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
+          <div className="flex items-center gap-1 border-b border-slate-200 dark:border-zinc-800 overflow-x-auto pb-0.5 no-scrollbar scroll-smooth w-full">
             <button
               onClick={() => setDetailTab('DRIVERS')}
-              className={`px-6 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              className={`px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 detailTab === 'DRIVERS' ? 'border-emerald-500 text-emerald-600 bg-transparent' : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
@@ -114,7 +114,7 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
             </button>
             <button
               onClick={() => setDetailTab('TRUCKS')}
-              className={`px-6 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              className={`px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 detailTab === 'TRUCKS' ? 'border-emerald-500 text-emerald-600 bg-transparent' : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
@@ -122,7 +122,7 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
             </button>
             <button
               onClick={() => setDetailTab('USERS')}
-              className={`px-6 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              className={`px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 detailTab === 'USERS' ? 'border-emerald-500 text-emerald-600 bg-transparent' : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
@@ -130,7 +130,7 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
             </button>
             <button
               onClick={() => setDetailTab('CANCELLATIONS')}
-              className={`px-6 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              className={`px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 detailTab === 'CANCELLATIONS' ? 'border-emerald-500 text-emerald-600 bg-transparent' : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >

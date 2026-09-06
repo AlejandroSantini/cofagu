@@ -141,7 +141,7 @@ export default function NotificationsPage() {
                         <div className="mt-1 sm:mt-2 sm:flex sm:justify-between items-center">
                           <div className="sm:flex">
                             <p className={`text-sm leading-relaxed ${!notification.read ? 'text-slate-700 dark:text-zinc-300 font-medium' : 'text-slate-500 dark:text-zinc-500'}`}>
-                              {notification.message}
+                              {notification.message?.replace(/El transportista ha cargado el CTG/gi, 'El balancero ha cargado el CTG')}
                             </p>
                           </div>
                           {notification.link && (

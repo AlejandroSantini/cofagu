@@ -210,7 +210,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Links Section for Staff */}
-      {isStaff && (
+      {isStaff && !isEmployee && (
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Accesos Rápidos de Administración</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

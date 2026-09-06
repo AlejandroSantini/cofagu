@@ -512,7 +512,7 @@ export const GroupsPage: React.FC = () => {
                   onClick={handleSaveGroup}
                   isLoading={formSubmitting}
                   disabled={!groupName.trim() || formSubmitting}
-                  className="px-6"
+                  className="w-full sm:w-auto px-6 justify-center"
                 >
                   {editingGroup
                     ? "Guardar Cambios"
@@ -682,47 +682,48 @@ export const GroupsPage: React.FC = () => {
                             return (
                               <div
                                 key={key}
-                                className="flex items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
                               >
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <div
-                                    className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
-                                      member.member_type === "carrier"
-                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                                    }`}
-                                  >
-                                    <Building size={18} />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate">
+                                <div className="flex items-start justify-between gap-3 min-w-0 flex-1 w-full">
+                                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                                    <div
+                                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
+                                        member.member_type === "carrier"
+                                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                      }`}
+                                    >
+                                      <Building size={18} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 break-words">
                                         {member.name}
                                       </p>
-                                      <Badge
-                                        variant={
-                                          member.member_type === "carrier"
-                                            ? "success"
-                                            : "info"
-                                        }
-                                        size="xs"
-                                      >
-                                        {member.member_type === "carrier"
-                                          ? "Transportista"
-                                          : "Logística"}
-                                      </Badge>
+                                      {member.cuit && (
+                                        <p className="text-xs text-slate-400 font-mono mt-0.5 whitespace-nowrap">
+                                          CUIT: {member.cuit}
+                                        </p>
+                                      )}
+                                      {member.email && (
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                          {member.email}
+                                        </p>
+                                      )}
                                     </div>
-                                    {member.cuit && (
-                                      <p className="text-xs text-slate-400 font-mono">
-                                        CUIT: {member.cuit}
-                                      </p>
-                                    )}
-                                    {member.email && (
-                                      <p className="text-xs text-slate-400">
-                                        {member.email}
-                                      </p>
-                                    )}
                                   </div>
+                                  <Badge
+                                    variant={
+                                      member.member_type === "carrier"
+                                        ? "success"
+                                        : "info"
+                                    }
+                                    size="xs"
+                                    className="shrink-0 mt-0.5"
+                                  >
+                                    {member.member_type === "carrier"
+                                      ? "Transportista"
+                                      : "Logística"}
+                                  </Badge>
                                 </div>
                                 <Button
                                   variant="danger"
@@ -739,7 +740,7 @@ export const GroupsPage: React.FC = () => {
                                       removingMemberId !== key)
                                   }
                                   icon={UserMinus}
-                                  className="shrink-0 !px-3 !py-1.5 text-xs whitespace-nowrap"
+                                  className="w-full sm:w-auto shrink-0 justify-center !px-3 !py-1.5 text-xs whitespace-nowrap"
                                 >
                                   Quitar
                                 </Button>
