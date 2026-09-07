@@ -6,6 +6,19 @@ import { useToast } from './useToast';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
+// Construir URL del SW con las credenciales de Firebase como params
+function getServiceWorkerUrl(): string {
+  const params = new URLSearchParams({
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  });
+  return `/firebase-messaging-sw.js?${params.toString()}`;
+}
+
 export function usePushNotifications(isAuthenticated: boolean) {
   const { showToast } = useToast();
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
@@ -37,7 +50,10 @@ export function usePushNotifications(isAuthenticated: boolean) {
 
         let swRegistration: ServiceWorkerRegistration | undefined;
         if ('serviceWorker' in navigator) {
-          swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          // Registrar SW con params de Firebase en la URL
+          swRegistration = await navigator.serviceWorker.register(getServiceWorkerUrl());
+          // Esperar a que el SW esté activo antes de obtener el token
+          await navigator.serviceWorker.ready;
         }
 
         const currentToken = await getToken(msg, {

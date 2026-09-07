@@ -106,7 +106,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
     <div className="h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row overflow-hidden transition-colors duration-300">
       {/* MOBILE TOP HEADER */}
-      <header className="lg:hidden bg-zinc-100 dark:bg-zinc-950 text-slate-800 dark:text-white p-4 flex items-center h-16 sticky top-0 z-[60] shadow-sm border-b border-zinc-200 dark:border-zinc-900">
+      <header
+        className="lg:hidden bg-zinc-100 dark:bg-zinc-950 text-slate-800 dark:text-white flex items-center h-16 sticky top-0 z-[60] shadow-sm border-b border-zinc-200 dark:border-zinc-900"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+      >
         <button
           onClick={() => setIsOpen(true)}
           className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-xl transition-colors text-slate-600 dark:text-slate-200"
