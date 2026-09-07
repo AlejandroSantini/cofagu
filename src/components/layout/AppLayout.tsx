@@ -75,10 +75,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     ...(isPlayeroYard
       ? [{ label: "Playa de Camiones", icon: ParkingSquare, path: "/yard" }]
       : []),
-    ...(isControlViajes || user?.role === "OPERATOR" || isAdmin
+    ...(isControlViajes || user?.role === "OPERATOR"
       ? [{ label: "Control de Viajes", icon: Search, path: "/control-viajes" }]
       : []),
-    ...(isTechnicalCenter || isAdmin
+    ...(isTechnicalCenter
       ? [{ label: "Buscador de Camiones", icon: Search, path: "/technical-center-search" }]
       : []),
 

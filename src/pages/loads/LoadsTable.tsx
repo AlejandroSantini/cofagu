@@ -43,15 +43,47 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
   };
 
   const columns = [
-    {
-      header: 'Fecha',
-      className: 'min-w-[100px]',
-      render: (l: Load) => (
-        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-          {new Date(l.loadingDate || l.date).toLocaleDateString('es-AR')}
-        </span>
-      )
-    },
+    ...(statusFilter === 'ACTIVE' 
+      ? [
+          {
+            header: 'Fecha',
+            className: 'min-w-[100px]',
+            render: (l: Load) => {
+              const dateVal = (l as any).loadingDate || l.date || (l as any).quotaDate;
+              return (
+                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                  {dateVal ? new Date(dateVal).toLocaleDateString('es-AR') : 'N/D'}
+                </span>
+              );
+            }
+          }
+        ]
+      : [
+          {
+            header: 'Fecha de Carga',
+            className: 'min-w-[100px]',
+            render: (l: Load) => {
+              const loadingDate = (l as any).loadingDate || (l as any).trip?.loadingDate;
+              return (
+                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                  {loadingDate ? new Date(loadingDate).toLocaleDateString('es-AR') : 'A Confirmar'}
+                </span>
+              );
+            }
+          },
+          {
+            header: 'Fecha de Cupo',
+            className: 'min-w-[100px]',
+            render: (l: Load) => {
+              const quotaDate = (l as any).quotaDate || l.date || (l as any).trip?.quotaDate || (l as any).trip?.date;
+              return (
+                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                  {quotaDate ? new Date(quotaDate).toLocaleDateString('es-AR') : 'N/D'}
+                </span>
+              );
+            }
+          }
+        ]),
     {
       header: 'Ruta',
       className: 'min-w-[170px]',
@@ -113,15 +145,6 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         return <span className="text-xs text-slate-400 italic">N/A</span>;
       }
     },
-    {
-      header: 'Estado',
-      className: 'min-w-[120px]',
-      render: (l: Load) => (
-        <Badge variant={getStatusBadgeVariant(l.status)}>
-          {getStatusLabel(l.status)}
-        </Badge>
-      )
-    },
     ...(statusFilter === 'ACTIVE' ? (
       isCarrier 
         ? [
@@ -172,7 +195,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
           ]
     ) : [])
   ].filter(col => {
-    if (isAdmin && (col.header === 'Transportista' || col.header === 'Chofer / Camión')) {
+    if (!isCarrier && (col.header === 'Transportista' || col.header === 'Chofer / Camión')) {
       return false;
     }
     return true;
