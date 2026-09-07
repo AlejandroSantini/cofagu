@@ -2,6 +2,8 @@
   "short_name": "COFAGU",
   "name": "COFAGU - Gestión de Transporte",
   "description": "Plataforma de Gestión de Transporte y Logística COFAGU",
+  "id": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/LOGO COFAGU-03.png",
