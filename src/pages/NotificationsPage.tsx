@@ -7,6 +7,8 @@ import { Button } from '../components/ui/Button';
 import { notificationService } from '../api/services';
 import type { Notification } from '../types';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -14,11 +16,9 @@ export default function NotificationsPage() {
   const [markingAll, setMarkingAll] = useState(false);
   const decrementUnread = useNotificationStore(state => state.decrementUnread);
   const resetUnread = useNotificationStore(state => state.resetUnread);
+  const user = useAuthStore(state => state.user);
+  const { permissionStatus, requestPermission, loading: pushLoading } = usePushNotifications(Boolean(user));
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -30,6 +30,10 @@ export default function NotificationsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -101,6 +105,33 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+
+      {permissionStatus !== 'granted' && (
+        <div className="bg-amber-500/10 border border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Bell size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                Notificaciones Push inactivas en este dispositivo
+              </p>
+              <p className="text-xs text-slate-600 dark:text-zinc-400">
+                Toca el botón para autorizar las alertas nativas en tu pantalla.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={requestPermission}
+            isLoading={pushLoading}
+            className="w-full sm:w-auto shrink-0 justify-center"
+          >
+            Activar Notificaciones
+          </Button>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-zinc-900 shadow-sm rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
         {loading ? (

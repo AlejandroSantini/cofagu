@@ -1,19 +1,17 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
-// Parse configuration from Service Worker script URL search parameters dynamically
-const params = new URLSearchParams(self.location.search);
-
+// Configuración de Firebase Cloud Messaging
 const firebaseConfig = {
-  apiKey: params.get('apiKey') || "",
-  authDomain: params.get('authDomain') || "",
-  projectId: params.get('projectId') || "",
-  storageBucket: params.get('storageBucket') || "",
-  messagingSenderId: params.get('messagingSenderId') || "",
-  appId: params.get('appId') || ""
+  apiKey: "FIREBASE_API_KEY_REMOVED",
+  authDomain: "cooperativa-notificaciones.firebaseapp.com",
+  projectId: "cooperativa-notificaciones",
+  storageBucket: "cooperativa-notificaciones.firebasestorage.app",
+  messagingSenderId: "FIREBASE_SENDER_ID_REMOVED",
+  appId: "FIREBASE_APP_ID_REMOVED"
 };
 
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
   firebase.initializeApp(firebaseConfig);
 
   const messaging = firebase.messaging();
