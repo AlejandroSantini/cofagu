@@ -19,6 +19,19 @@ function getServiceWorkerUrl(): string {
   return `/firebase-messaging-sw.js?${params.toString()}`;
 }
 
+// Detecta si estamos en iOS Safari en modo browser (NO como app instalada)
+function isIOSSafariBrowser(): boolean {
+  const ua = navigator.userAgent;
+  const isIOS = /iP(hone|ad|od)/.test(ua);
+  const isStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  return isIOS && !isStandalone;
+}
+
+function isNotificationSupported(): boolean {
+  return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+}
+
 export function usePushNotifications(isAuthenticated: boolean) {
   const { showToast } = useToast();
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
@@ -28,15 +41,35 @@ export function usePushNotifications(isAuthenticated: boolean) {
   );
   const [loading, setLoading] = useState(false);
 
+  // true = está en iOS Safari browser, necesita abrir desde el acceso directo
+  const requiresStandaloneMode = typeof window !== 'undefined' && isIOSSafariBrowser();
+  // true = el browser no soporta push notifications en absoluto
+  const notSupported = typeof window !== 'undefined' && !isNotificationSupported() && !isIOSSafariBrowser();
+
   const requestPermissionAndGetToken = useCallback(async () => {
     const msg = messaging;
+
+    // Debug: loguear estado de configuración
+    console.log('[FCM] isFirebaseConfigured:', isFirebaseConfigured);
+    console.log('[FCM] messaging:', !!msg);
+    console.log('[FCM] VAPID_KEY:', VAPID_KEY ? `${VAPID_KEY.substring(0, 10)}...` : 'MISSING');
+    console.log('[FCM] Notification support:', 'Notification' in window);
+    console.log('[FCM] ServiceWorker support:', 'serviceWorker' in navigator);
+
     if (!isFirebaseConfigured || !msg || !VAPID_KEY) {
-      console.warn('[FCM] Push notifications pending VAPID_KEY or configuration');
+      const reason = !isFirebaseConfigured ? 'Firebase no configurado' : !msg ? 'Messaging no inicializado' : 'VAPID_KEY faltante';
+      console.error('[FCM] Configuración incompleta:', reason);
+      showToast(`Error: ${reason}. Verificá las variables de entorno.`, 'error');
       return false;
     }
 
-    if (!('Notification' in window)) {
-      console.warn('[FCM] Notifications not supported in this browser.');
+    if (isIOSSafariBrowser()) {
+      showToast('Abrí la app desde el acceso directo en tu pantalla de inicio para activar notificaciones.', 'error');
+      return false;
+    }
+
+    if (!isNotificationSupported()) {
+      showToast('Este navegador no soporta notificaciones push.', 'error');
       return false;
     }
 
@@ -44,16 +77,16 @@ export function usePushNotifications(isAuthenticated: boolean) {
       setLoading(true);
       const permission = await Notification.requestPermission();
       setPermissionStatus(permission);
+      console.log('[FCM] Permission result:', permission);
 
       if (permission === 'granted') {
-        console.log('[FCM] Notification permission granted.');
-
         let swRegistration: ServiceWorkerRegistration | undefined;
         if ('serviceWorker' in navigator) {
-          // Registrar SW con params de Firebase en la URL
-          swRegistration = await navigator.serviceWorker.register(getServiceWorkerUrl());
-          // Esperar a que el SW esté activo antes de obtener el token
+          const swUrl = getServiceWorkerUrl();
+          console.log('[FCM] Registering SW at:', swUrl.substring(0, 80) + '...');
+          swRegistration = await navigator.serviceWorker.register(swUrl);
           await navigator.serviceWorker.ready;
+          console.log('[FCM] SW ready, state:', swRegistration.active?.state);
         }
 
         const currentToken = await getToken(msg, {
@@ -62,18 +95,20 @@ export function usePushNotifications(isAuthenticated: boolean) {
         });
 
         if (currentToken) {
-          console.log('[FCM] Token retrieved successfully:', currentToken);
+          console.log('[FCM] Token OK:', currentToken.substring(0, 20) + '...');
           await authService.registerFcmToken(currentToken);
           showToast('Notificaciones Push activadas en este dispositivo', 'success');
           return true;
         } else {
-          console.warn('[FCM] No registration token available.');
+          console.warn('[FCM] getToken returned empty token');
+          showToast('No se pudo obtener el token de notificaciones.', 'error');
         }
       } else {
-        console.warn('[FCM] Notification permission not granted:', permission);
+        showToast('Permiso de notificaciones denegado.', 'error');
       }
     } catch (err) {
-      console.error('[FCM] Error obtaining token:', err);
+      console.error('[FCM] Error:', err);
+      showToast(`Error activando notificaciones: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -116,5 +151,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
     permissionStatus,
     requestPermission: requestPermissionAndGetToken,
     loading,
+    requiresStandaloneMode,
+    notSupported,
   };
 }

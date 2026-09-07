@@ -9,6 +9,7 @@ import type { Notification } from '../types';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useAuthStore } from '../store/useAuthStore';
+import { isFirebaseConfigured } from '../firebase';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -17,7 +18,7 @@ export default function NotificationsPage() {
   const decrementUnread = useNotificationStore(state => state.decrementUnread);
   const resetUnread = useNotificationStore(state => state.resetUnread);
   const user = useAuthStore(state => state.user);
-  const { permissionStatus, requestPermission, loading: pushLoading } = usePushNotifications(Boolean(user));
+  const { permissionStatus, requestPermission, loading: pushLoading, requiresStandaloneMode, notSupported } = usePushNotifications(Boolean(user));
   const navigate = useNavigate();
 
   const fetchNotifications = async () => {
@@ -106,7 +107,54 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {permissionStatus !== 'granted' && (
+      {/* 🔧 DEBUG PANEL TEMPORAL */}
+      <details className="mb-4 bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 text-xs font-mono">
+          <summary className="text-zinc-400 cursor-pointer select-none">🔧 Debug Push Notifications</summary>
+          <div className="mt-2 space-y-1 text-zinc-300">
+            <div>Firebase configurado: <span className={`font-bold ${isFirebaseConfigured ? 'text-emerald-400' : 'text-red-400'}`}>{String(isFirebaseConfigured)}</span></div>
+            <div>Permiso actual: <span className="font-bold text-amber-300">{permissionStatus}</span></div>
+            <div>Standalone (PWA): <span className={`font-bold ${((navigator as Navigator & {standalone?: boolean}).standalone === true || window.matchMedia('(display-mode: standalone)').matches) ? 'text-emerald-400' : 'text-red-400'}`}>{String((navigator as Navigator & {standalone?: boolean}).standalone === true || window.matchMedia('(display-mode: standalone)').matches)}</span></div>
+            <div>Requiere standalone: <span className="font-bold">{String(requiresStandaloneMode)}</span></div>
+            <div>No soportado: <span className="font-bold">{String(notSupported)}</span></div>
+            <div>Notification API: <span className={`font-bold ${'Notification' in window ? 'text-emerald-400' : 'text-red-400'}`}>{String('Notification' in window)}</span></div>
+            <div>PushManager: <span className={`font-bold ${'PushManager' in window ? 'text-emerald-400' : 'text-red-400'}`}>{String('PushManager' in window)}</span></div>
+            <div>ServiceWorker: <span className={`font-bold ${'serviceWorker' in navigator ? 'text-emerald-400' : 'text-red-400'}`}>{String('serviceWorker' in navigator)}</span></div>
+          </div>
+        </details>
+
+      {permissionStatus === 'denied' && (
+        <div className="bg-red-500/10 border border-red-500/30 dark:bg-red-500/20 dark:border-red-500/40 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Bell size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                Notificaciones bloqueadas por el navegador
+              </p>
+              <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1 mb-3">
+                Tu navegador bloqueó el permiso. Tenés que habilitarlo manualmente:
+              </p>
+              <ol className="text-xs text-slate-600 dark:text-zinc-400 space-y-1 list-none">
+                <li className="flex items-start gap-2">
+                  <span className="bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full w-4 h-4 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">1</span>
+                  <span>Hacé clic en el <strong className="text-slate-800 dark:text-zinc-200">🔒 candado</strong> en la barra de dirección</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full w-4 h-4 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">2</span>
+                  <span>Buscá <strong className="text-slate-800 dark:text-zinc-200">"Notifications"</strong> → cambialo a <strong className="text-slate-800 dark:text-zinc-200">"Allow"</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full w-4 h-4 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">3</span>
+                  <span>Recargá la página y volvé a activar las notificaciones</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {permissionStatus === 'default' && (
         <div className="bg-amber-500/10 border border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
@@ -132,6 +180,7 @@ export default function NotificationsPage() {
           </Button>
         </div>
       )}
+
 
       <div className="bg-white dark:bg-zinc-900 shadow-sm rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
         {loading ? (
