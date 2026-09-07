@@ -1,18 +1,19 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
-// Configuración de Firebase - Reemplazar con las credenciales de Firebase Console
+// Parse configuration from Service Worker script URL search parameters dynamically
+const params = new URLSearchParams(self.location.search);
+
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: params.get('apiKey') || "",
+  authDomain: params.get('authDomain') || "",
+  projectId: params.get('projectId') || "",
+  storageBucket: params.get('storageBucket') || "",
+  messagingSenderId: params.get('messagingSenderId') || "",
+  appId: params.get('appId') || ""
 };
 
-// Solo inicializar si no es el placeholder de ejemplo
-if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   firebase.initializeApp(firebaseConfig);
 
   const messaging = firebase.messaging();

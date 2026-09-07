@@ -26,10 +26,28 @@ export function usePushNotifications(isAuthenticated: boolean) {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           console.log('[FCM] Notification permission granted.');
-          const currentToken = await getToken(msg, { vapidKey: VAPID_KEY });
+
+          let swRegistration: ServiceWorkerRegistration | undefined = undefined;
+          if ('serviceWorker' in navigator) {
+            const swParams = new URLSearchParams({
+              apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+              authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+              projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+              storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+              messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+              appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+            }).toString();
+
+            swRegistration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${swParams}`);
+          }
+
+          const currentToken = await getToken(msg, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: swRegistration
+          });
+
           if (currentToken) {
             console.log('[FCM] Token retrieved successfully.');
-            // Send token to backend
             await authService.registerFcmToken(currentToken);
           } else {
             console.log('[FCM] No registration token available.');

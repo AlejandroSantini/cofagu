@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getMessaging, type Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -18,12 +18,11 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.appId
 );
 
-let app: FirebaseApp | null = null;
 let messaging: Messaging | null = null;
 
 if (isFirebaseConfigured) {
   try {
-    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     messaging = getMessaging(app);
   } catch (err) {
     console.warn('[Firebase] Error initializing Messaging:', err);
