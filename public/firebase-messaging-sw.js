@@ -1,17 +1,19 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
-// Configuración de Firebase Cloud Messaging
+// Configuración de Firebase - las credenciales se inyectan dinámicamente desde el entorno
+const params = new URLSearchParams(self.location.search);
+
 const firebaseConfig = {
-  apiKey: "FIREBASE_API_KEY_REMOVED",
-  authDomain: "cooperativa-notificaciones.firebaseapp.com",
-  projectId: "cooperativa-notificaciones",
-  storageBucket: "cooperativa-notificaciones.firebasestorage.app",
-  messagingSenderId: "FIREBASE_SENDER_ID_REMOVED",
-  appId: "FIREBASE_APP_ID_REMOVED"
+  apiKey: params.get('apiKey') || "",
+  authDomain: params.get('authDomain') || "",
+  projectId: params.get('projectId') || "",
+  storageBucket: params.get('storageBucket') || "",
+  messagingSenderId: params.get('messagingSenderId') || "",
+  appId: params.get('appId') || ""
 };
 
-if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   firebase.initializeApp(firebaseConfig);
 
   const messaging = firebase.messaging();
