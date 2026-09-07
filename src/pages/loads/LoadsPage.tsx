@@ -917,12 +917,13 @@ export const LoadsPage: React.FC = () => {
 
 
           {/* Tab Content Render */}
-          <LoadsTable
-            loads={loads}
-            isLoading={loading}
+          <LoadsTable 
+            loads={loads} 
+            isLoading={loading} 
             onRowClick={handleRowClick}
             statusFilter={activeTab}
             isCarrier={isCarrier}
+            isAdmin={user?.role === 'ADMIN'}
             myCarrierId={user?.carrierId}
           />
         </div>

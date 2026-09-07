@@ -17,6 +17,7 @@ import {
   type Invoice,
   type Notification,
   type GroupMemberType,
+  type TechnicalCenterSearchResult,
 } from "../types";
 
 // --- AUTH & USERS ---
@@ -109,6 +110,8 @@ export const truckService = {
 export const loadService = {
   getLoads: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>("/loads", { params }),
+  searchTechnicalCenterLoads: (search?: string) =>
+    api.get<ApiResponse<TechnicalCenterSearchResult[]>>("/loads/technical-center/loads/search", { params: { search } }),
   getTrips: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>("/trips", { params }),
   getTrip: (id: number | string) => api.get<ApiResponse<Load>>(`/trips/${id}`),

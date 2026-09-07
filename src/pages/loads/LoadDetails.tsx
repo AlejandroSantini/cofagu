@@ -1326,8 +1326,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     const logisticsCreatorName = 
                       app.createdByUser?.name || 
                       app.logisticsUser?.name || 
-                      (typeof app.appliedBy === 'object' ? app.appliedBy?.name : '') || 
-                      (typeof app.appliedBy === 'string' ? app.appliedBy : '');
+                      (app as any).user?.name ||
+                      (app as any).user?.companyName ||
+                      (app as any).logistics?.name ||
+                      (typeof app.appliedBy === 'object' ? app.appliedBy?.name || app.appliedBy?.companyName : '') || 
+                      (typeof app.appliedBy === 'string' && !app.appliedBy.toLowerCase().startsWith('log') ? app.appliedBy : '');
 
                     return (
                       <div
@@ -1344,7 +1347,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             {isAppliedByLogistics && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
                                 <Layers size={10} className="shrink-0" />
-                                Postulado por Logística {logisticsCreatorName ? `(${logisticsCreatorName})` : ''}
+                                Postulado por Logística: {logisticsCreatorName ? `${logisticsCreatorName}` : '-'}
                               </span>
                             )}
                           </div>

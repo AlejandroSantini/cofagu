@@ -10,9 +10,10 @@ interface LoadsTableProps {
   statusFilter?: string;
   isCarrier?: boolean;
   myCarrierId?: number | null;
+  isAdmin?: boolean;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, isAdmin }) => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'PUBLISHED': return 'warning';
@@ -170,7 +171,12 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
             }
           ]
     ) : [])
-  ];
+  ].filter(col => {
+    if (isAdmin && (col.header === 'Transportista' || col.header === 'Chofer / Camión')) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <Table

@@ -27,6 +27,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import NotificationsPage from './pages/NotificationsPage';
 import { YardPage } from './pages/YardPage';
 import { ControlViajesPage } from './pages/ControlViajesPage';
+import { TechnicalCenterSearchPage } from './pages/TechnicalCenterSearchPage';
 
 
 function App() {
@@ -71,6 +72,8 @@ function App() {
                 <Navigate to="/loads" replace />
               ) : user?.role === 'CONTROL_VIAJES' ? (
                 <Navigate to="/control-viajes" replace />
+              ) : user?.role === 'TECHNICAL_CENTER' ? (
+                <Navigate to="/technical-center-search" replace />
               ) : (
                 <AppLayout><Dashboard /></AppLayout>
               )
@@ -231,6 +234,21 @@ function App() {
             ) : <Navigate to="/login" />
           }
         />
+
+        <Route
+          path="/technical-center-search"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN', 'TECHNICAL_CENTER']}>
+                  <TechnicalCenterSearchPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

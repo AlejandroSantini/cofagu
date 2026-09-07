@@ -59,7 +59,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isPlayeroCombustible = user?.role === "GAS_STATION";
   const isControlViajes = user?.role === "CONTROL_VIAJES";
   const isLogistics = user?.role === "LOGISTICS";
-  const isRestricted = isPlayeroYard || isPlayeroCombustible || isControlViajes;
+  const isTechnicalCenter = user?.role === "TECHNICAL_CENTER";
+  const isRestricted = isPlayeroYard || isPlayeroCombustible || isControlViajes || isTechnicalCenter;
 
   const navItems = [
     ...(!isRestricted
@@ -76,6 +77,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       : []),
     ...(isControlViajes || user?.role === "OPERATOR" || isAdmin
       ? [{ label: "Control de Viajes", icon: Search, path: "/control-viajes" }]
+      : []),
+    ...(isTechnicalCenter || isAdmin
+      ? [{ label: "Buscador de Camiones", icon: Search, path: "/technical-center-search" }]
       : []),
 
     ...(isStaff && !isRestricted && !isBalancero
@@ -176,12 +180,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <item.icon
                   size={20}
                   className={
-                    isActive(item.path)
+                    `shrink-0 ${isActive(item.path)
                       ? "text-white"
-                      : "text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-yellow-400"
+                      : "text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-yellow-400"}`
                   }
                 />
-                <span className="font-bold text-sm">{item.label}</span>
+                <span className="font-bold text-sm flex-1 text-left line-clamp-2">{item.label}</span>
                 {item.path === "/notifications" && unreadCount > 0 && (
                   <span className="absolute right-4 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {unreadCount}
@@ -206,7 +210,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </p>
                 {user?.role !== "EMPLOYEE" && (
                   <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-black uppercase tracking-widest">
-                    {user?.role}
+                    {user?.role === 'TECHNICAL_CENTER' ? 'CENTRO AGROTÉCNICO' : 
+                     user?.role === 'CONTROL_VIAJES' ? 'CONTROL VIAJES' : 
+                     user?.role === 'GAS_STATION' ? 'ESTACIÓN DE SERVICIO' : 
+                     user?.role === 'CARRIER' ? 'TRANSPORTISTA' : 
+                     user?.role === 'LOGISTICS' ? 'LOGÍSTICA' : 
+                     user?.role === 'PLAYERO' ? 'PLAYERO' : 
+                     user?.role === 'OPERATOR' ? 'OPERADOR' : 
+                     user?.role}
                   </p>
                 )}
               </div>

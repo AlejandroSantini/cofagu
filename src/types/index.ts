@@ -95,6 +95,12 @@ export interface Application {
   appliedBy?: User | string | any;
   logisticsUser?: User;
   appliedByLogistics?: boolean;
+  logisticsId?: number | null;
+  logistics?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
 }
 
 
@@ -103,6 +109,18 @@ export interface Contingency {
   description: string;
   reportedBy: string;
   createdAt: string;
+}
+
+export interface TechnicalCenterSearchResult {
+  id: number;
+  plate: string;
+  truckType: string;
+  carrierName: string;
+  driverName: string;
+  driverPhone: string;
+  destination: string;
+  status: string;
+  ctg: string | null;
 }
 
 export interface Load {
