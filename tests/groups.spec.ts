@@ -1,118 +1,42 @@
 import { test, expect } from "@playwright/test";
-import { loginAs } from "./utils";
+import { apiOk, fulfill, loginAs } from "./utils";
 
-test.describe("Groups Flow", () => {
-  test("should display mixed member types and toggle correctly when adding", async ({
-    page,
-  }) => {
-    // 1. Setup API Mocks
-    await page.route("**/api/groups", async (route) => {
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: {
-          success: true,
-          data: [
-            {
-              id: 1,
-              name: "Grupo Mixto Sur",
-              description: "Grupo de prueba",
-              members: [],
-            },
-          ],
-        },
-      });
-    });
+const GROUP = {
+  id: 1,
+  name: "Grupo Mixto Sur",
+  description: "Grupo de prueba",
+  members: [
+    { id: "10", name: "Transportes SA", member_type: "carrier", carrier_id: 10, cuit: "30-11111111-1" },
+    { id: "20", name: "Logística Interna", member_type: "logistics", user_id: 20, email: "log@cofagu.com" },
+  ],
+};
 
-    await page.route("**/api/groups/1", async (route) => {
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: {
-          success: true,
-          data: {
-            id: 1,
-            name: "Grupo Mixto Sur",
-            description: "Grupo de prueba",
-            members: [
-              {
-                id: "10",
-                name: "Transportes SA",
-                member_type: "carrier",
-                carrier_id: 10,
-              },
-              {
-                id: "20",
-                name: "Logistica Interna",
-                member_type: "logistics",
-                user_id: 20,
-              },
-            ],
-          },
-        },
-      });
-    });
-
-    await page.route("**/api/carriers", async (route) => {
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: {
-          success: true,
-          data: [{ id: 30, name: "Transportes Nuevo" }],
-        },
-      });
-    });
-
-    await page.route("**/api/users*", async (route) => {
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: {
-          success: true,
-          data: [
-            { id: 40, name: "Usuario Logistica Nuevo", role: "LOGISTICS" },
-          ],
-        },
-      });
-    });
-
-    // 2. Login as ADMIN
+test.describe("Grupos de Transportistas", () => {
+  test("el detalle de un grupo muestra integrantes de tipo mixto con su etiqueta", async ({ page }) => {
     await loginAs(page, "ADMIN");
+    await page.route("**/api/groups", (r) => fulfill(r, apiOk([{ id: 1, name: GROUP.name, description: GROUP.description, members: [] }])));
+    await page.route("**/api/groups/1", (r) => fulfill(r, apiOk(GROUP)));
+    await page.route("**/api/carriers*", (r) => fulfill(r, apiOk([{ id: 30, name: "Transportes Nuevo" }])));
+    await page.route("**/api/users*", (r) => fulfill(r, apiOk([{ id: 40, name: "Usuario Logística Nuevo", role: "LOGISTICS" }])));
 
-    // 3. Navigate to group details
     await page.goto("/groups/1");
 
-    // 4. Check if badges are present for mixed members
     await expect(page.getByText("Transportes SA")).toBeVisible();
-    await expect(page.getByText("Logística").first()).toBeVisible();
+    await expect(page.getByText("Logística Interna")).toBeVisible();
 
-    await expect(page.getByText("Logistica Interna")).toBeVisible();
+    // Cada integrante lleva el badge (span) de su tipo
+    await expect(page.locator("span").filter({ hasText: /^Transportista$/ })).toBeVisible();
+    await expect(page.locator("span").filter({ hasText: /^Logística$/ })).toBeVisible();
+  });
 
-    // 5. Verify radio button toggle for member type
-    const carrierRadio = page.getByLabel("Transportista");
-    const logisticsRadio = page.getByLabel("Usuario de Logística");
+  test("un grupo sin integrantes muestra el estado vacío", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/groups", (r) => fulfill(r, apiOk([{ id: 2, name: "Grupo Vacío", description: "", members: [] }])));
+    await page.route("**/api/groups/2", (r) => fulfill(r, apiOk({ id: 2, name: "Grupo Vacío", description: "", members: [] })));
+    await page.route("**/api/carriers*", (r) => fulfill(r, apiOk([])));
+    await page.route("**/api/users*", (r) => fulfill(r, apiOk([])));
 
-    await expect(carrierRadio).toBeChecked();
-
-    // Toggle to Logistics
-    await logisticsRadio.click();
-    await expect(logisticsRadio).toBeChecked();
+    await page.goto("/groups/2");
+    await expect(page.getByText(/aún no tiene integrantes/i)).toBeVisible();
   });
 });

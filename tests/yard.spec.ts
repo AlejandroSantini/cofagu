@@ -1,76 +1,61 @@
 import { test, expect } from "@playwright/test";
-import { loginAs } from "./utils";
+import { apiOk, fulfill, loginAs } from "./utils";
 
-test.describe("Yard Flow (Playa de Camiones)", () => {
-  test("should display yard loads and allow rejection", async ({ page }) => {
-    // 1. Setup API Mocks
-    await page.route("**/api/loads/yard*", async (route) => {
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: {
-          success: true,
-          data: [
-            {
-              id: 99,
-              status: "ARRIVED_PLANT",
-              origin: "Campo",
-              destination: "Planta Urdinarrain",
-              truck: { chassisPlate: "YARD-123" },
-              driver: { name: "Pepe Grillo" },
-              carrier: { name: "Logistica X" },
-              timeSlot: "08:00 - 10:00",
-            },
-          ],
-        },
-      });
-    });
+const YARD_LOAD = {
+  id: 99,
+  status: "ASSIGNED",
+  origin: "Campo La Esperanza",
+  destination: "Planta Urdinarrain",
+  truck: { chassisPlate: "AB123CD" },
+  driver: { name: "Pepe Grillo", dni: "12345678" },
+  carrier: { name: "Logística X" },
+  loadingTimeStart: "08:00",
+  loadingTimeEnd: "10:00",
+};
 
-    let rejectCalled = false;
-    await page.route("**/api/loads/99/reject", async (route) => {
-      rejectCalled = true;
-      const postData = JSON.parse(route.request().postData() || "{}");
-      expect(postData.reason).toBe("Camión no cumple los requisitos");
-      await route.fulfill({
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "*",
-          "Access-Control-Allow-Headers": "*",
-        },
-        status: 200,
-        json: { success: true, data: { id: 99, status: "REJECTED" } },
-      });
-    });
-
-    // 2. Login as PLAYERO
+test.describe("Control de Playa", () => {
+  test("lista los camiones asignados y permite rechazar uno", async ({ page }) => {
     await loginAs(page, "PLAYERO");
+    await page.route("**/api/loads/yard/loads*", (r) => fulfill(r, apiOk([YARD_LOAD])));
 
-    // 3. Go to Yard
+    let rejectBody: { reason?: string } | null = null;
+    await page.route("**/api/loads/99/reject", (route) => {
+      rejectBody = JSON.parse(route.request().postData() || "{}");
+      return fulfill(route, apiOk({ id: 99, status: "REJECTED" }));
+    });
+
     await page.goto("/yard");
 
-    // 4. Verify table content
-    await expect(page.getByText("YARD-123")).toBeVisible();
+    // La fila del camión se ve
+    await expect(page.getByText("AB123CD")).toBeVisible();
     await expect(page.getByText("Pepe Grillo")).toBeVisible();
+    await expect(page.getByText("Logística X")).toBeVisible();
 
-    // 5. Click Reject
-    await page.getByRole("button", { name: /Rechazar/i }).click();
+    // Abrir el modal de rechazo
+    await page.getByRole("button", { name: "Rechazar" }).click();
+    await expect(page.getByRole("heading", { name: "Rechazar Carga" })).toBeVisible();
 
-    // 6. Fill Reject Modal
-    await expect(page.getByText("Motivo de Rechazo")).toBeVisible();
+    // El confirmar está deshabilitado hasta que haya un motivo
+    const confirm = page.getByRole("button", { name: "Confirmar Rechazo" });
+    await expect(confirm).toBeDisabled();
+
     await page
-      .getByPlaceholder(
-        "Especifique el motivo por el cual se rechaza el camión...",
-      )
-      .fill("Camión no cumple los requisitos");
+      .getByPlaceholder("Ej: Llegó fuera de horario establecido, documentación incompleta...")
+      .fill("Camión sin documentación");
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
 
-    // 7. Confirm Reject
-    await page.getByRole("button", { name: "Rechazar Camión" }).click();
+    // El backend recibió el motivo
+    await expect.poll(() => rejectBody?.reason).toBe("Camión sin documentación");
+    await expect(page.getByText("Carga rechazada correctamente")).toBeVisible();
+  });
 
-    // 8. Verify reject API was called
-    expect(rejectCalled).toBe(true);
+  test("muestra el estado vacío cuando no hay camiones", async ({ page }) => {
+    await loginAs(page, "PLAYERO");
+    await page.route("**/api/loads/yard/loads*", (r) => fulfill(r, apiOk([])));
+
+    await page.goto("/yard");
+    await expect(page.getByRole("heading", { name: "Control de Playa" })).toBeVisible();
+    await expect(page.getByText("No se encontraron camiones en la playa de camiones.")).toBeVisible();
   });
 });

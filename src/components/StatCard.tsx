@@ -18,17 +18,19 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, co
       padding="sm"
       className={`border-l-4 ${color.replace('bg-', 'border-')}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">
-          {value}
-        </p>
-        <div className={`p-2 rounded-md ${color} text-white shrink-0`}>
-          <Icon size={18} />
+      <div data-testid="stat-card" data-title={title} data-value={value}>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-3xl font-black text-slate-900 dark:text-white leading-none">
+            {value}
+          </p>
+          <div className={`p-2 rounded-md ${color} text-white shrink-0`}>
+            <Icon size={18} />
+          </div>
         </div>
+        <p className="mt-2 text-[11px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 leading-tight">
+          {title}
+        </p>
       </div>
-      <p className="mt-2 text-[11px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 leading-tight">
-        {title}
-      </p>
     </Card>
   );
 };
