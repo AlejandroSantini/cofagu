@@ -1,7 +1,6 @@
 import React from 'react';
 import { type Load } from '../../types';
 import { Table } from '../../components/ui/Table';
-import { Badge } from '../../components/ui/Badge';
 
 interface LoadsTableProps {
   loads: Load[];
@@ -13,35 +12,7 @@ interface LoadsTableProps {
   isAdmin?: boolean;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, isAdmin }) => {
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'PUBLISHED': return 'warning';
-      case 'ACTIVE': return 'success';
-      case 'PENDING': return 'warning';
-      case 'ASSIGNED': return 'info';
-      case 'ACCEPTED': return 'info';
-      case 'IN_PROGRESS': return 'primary';
-      case 'COMPLETED': return 'success';
-      case 'CANCELLED': return 'neutral';
-      default: return 'neutral';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'PUBLISHED': return 'DISPONIBLE';
-      case 'ACTIVE': return 'DISPONIBLE';
-      case 'PENDING': return 'PENDIENTE';
-      case 'ASSIGNED': return 'ASIGNADO';
-      case 'ACCEPTED': return 'ASIGNADO';
-      case 'IN_PROGRESS': return 'EN CURSO';
-      case 'COMPLETED': return 'COMPLETADO';
-      case 'CANCELLED': return 'CANCELADO';
-      default: return status;
-    }
-  };
-
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
   const columns = [
     ...(statusFilter === 'ACTIVE' 
       ? [

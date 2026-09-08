@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Truck, Phone, Package, Hash, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Truck, Phone, Package } from 'lucide-react';
 import { loadService } from '../api/services';
 import type { TechnicalCenterSearchResult } from '../types';
 import { Badge } from '../components/ui/Badge';
@@ -7,13 +7,13 @@ import { Table } from '../components/ui/Table';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
-export enum TruckType {
-  BATEA = 'BATEA',
-  TOLVA = 'TOLVA',
-  CHASIS_Y_ACOPLADO = 'CHASIS_Y_ACOPLADO',
-  SEMI = 'SEMI',
-  SEMI_TOLVA = 'SEMI_TOLVA'
-}
+export const TruckType = {
+  BATEA: 'BATEA',
+  TOLVA: 'TOLVA',
+  CHASIS_Y_ACOPLADO: 'CHASIS_Y_ACOPLADO',
+  SEMI: 'SEMI',
+  SEMI_TOLVA: 'SEMI_TOLVA'
+} as const;
 
 export const TRUCK_TYPE_LABELS: Record<string, string> = {
   [TruckType.BATEA]: 'Batea',
