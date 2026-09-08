@@ -12,28 +12,23 @@ interface StatCardProps {
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, onClick }) => {
   return (
-    <Card 
-      hover 
-      onClick={onClick} 
-      className={`relative overflow-hidden group cursor-pointer border-l-4 ${color.replace('bg-', 'border-')}`}
+    <Card
+      hover
+      onClick={onClick}
+      className={`border-l-4 ${color.replace('bg-', 'border-')}`}
     >
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-1 min-w-0">
           <p className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
             {title}
           </p>
-          <p className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+          <p className="text-3xl font-black text-slate-900 dark:text-white">
             {value}
           </p>
         </div>
-        <div className={`p-3 rounded-md ${color} text-white shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
+        <div className={`p-3 rounded-md ${color} text-white shrink-0`}>
           <Icon size={24} />
         </div>
-      </div>
-      
-      {/* Decoración sutil de fondo */}
-      <div className="absolute -right-4 -bottom-4 opacity-[0.03] dark:opacity-[0.05] group-hover:opacity-10 transition-opacity">
-        <Icon size={120} />
       </div>
     </Card>
   );

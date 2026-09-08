@@ -20,6 +20,10 @@ PWA, con dark mode. Estética: **sobria, densa en datos, verde oliva**.
 - `bg-clip-text` / texto con degradé.
 - Glassmorphism, acentos violeta/fucsia, sombras de neón, bordes con gradiente.
 - Radios exagerados (ver "Forma y profundidad").
+- Iconos gigantes de "marca de agua" detrás del contenido (`<Icon size={120}>`
+  con opacidad baja), sombras de color tipo glow (`shadow-lg shadow-current/20`,
+  `shadow-<color>/30`+), y micro-animaciones decorativas (`group-hover:scale-110`
+  en iconos). El feedback de hover lo da la `Card` (borde + `shadow-md`).
 
 ## Reglas duras (romper esto rompe el build o la coherencia visual)
 
