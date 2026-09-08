@@ -35,7 +35,7 @@ const SecureImagePreview: React.FC<{
   src: string;
   alt?: string;
   className?: string;
-}> = ({ src, alt, className = "max-h-48 rounded-md object-contain" }) => {
+}> = ({ src, alt, className = "max-h-48 rounded-sm object-contain" }) => {
   const [blobUrl, setBlobUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -543,7 +543,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           )}
 
           {(!isLogistics || postulateCarrierId) && availableTrucks.length === 0 && carrierTrucks.length > 0 && !isLogistics ? (
-            <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-700 dark:text-amber-300 font-medium">
+            <div className="p-4 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-sm text-amber-700 dark:text-amber-300 font-medium">
               ⚠️ Todos los camiones de tu flota ya están postulados a esta
               carga. Si tenés más camiones que no aparecen aquí, verificá que
               estén cargados en el sistema.
@@ -756,7 +756,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
       <div className="max-w-6xl mx-auto space-y-6 w-full">
         {/* Main Details Panel */}
-        <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 w-full">
             <div>
               <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
@@ -781,7 +781,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+              <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                 <Calendar size={20} />
               </div>
               <div>
@@ -797,7 +797,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+              <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                 <Calendar size={20} />
               </div>
               <div>
@@ -813,7 +813,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+              <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                 <Calendar size={20} />
               </div>
               <div>
@@ -829,7 +829,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+              <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                 <Building size={20} />
               </div>
               <div>
@@ -850,7 +850,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             ) && (
               <>
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+                  <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                     <DollarSign size={20} />
                   </div>
                   <div>
@@ -866,7 +866,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+                  <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                     <TruckIcon size={20} />
                   </div>
                   <div>
@@ -884,7 +884,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {/* Progress metric for arrived/completed trucks */}
                 {acceptedCount > 0 && isAdmin && (
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+                    <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                       <CheckCircle size={20} />
                     </div>
                     <div>
@@ -907,7 +907,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
             {load.ctg && (
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+                <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                   <Send size={20} />
                 </div>
                 <div>
@@ -923,7 +923,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
             {load.loadedWeight != null && (
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
+                <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                   <Scale size={20} />
                 </div>
                 <div>
@@ -939,7 +939,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           </div>
 
           {load.notes && (
-            <div className="bg-slate-50 dark:bg-zinc-800/30 p-4 rounded-lg border border-slate-100 dark:border-zinc-800/50">
+            <div className="bg-slate-50 dark:bg-zinc-800/30 p-4 rounded-md border border-slate-100 dark:border-zinc-800/50">
               <span className="text-xs font-bold text-slate-400 block uppercase mb-1">
                 Notas Adicionales
               </span>
@@ -958,7 +958,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             if (validTargetGroups.length === 0) return null;
 
             return (
-              <div className="bg-emerald-500/5 dark:bg-zinc-800/40 p-4 rounded-lg border border-emerald-500/20 dark:border-zinc-800 space-y-3">
+              <div className="bg-emerald-500/5 dark:bg-zinc-800/40 p-4 rounded-md border border-emerald-500/20 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center gap-2">
                   <Layers
                     size={18}
@@ -972,7 +972,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   {validTargetGroups.map((tg, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-md border border-slate-200/80 dark:border-zinc-750 text-xs"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-sm border border-slate-200/80 dark:border-zinc-750 text-xs"
                     >
                       <span className="font-bold text-slate-800 dark:text-zinc-200">
                         {tg.group?.name || `Grupo ID: ${tg.groupId}`}
@@ -988,7 +988,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           })()}
 
           {load.status === "COMPLETED" && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/20 p-6 rounded-lg border border-emerald-100/30 dark:border-emerald-900/30 space-y-4">
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 p-6 rounded-md border border-emerald-100/30 dark:border-emerald-900/30 space-y-4">
               <h3 className="text-lg font-black text-emerald-900 dark:text-emerald-400 flex items-center gap-2">
                 <CheckCircle size={20} />
                 Datos de Finalización de Viaje
@@ -996,7 +996,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                 {load.unloadedWeight != null &&
                   Number(load.unloadedWeight) > 0 && (
-                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-md border border-emerald-100/50 dark:border-zinc-800">
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-sm border border-emerald-100/50 dark:border-zinc-800">
                       <span className="text-xs font-bold text-slate-400 block uppercase mb-1">
                         Kilos Descargados
                       </span>
@@ -1006,7 +1006,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     </div>
                   )}
                 {load.fuelConsumption ? (
-                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-md border border-emerald-100/50 dark:border-zinc-800">
+                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-sm border border-emerald-100/50 dark:border-zinc-800">
                     <span className="text-xs font-bold text-slate-400 block uppercase mb-1">
                       Consumo de Combustible
                     </span>
@@ -1016,7 +1016,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </div>
                 ) : null}
                 {load.mileage ? (
-                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-md border border-emerald-100/50 dark:border-zinc-800">
+                  <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-sm border border-emerald-100/50 dark:border-zinc-800">
                     <span className="text-xs font-bold text-slate-400 block uppercase mb-1">
                       Kilometraje Recorrido
                     </span>
@@ -1028,7 +1028,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {(!load.unloadedWeight || Number(load.unloadedWeight) === 0) &&
                   !load.fuelConsumption &&
                   !load.mileage && (
-                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-md border border-emerald-100/50 dark:border-zinc-800 col-span-full">
+                    <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-sm border border-emerald-100/50 dark:border-zinc-800 col-span-full">
                       <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
                         Todos los camiones arribaron a destino correctamente.
                         Viaje finalizado.
@@ -1044,21 +1044,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {load.invoiceUrl && (
-                      <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-lg border border-slate-100 dark:border-zinc-800">
+                      <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-md border border-slate-100 dark:border-zinc-800">
                         <span className="text-xs font-bold text-slate-500">
                           Factura / Remito
                         </span>
-                        <div className="relative aspect-video rounded-md overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
+                        <div className="relative aspect-video rounded-sm overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
                           <SecureImagePreview src={load.invoiceUrl} />
                         </div>
                       </div>
                     )}
                     {load.waybillUrl && (
-                      <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-lg border border-slate-100 dark:border-zinc-800">
+                      <div className="flex flex-col gap-2 p-3 bg-white dark:bg-zinc-900/60 rounded-md border border-slate-100 dark:border-zinc-800">
                         <span className="text-xs font-bold text-slate-500">
                           Carta de Porte
                         </span>
-                        <div className="relative aspect-video rounded-md overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
+                        <div className="relative aspect-video rounded-sm overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-center p-2">
                           <SecureImagePreview src={load.waybillUrl} />
                         </div>
                       </div>
@@ -1158,7 +1158,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           {load.unloadedWeight != null &&
             load.loadedWeight != null &&
             Number(load.unloadedWeight) < Number(load.loadedWeight) && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-5 rounded-lg border border-amber-200 dark:border-amber-900/40 space-y-3">
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-5 rounded-md border border-amber-200 dark:border-amber-900/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
                     <AlertTriangle
@@ -1174,11 +1174,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     </span>
                   </div>
                   {load.differenceAdjusted ? (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md">
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/40 px-2.5 py-1 rounded-sm">
                       Ajustado en Cta. Cte.
                     </span>
                   ) : (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-100 dark:bg-rose-950/40 px-2.5 py-1 rounded-md">
+                    <span className="text-xs font-bold text-rose-700 bg-rose-100 dark:bg-rose-950/40 px-2.5 py-1 rounded-sm">
                       Pendiente de Ajuste (Transportista Bloqueado)
                     </span>
                   )}
@@ -1215,7 +1215,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         </div>
 
         {!isLogistics && isStaff ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
             <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
               Postulaciones y Viajes Asignados (
               {isBalancero
@@ -1335,7 +1335,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     return (
                       <div
                         key={app.id}
-                        className={`p-4 border rounded-lg border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 ${!isPending && !isAccepted ? "opacity-60" : ""}`}
+                        className={`p-4 border rounded-md border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/40 ${!isPending && !isAccepted ? "opacity-60" : ""}`}
                       >
                         <div className="flex justify-between items-start mb-1 border-b border-slate-200/60 dark:border-zinc-700 pb-2 gap-2">
                           <div>
@@ -1345,7 +1345,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 "Transportista"}
                             </span>
                             {isAppliedByLogistics && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-sm text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
                                 <Layers size={10} className="shrink-0" />
                                 Postulado por Logística: {logisticsCreatorName ? `${logisticsCreatorName}` : '-'}
                               </span>
@@ -1489,7 +1489,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 return (
                                   <>
                                     {isProposedTruckInvalid && (
-                                      <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-lg text-xs font-semibold space-y-1">
+                                      <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-md text-xs font-semibold space-y-1">
                                         <p className="font-bold">
                                           ⚠️ Seguro de camión propuesto
                                           inválido
@@ -1535,7 +1535,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                   {/* Direct Assignment Fallback (when no applications exist but load has resources) */}
                   {directAssignmentTrip && appsToShow.length === 0 && (
-                    <div className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-200 dark:border-zinc-700/60 space-y-3">
+                    <div className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-200 dark:border-zinc-700/60 space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
                         <span className="font-bold text-sm text-slate-900 dark:text-white">
                           {directAssignmentTrip.carrier?.name ||
@@ -1653,7 +1653,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <div className="space-y-6">
                 {/* If no applications at all */}
                 {myTrips.length === 0 && (
-                  <div className="p-6 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800 text-center">
+                  <div className="p-6 bg-slate-50 dark:bg-zinc-900 rounded-md border border-slate-100 dark:border-zinc-800 text-center">
                     <p className="text-slate-500 dark:text-slate-400 font-medium">
                       Aún no te has postulado a este viaje.
                     </p>
@@ -1662,12 +1662,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                 {/* Pending applications — one card per truck */}
                 {myPendingApps.length > 0 && (
-                  <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
+                  <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
                       Tus Postulaciones Pendientes ({myPendingApps.length})
                     </h3>
                     {myPendingApps.map((pendingApp) => (
-                      <div key={pendingApp.id} className="p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
+                      <div key={pendingApp.id} className="p-4 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
                             Postulado — en revisión por el operador
@@ -1709,7 +1709,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                 {/* Accepted trips: one card per truck */}
                 {myAcceptedTrips.length > 0 && (
-                  <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+                  <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
                       Mis Camiones en este Viaje ({myAcceptedTrips.length})
                     </h3>
@@ -1760,7 +1760,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         return (
                           <div
                             key={trip.id}
-                            className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-200 dark:border-zinc-700/60 space-y-3"
+                            className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-200 dark:border-zinc-700/60 space-y-3"
                           >
                             {/* Header */}
                             <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
@@ -1828,7 +1828,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             {isTripCompleted && (
                               <div className="space-y-2">
                                 {load.status !== "COMPLETED" ? (
-                                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-semibold space-y-1">
+                                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-sm text-xs font-semibold space-y-1">
                                     <p className="font-bold flex items-center gap-1.5">
                                       <CheckCircle
                                         size={14}
@@ -1853,7 +1853,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             {!isTripInProgress && !isTripCompleted && (
                               <div className="space-y-2">
                                 {!tripCtg ? (
-                                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-sm">
                                     <p className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
                                       <Clock size={14} className="shrink-0" />
                                       Esperando que el balancero u operador
@@ -1929,7 +1929,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
         {/* Contingencies Timeline */}
         {!isBalancero && (
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
             <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">
               Historial de Contingencias y Novedades
             </h3>
@@ -1942,7 +1942,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {load.contingencies.map((c) => (
                   <div key={c.id} className="relative">
                     <div className="absolute -left-[31px] top-1.5 w-4 h-4 bg-amber-500 rounded-full border-4 border-white dark:border-zinc-900" />
-                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-lg border border-slate-100 dark:border-zinc-800">
+                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-md border border-slate-100 dark:border-zinc-800">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">
                           Reportado por: {c.reportedBy}

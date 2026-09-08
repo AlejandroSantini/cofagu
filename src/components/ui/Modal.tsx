@@ -95,7 +95,7 @@ export const Modal: React.FC<ModalProps> = ({
       
       {/* Modal Content */}
       <div 
-        className={`relative ${imageOnly ? 'w-auto max-w-[95vw] bg-transparent p-0' : 'w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-6'} transition-all duration-200 transform ${
+        className={`relative ${imageOnly ? 'w-auto max-w-[95vw] bg-transparent p-0' : 'w-full max-w-md bg-white dark:bg-zinc-900 rounded-lg shadow-2xl border border-slate-200 dark:border-zinc-800 p-6'} transition-all duration-200 transform ${
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
       >
@@ -104,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
           className={`absolute top-4 right-4 p-2 transition-colors z-[110] ${
             imageOnly 
               ? 'text-white hover:text-white bg-black/40 hover:bg-black/60 rounded-full' 
-              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-md'
           }`}
         >
           <X size={20} />
@@ -113,7 +113,7 @@ export const Modal: React.FC<ModalProps> = ({
         {!imageOnly && (
           <div className="flex items-start gap-4 mb-6">
             {!hideIcon && (
-              <div className={`p-3 shrink-0 rounded-lg ${
+              <div className={`p-3 shrink-0 rounded-md ${
                 type === 'danger' ? 'bg-rose-50 dark:bg-rose-500/10' : 
                 type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10' : 
                 'bg-yellow-50 dark:bg-yellow-500/10'

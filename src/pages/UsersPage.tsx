@@ -200,7 +200,7 @@ export const UsersPage: React.FC = () => {
     { 
       header: 'Rol', 
       render: (u: User) => (
-        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+        <span className={`px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-wider ${
           u.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
           u.role === 'LOGISTICS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' :
           u.role === 'TECHNICAL_CENTER' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-400' :
@@ -276,7 +276,7 @@ export const UsersPage: React.FC = () => {
       <ErrorMessage message={error} className="mb-8" />
 
       {showForm ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 md:p-8 pb-8 md:pb-10 border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 rounded-md p-4 md:p-8 pb-8 md:pb-10 border border-slate-200 dark:border-zinc-800 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <Input 

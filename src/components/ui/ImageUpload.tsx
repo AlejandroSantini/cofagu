@@ -133,7 +133,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ label, value, onChange
       )}
       <div className="flex gap-4">
         <div className={`
-          flex-1 border-2 border-dashed rounded-lg p-4 text-center relative transition-all duration-300
+          flex-1 border-2 border-dashed rounded-md p-4 text-center relative transition-all duration-300
           ${error 
             ? 'border-rose-300 bg-rose-500/5 dark:border-rose-900/50' 
             : 'border-slate-200 dark:border-zinc-700 hover:border-emerald-500 hover:bg-emerald-50/10 dark:hover:bg-zinc-800/30'
@@ -163,8 +163,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ label, value, onChange
       </div>
       
       {value && !isUploading && (
-        <div className="mt-2 flex items-center gap-3 p-2.5 rounded-md bg-emerald-500/10 border border-emerald-500/25">
-          <SecureImage src={value} alt="Preview" className="w-10 h-10 object-cover rounded-md border border-emerald-500/20" />
+        <div className="mt-2 flex items-center gap-3 p-2.5 rounded-sm bg-emerald-500/10 border border-emerald-500/25">
+          <SecureImage src={value} alt="Preview" className="w-10 h-10 object-cover rounded-sm border border-emerald-500/20" />
           <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 truncate flex-1">
             {selectedFileName || 'Imagen cargada'}
           </span>

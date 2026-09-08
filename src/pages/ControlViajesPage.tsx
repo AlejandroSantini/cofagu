@@ -115,7 +115,7 @@ export const ControlViajesPage: React.FC = () => {
 
       {/* Header */}
       <div className="text-center space-y-2 pt-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-2">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-2">
           <FileText size={32} />
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
@@ -127,7 +127,7 @@ export const ControlViajesPage: React.FC = () => {
       </div>
 
       {/* Hero Search */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm">
         <label className="block text-xs font-black text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
           Buscar por CTG
         </label>
@@ -140,7 +140,7 @@ export const ControlViajesPage: React.FC = () => {
               value={ctgInput}
               onChange={(e) => setCtgInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-zinc-800/60 border-2 border-slate-200 dark:border-zinc-700 rounded-lg text-lg text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-zinc-800/60 border-2 border-slate-200 dark:border-zinc-700 rounded-md text-lg text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
               autoFocus
             />
           </div>
@@ -167,8 +167,8 @@ export const ControlViajesPage: React.FC = () => {
 
       {/* Not Found Alert */}
       {!searching && notFound && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl p-6 flex items-start gap-4">
-          <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-lg p-6 flex items-start gap-4">
+          <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-md shrink-0">
             <AlertTriangle size={24} className="text-amber-600 dark:text-amber-400" />
           </div>
           <div>
@@ -186,7 +186,7 @@ export const ControlViajesPage: React.FC = () => {
       {/* Empty State (before first search) */}
       {!searching && !hasSearched && (
         <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-          <div className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
             <Package size={40} className="text-slate-300 dark:text-zinc-600" />
           </div>
           <div>
@@ -202,11 +202,11 @@ export const ControlViajesPage: React.FC = () => {
 
       {/* Result Card */}
       {!searching && load && (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
           {/* Card Header */}
           <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <FileText size={20} />
               </div>
               <div>
@@ -228,8 +228,8 @@ export const ControlViajesPage: React.FC = () => {
             {/* Data Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Transportista */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
+                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md shrink-0">
                   <Building size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -243,8 +243,8 @@ export const ControlViajesPage: React.FC = () => {
               </div>
 
               {/* Kilogramos Descargados */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md shrink-0">
                   <Scale size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -258,8 +258,8 @@ export const ControlViajesPage: React.FC = () => {
               </div>
 
               {/* Tarifa */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-lg shrink-0">
+              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
+                <div className="p-2.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-md shrink-0">
                   <DollarSign size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -274,8 +274,8 @@ export const ControlViajesPage: React.FC = () => {
 
               {/* Ruta */}
               {(load.origin || load.destination) && (
-                <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-lg border border-slate-100 dark:border-zinc-800">
-                  <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
+                <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
+                  <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-md shrink-0">
                     <Package size={20} />
                   </div>
                   <div className="min-w-0 flex-1">

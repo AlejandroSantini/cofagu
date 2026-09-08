@@ -135,7 +135,7 @@ export const YardPage: React.FC = () => {
         const { driver } = resolveResource(load);
         return (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
               <User size={14} />
             </div>
             <div className="flex flex-col min-w-0">
@@ -156,7 +156,7 @@ export const YardPage: React.FC = () => {
         const { carrier } = resolveResource(load);
         return (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Building size={14} />
             </div>
             <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
@@ -249,7 +249,7 @@ export const YardPage: React.FC = () => {
               Motivo de Rechazo *
             </label>
             <textarea
-              className="w-full bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-rose-500 focus:outline-none transition-all resize-none h-28"
+              className="w-full bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-md px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-rose-500 focus:outline-none transition-all resize-none h-28"
               placeholder="Ej: Llegó fuera de horario establecido, documentación incompleta..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -276,7 +276,7 @@ export const YardPage: React.FC = () => {
       </div>
 
       {/* Smart Search Bar */}
-      <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -286,7 +286,7 @@ export const YardPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
             />
           </div>
           <Button
@@ -302,13 +302,13 @@ export const YardPage: React.FC = () => {
 
       {/* Error display */}
       {error && (
-        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-sm font-medium p-4 rounded-lg">
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-sm font-medium p-4 rounded-md">
           {error}
         </div>
       )}
 
       {/* Loads Table */}
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-2xs overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs overflow-hidden">
         <Table
           columns={columns}
           data={loads}

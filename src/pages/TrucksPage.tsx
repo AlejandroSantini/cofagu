@@ -495,7 +495,7 @@ export const TrucksPage: React.FC = () => {
       >
         <div className="flex justify-center items-center">
           {previewUrl && (
-            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain" />
+            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-md shadow-2xl object-contain" />
           )}
         </div>
       </Modal>
@@ -541,7 +541,7 @@ export const TrucksPage: React.FC = () => {
       {error && <ErrorMessage message={error} className="mb-6" />}
 
       {showForm ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
@@ -644,7 +644,7 @@ export const TrucksPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm">
             <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
               Filtrar por Tipo de Camión:
             </span>

@@ -282,7 +282,7 @@ export const CarrierDocumentsPage: React.FC = () => {
             <Calendar size={14} className="opacity-60" />
             {new Date(doc.expirationDate).toLocaleDateString("es-AR")}
             {isDocExpired && (
-              <span className="text-[10px] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md font-black uppercase">
+              <span className="text-[10px] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-sm font-black uppercase">
                 Vencido
               </span>
             )}
@@ -309,7 +309,7 @@ export const CarrierDocumentsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setPreviewUrl(doc.fileUrl); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-md text-xs font-bold transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-sm text-xs font-bold transition-colors"
                 >
                   <Eye size={14} />
                   Ver Documento
@@ -440,14 +440,14 @@ export const CarrierDocumentsPage: React.FC = () => {
       >
         <div className="flex justify-center items-center">
           {previewUrl && (
-            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain" />
+            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-md shadow-2xl object-contain" />
           )}
         </div>
       </Modal>
 
       {isAdmin ? (
         // ================= ADMIN AUDIT VIEW =================
-        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
             <h3 className="text-lg font-black text-slate-900 dark:text-white">
               Pólizas Presentadas
@@ -464,13 +464,13 @@ export const CarrierDocumentsPage: React.FC = () => {
           {/* Status Policy Info & Upload Form */}
           <div className="lg:col-span-1 space-y-6">
             {/* Status Card */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
               <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">
                 Estado del Seguro
               </h3>
 
               {policyStatus === "MISSING" && (
-                <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
+                <div className="p-4 rounded-md bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
                   <AlertTriangle
                     className="text-rose-500 mx-auto mb-2"
                     size={32}
@@ -486,7 +486,7 @@ export const CarrierDocumentsPage: React.FC = () => {
               )}
 
               {policyStatus === "PENDING" && (
-                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 text-center">
+                <div className="p-4 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 text-center">
                   <Clock className="text-amber-500 mx-auto mb-2" size={32} />
                   <p className="font-bold text-amber-800 dark:text-amber-400 text-sm">
                     Pendiente de Aprobación
@@ -498,7 +498,7 @@ export const CarrierDocumentsPage: React.FC = () => {
               )}
 
               {policyStatus === "APPROVED" && (
-                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 text-center">
+                <div className="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 text-center">
                   <CheckCircle2
                     className="text-emerald-500 mx-auto mb-2"
                     size={32}
@@ -518,7 +518,7 @@ export const CarrierDocumentsPage: React.FC = () => {
               )}
 
               {policyStatus === "REJECTED" && (
-                <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
+                <div className="p-4 rounded-md bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
                   <X
                     className="text-rose-500 bg-rose-100 dark:bg-rose-900/50 p-1.5 rounded-full mx-auto mb-2"
                     size={32}
@@ -534,7 +534,7 @@ export const CarrierDocumentsPage: React.FC = () => {
               )}
 
               {policyStatus === "EXPIRED" && (
-                <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
+                <div className="p-4 rounded-md bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 text-center">
                   <AlertCircle
                     className="text-rose-500 mx-auto mb-2"
                     size={32}
@@ -555,7 +555,7 @@ export const CarrierDocumentsPage: React.FC = () => {
             </div>
 
             {/* Upload Form */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
               <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">
                 Actualizar Póliza
               </h3>
@@ -567,7 +567,7 @@ export const CarrierDocumentsPage: React.FC = () => {
                   <div className="relative">
                     <input
                       type="date"
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-4 py-2.5 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
                       {...register("expirationDate")}
                     />
                   </div>
@@ -606,7 +606,7 @@ export const CarrierDocumentsPage: React.FC = () => {
           </div>
 
           {/* History Uploads Table */}
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden h-fit">
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden h-fit">
             <div className="p-6 border-b border-slate-100 dark:border-zinc-800">
               <h3 className="text-lg font-black text-slate-900 dark:text-white">
                 Historial de Cargas

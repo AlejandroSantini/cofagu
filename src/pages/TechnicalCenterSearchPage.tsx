@@ -100,7 +100,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-800 p-4 sm:p-6 mb-6">
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-slate-200 dark:border-zinc-800 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -109,13 +109,13 @@ export const TechnicalCenterSearchPage: React.FC = () => {
               placeholder="Buscar por patente o transportista..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg pl-12 pr-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md pl-12 pr-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
             />
           </div>
           <select
             value={selectedTruckType}
             onChange={(e) => setSelectedTruckType(e.target.value)}
-            className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none sm:min-w-[200px]"
+            className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none sm:min-w-[200px]"
           >
             <option value="ALL">Todos los tipos</option>
             {Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => (
@@ -128,7 +128,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-md border border-red-200 dark:border-red-800">
           {error}
         </div>
       )}
@@ -140,7 +140,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
       )}
 
       {!loading && hasSearched && filteredResults.length === 0 && !error && (
-        <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800">
+        <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800">
           <Truck size={48} className="mx-auto text-slate-300 dark:text-zinc-600 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-white">No se encontraron resultados</h3>
           <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto">
@@ -156,7 +156,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
               header: 'Patente',
               render: (item: TechnicalCenterSearchResult) => (
                 <div className="flex flex-col gap-1">
-                  <span className="font-mono text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 w-fit">
+                  <span className="font-mono text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-sm border border-slate-200 dark:border-zinc-700 w-fit">
                     {item.plate}
                   </span>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
@@ -194,7 +194,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
                   {item.driverPhone && (
                     <a
                       href={`tel:${item.driverPhone}`}
-                      className="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-md text-xs font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors"
+                      className="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-sm text-xs font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors"
                     >
                       <Phone size={14} className="fill-current shrink-0" />
                       Llamar
@@ -207,7 +207,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
               header: 'CTG',
               render: (item: TechnicalCenterSearchResult) => (
                 item.ctg ? (
-                  <span className="text-sm font-mono font-bold text-slate-800 dark:text-zinc-200 bg-slate-50 dark:bg-zinc-800 px-2 py-1 rounded-md border border-slate-200 dark:border-zinc-700">
+                  <span className="text-sm font-mono font-bold text-slate-800 dark:text-zinc-200 bg-slate-50 dark:bg-zinc-800 px-2 py-1 rounded-sm border border-slate-200 dark:border-zinc-700">
                     {item.ctg}
                   </span>
                 ) : <span className="text-slate-400 text-sm">-</span>

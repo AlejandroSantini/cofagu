@@ -82,13 +82,15 @@ Todo lo que se agregue debe tener su variante `dark:`.
 
 ## Forma y profundidad
 
-- **Radios** (escala contenida — nada más redondo que esto):
-  - `rounded-lg` (8px) → default: botones, cards, inputs, selects, tabla, filas de nav.
-  - `rounded-xl` (12px) → superficies grandes: contenedor de modal, tiles de icono de `PageHeader`.
-  - `rounded-md` (6px) → controles chicos y badges: paginación, chips, pills.
-  - `rounded-full` → solo para elementos circulares reales: avatares, botones de
-    solo icono (ej. "volver"), contadores de notificación.
-  - No usar `rounded-2xl` ni `rounded-3xl` en componentes nuevos.
+- **Radios** (escala ajustada — look utilitario, nada más redondo que esto):
+  - `rounded-md` (6px) → default: botones, cards, inputs, selects, tabla, filas de nav.
+  - `rounded-lg` (8px) → solo superficies grandes: contenedor de modal, cards de
+    las pantallas de auth, tiles de icono de `PageHeader`, zona de drop de imágenes.
+  - `rounded-sm` (4px) → controles y adornos chicos: badges, chips, pills,
+    checkboxes, cajas de icono pequeñas, tags inline.
+  - `rounded-full` → solo elementos circulares reales: avatares, botones de solo
+    icono (ej. "volver"), contadores de notificación.
+  - Prohibido `rounded-xl`, `rounded-2xl`, `rounded-3xl` en componentes nuevos.
 - **Bordes:** cards y contenedores `border` (1px); inputs y botones `outline`
   usan `border-2`.
 - **Sombras:** discretas. `shadow-sm` en reposo, `shadow-md` en hover. Sombras

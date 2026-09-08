@@ -156,9 +156,9 @@ export const Dashboard: React.FC = () => {
 
       {/* Alerta de Seguro de Carga para Transportistas */}
       {!isStaff && user?.role === 'CARRIER' && (carrierDocStatus === 'MISSING' || carrierDocStatus === 'EXPIRED' || carrierDocStatus === 'REJECTED') && (
-        <div className="p-4 md:p-6 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 flex flex-col md:flex-row items-center md:justify-between gap-4 animate-pulse">
+        <div className="p-4 md:p-6 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 flex flex-col md:flex-row items-center md:justify-between gap-4 animate-pulse">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 shrink-0">
+            <div className="p-3 rounded-md bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 shrink-0">
               <AlertTriangle size={24} />
             </div>
             <div>
@@ -211,7 +211,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Quick Links Section for Staff */}
       {isStaff && !isEmployee && (
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-6 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-md p-6 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Accesos Rápidos de Administración</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button variant="outline" icon={Truck} onClick={() => navigate('/carriers')} className="justify-start py-3">

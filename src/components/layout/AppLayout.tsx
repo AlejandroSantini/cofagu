@@ -116,7 +116,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       >
         <button
           onClick={() => setIsOpen(true)}
-          className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg transition-colors text-slate-600 dark:text-slate-200"
+          className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-md transition-colors text-slate-600 dark:text-slate-200"
         >
           <Menu size={24} />
         </button>
@@ -155,7 +155,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-zinc-700 dark:hover:bg-white/5 rounded-lg text-zinc-300 dark:text-zinc-400"
+            className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-zinc-700 dark:hover:bg-white/5 rounded-md text-zinc-300 dark:text-zinc-400"
           >
             <X size={20} />
           </button>
@@ -171,7 +171,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   navigate(item.path);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all group relative ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all group relative ${
                   isActive(item.path)
                     ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
                     : "text-zinc-300 hover:bg-zinc-700 dark:hover:bg-white/5 hover:text-white"
@@ -200,8 +200,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* User Info & Logout */}
           <div className="mt-auto p-4 border-t border-zinc-700/50 dark:border-zinc-800 bg-zinc-900/10 dark:bg-zinc-950/20 shrink-0">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-700/40 dark:bg-white/5 border border-zinc-700/50 dark:border-zinc-800/50 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg">
+            <div className="flex items-center gap-3 p-3 rounded-md bg-zinc-700/40 dark:bg-white/5 border border-zinc-700/50 dark:border-zinc-800/50 mb-3">
+              <div className="w-10 h-10 rounded-md bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg">
                 {user?.name.charAt(0)}
               </div>
               <div className="truncate">
@@ -225,7 +225,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10 font-bold text-sm transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md text-rose-400 hover:bg-rose-500/10 font-bold text-sm transition-colors cursor-pointer"
             >
               <LogOut size={18} />
               Cerrar Sesión

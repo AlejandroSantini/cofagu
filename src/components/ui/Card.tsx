@@ -27,7 +27,7 @@ export const Card: React.FC<CardProps> = ({
       onClick={onClick}
       className={`
         bg-white dark:bg-zinc-900 
-        rounded-lg 
+        rounded-md 
         border border-slate-200 dark:border-zinc-800 
         shadow-sm 
         transition-all duration-200

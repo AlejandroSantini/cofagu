@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const isIconOnly = !children && !!Icon;
   const isDisabled = isLoading || disabled;
-  const baseStyles = `relative flex items-center justify-center gap-3 font-bold transition-all duration-200 rounded-lg ${isDisabled ? 'opacity-50 !cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'}`;
+  const baseStyles = `relative flex items-center justify-center gap-3 font-bold transition-all duration-200 rounded-md ${isDisabled ? 'opacity-50 !cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'}`;
   const sizes = {
     sm: isIconOnly ? "w-10 h-10 p-0" : "px-4 py-2 text-sm",
     md: isIconOnly ? "w-12 h-12 p-0" : "px-6 py-3 text-base",

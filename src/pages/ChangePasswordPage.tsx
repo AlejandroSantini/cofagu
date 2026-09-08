@@ -71,7 +71,7 @@ export const ChangePasswordPage: React.FC = () => {
           />
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-8 rounded-xl border border-slate-100 dark:border-zinc-800 shadow-2xl transition-all">
+        <div className="bg-white dark:bg-zinc-900 p-8 rounded-lg border border-slate-100 dark:border-zinc-800 shadow-2xl transition-all">
           <div className="mb-6">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Actualizar Contraseña</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">

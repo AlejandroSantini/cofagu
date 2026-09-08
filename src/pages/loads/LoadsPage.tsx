@@ -702,7 +702,7 @@ export const LoadsPage: React.FC = () => {
           <p className="text-slate-500 font-medium animate-pulse">Cargando información del viaje...</p>
         </div>
       ) : id && loadError ? (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-lg flex flex-col items-center justify-center text-center max-w-md mx-auto my-12">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-md flex flex-col items-center justify-center text-center max-w-md mx-auto my-12">
           <AlertTriangle size={48} className="mb-4 opacity-80" />
           <p className="font-black text-xl mb-2">No se pudo cargar el viaje</p>
           <p className="text-sm font-medium mb-6">El viaje solicitado no existe o no tienes permisos para acceder a él.</p>
@@ -712,7 +712,7 @@ export const LoadsPage: React.FC = () => {
         </div>
       ) : isPlayero && !selectedLoad ? (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
             <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
               Buscador de Camiones Autorizados a Combustible
             </h3>
@@ -721,11 +721,11 @@ export const LoadsPage: React.FC = () => {
               placeholder="Buscar por Patente (Chasis/Acoplado), Chofer o Transportista..."
               value={plateSearch}
               onChange={(e) => setPlateSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+              className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md px-4 py-3 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
             />
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <Table
               columns={[
                 {

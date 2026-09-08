@@ -64,7 +64,7 @@ export const LoginPage: React.FC = () => {
           />
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-10 rounded-xl border border-slate-100 dark:border-zinc-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">
+        <div className="bg-white dark:bg-zinc-900 p-10 rounded-lg border border-slate-100 dark:border-zinc-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">
           <form onSubmit={handleSubmit} className="space-y-5">
             <ErrorMessage message={error} />
 

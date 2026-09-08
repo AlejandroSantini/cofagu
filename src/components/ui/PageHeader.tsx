@@ -35,7 +35,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       
       <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
         {Icon && (
-          <div className={`w-12 h-12 sm:w-16 sm:h-16 ${iconColor} text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0`}>
+          <div className={`w-12 h-12 sm:w-16 sm:h-16 ${iconColor} text-white rounded-lg flex items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0`}>
             <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
         )}

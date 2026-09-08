@@ -108,7 +108,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* 🔧 DEBUG PANEL TEMPORAL */}
-      <details className="mb-4 bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 text-xs font-mono">
+      <details className="mb-4 bg-zinc-800/50 border border-zinc-700 rounded-md p-3 text-xs font-mono">
           <summary className="text-zinc-400 cursor-pointer select-none">🔧 Debug Push Notifications</summary>
           <div className="mt-2 space-y-1 text-zinc-300">
             <div>Firebase configurado: <span className={`font-bold ${isFirebaseConfigured ? 'text-emerald-400' : 'text-red-400'}`}>{String(isFirebaseConfigured)}</span></div>
@@ -123,9 +123,9 @@ export default function NotificationsPage() {
         </details>
 
       {permissionStatus === 'denied' && (
-        <div className="bg-red-500/10 border border-red-500/30 dark:bg-red-500/20 dark:border-red-500/40 rounded-lg p-4 mb-6">
+        <div className="bg-red-500/10 border border-red-500/30 dark:bg-red-500/20 dark:border-red-500/40 rounded-md p-4 mb-6">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-md bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-sm bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
               <Bell size={20} />
             </div>
             <div>
@@ -155,9 +155,9 @@ export default function NotificationsPage() {
       )}
 
       {permissionStatus === 'default' && (
-        <div className="bg-amber-500/10 border border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+        <div className="bg-amber-500/10 border border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40 rounded-md p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
               <Bell size={20} />
             </div>
             <div>
@@ -182,7 +182,7 @@ export default function NotificationsPage() {
       )}
 
 
-      <div className="bg-white dark:bg-zinc-900 shadow-sm rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 shadow-sm rounded-lg border border-slate-200 dark:border-zinc-800 overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center h-48">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -204,7 +204,7 @@ export default function NotificationsPage() {
                 >
                   <div className="flex items-start sm:items-center justify-between">
                     <div className="flex items-start sm:items-center flex-1 min-w-0">
-                      <div className={`flex-shrink-0 mt-1 sm:mt-0 p-2 rounded-lg ${!notification.read ? 'bg-white dark:bg-zinc-700 shadow-sm' : 'bg-slate-50 dark:bg-zinc-800/50'}`}>
+                      <div className={`flex-shrink-0 mt-1 sm:mt-0 p-2 rounded-md ${!notification.read ? 'bg-white dark:bg-zinc-700 shadow-sm' : 'bg-slate-50 dark:bg-zinc-800/50'}`}>
                         {getIcon(notification.type)}
                       </div>
                       <div className="ml-4 flex-1">
@@ -245,7 +245,7 @@ export default function NotificationsPage() {
           </ul>
         ) : (
           <div className="text-center py-16 px-4">
-            <div className="w-16 h-16 bg-slate-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-slate-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Bell className="h-8 w-8 text-slate-400 dark:text-zinc-500" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-200">No hay notificaciones</h3>

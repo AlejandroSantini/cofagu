@@ -25,7 +25,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({ label,
         <select 
           ref={ref}
           className={`
-            w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-lg px-4 
+            w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-md px-4 
             ${Icon ? 'pl-11' : ''} 
             text-sm text-slate-900 dark:text-white focus:outline-none transition-all appearance-none cursor-pointer
             ${error ? 'border-rose-500 focus:border-rose-600' : 'border-slate-100 dark:border-zinc-800 focus:border-emerald-500'}
