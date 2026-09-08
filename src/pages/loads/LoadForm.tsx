@@ -97,7 +97,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+    <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input
@@ -160,7 +160,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
               Observaciones
             </label>
             <textarea
-              className="w-full bg-white dark:bg-zinc-900 border-2 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white border-slate-100 dark:border-zinc-800 focus:border-emerald-500 focus:outline-none transition-all resize-none h-24"
+              className="w-full bg-white dark:bg-zinc-900 border-2 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-white border-slate-100 dark:border-zinc-800 focus:border-emerald-500 focus:outline-none transition-all resize-none h-24"
               placeholder="Ej: Carga frágil, requiere lona..."
               {...register("notes")}
             />
@@ -169,8 +169,8 @@ export const LoadForm: React.FC<LoadFormProps> = ({
 
         {/* Groups Selection */}
         <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-4">
-          <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+          <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-lg border border-slate-200/70 dark:border-zinc-800 flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
               <DollarSign size={20} />
             </div>
             <div>
@@ -184,11 +184,11 @@ export const LoadForm: React.FC<LoadFormProps> = ({
           </div>
 
           {groups.length === 0 ? (
-            <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-lg border border-slate-150/50">
+            <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-md border border-slate-150/50">
               Cargando grupos...
             </p>
           ) : (
-            <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-4">
+            <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-lg p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-4">
               <div className="flex flex-col gap-3">
                 {groups.map((group) => {
                   const checkedGroupsCount = Object.values(selectedGroups).filter(s => s.checked).length;
@@ -203,7 +203,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
                   return (
                     <div
                       key={group.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all ${
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border transition-all ${
                         groupState.checked
                           ? "bg-white dark:bg-zinc-900 border-emerald-500/30 shadow-sm"
                           : "border-slate-200/60 dark:border-zinc-850 hover:bg-slate-100/40 dark:hover:bg-zinc-800/30"
@@ -269,7 +269,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
                                   });
                                 }
                               }}
-                              className={`w-full bg-slate-50 dark:bg-zinc-800/60 border rounded-lg pl-7 pr-3 py-1.5 text-sm text-slate-800 dark:text-white font-medium focus:ring-2 focus:outline-none transition-all ${
+                              className={`w-full bg-slate-50 dark:bg-zinc-800/60 border rounded-md pl-7 pr-3 py-1.5 text-sm text-slate-800 dark:text-white font-medium focus:ring-2 focus:outline-none transition-all ${
                                 errorMsg
                                   ? "border-red-300 focus:ring-red-500"
                                   : "border-slate-200 dark:border-zinc-700 focus:ring-emerald-500"

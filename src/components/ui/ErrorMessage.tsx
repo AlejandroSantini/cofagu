@@ -12,7 +12,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, className =
   return (
     <div 
       className={`
-        p-4 rounded-2xl flex items-center gap-3 text-sm font-medium
+        p-4 rounded-xl flex items-center gap-3 text-sm font-medium
         bg-rose-50 dark:bg-rose-500/10 
         border border-rose-100 dark:border-rose-500/20 
         text-rose-600 dark:text-rose-400

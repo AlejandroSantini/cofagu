@@ -25,7 +25,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, ic
         <input 
           ref={ref}
           className={`
-            w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-xl px-4 
+            w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-lg px-4 
             ${Icon ? 'pl-11' : ''} 
             ${rightElement ? 'pr-11' : ''}
             text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-all

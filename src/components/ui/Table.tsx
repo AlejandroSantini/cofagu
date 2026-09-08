@@ -46,7 +46,7 @@ export function Table<T>({
     : data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -118,7 +118,7 @@ export function Table<T>({
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1 || totalItems === 0}
-              className="px-3 sm:px-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:!cursor-not-allowed transition-colors"
+              className="px-3 sm:px-4 py-2 rounded-md border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:!cursor-not-allowed transition-colors"
             >
               Anterior
             </button>
@@ -135,7 +135,7 @@ export function Table<T>({
                     <button
                       key={p}
                       onClick={() => handlePageChange(p)}
-                      className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${
+                      className={`w-8 h-8 rounded-md text-sm font-bold transition-colors ${
                         currentPage === p
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
@@ -154,7 +154,7 @@ export function Table<T>({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || totalItems === 0}
-              className="px-3 sm:px-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:!cursor-not-allowed transition-colors"
+              className="px-3 sm:px-4 py-2 rounded-md border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:!cursor-not-allowed transition-colors"
             >
               Siguiente
             </button>

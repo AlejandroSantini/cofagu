@@ -26,7 +26,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, co
             {value}
           </p>
         </div>
-        <div className={`p-3 rounded-xl ${color} text-white shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
+        <div className={`p-3 rounded-lg ${color} text-white shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
           <Icon size={24} />
         </div>
       </div>

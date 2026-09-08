@@ -12,9 +12,9 @@ export const ConfigurationPage: React.FC = () => {
       description: 'Personaliza cómo se ve el sistema.',
       icon: Palette,
       content: (
-        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700 transition-colors">
+        <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700 transition-colors">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-600'}`}>
+            <div className={`p-2 rounded-md ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-600'}`}>
               {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
             </div>
             <div>
@@ -49,9 +49,9 @@ export const ConfigurationPage: React.FC = () => {
 
       <div className="mt-12 space-y-8">
         {settingsSections.map((section, i) => (
-          <section key={i} className="bg-white dark:bg-zinc-900 rounded-xl p-4 md:p-8 border border-slate-100 dark:border-zinc-800 shadow-sm transition-all">
+          <section key={i} className="bg-white dark:bg-zinc-900 rounded-lg p-4 md:p-8 border border-slate-100 dark:border-zinc-800 shadow-sm transition-all">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-slate-100 dark:bg-zinc-800 rounded-xl text-slate-600 dark:text-slate-400">
+              <div className="p-3 bg-slate-100 dark:bg-zinc-800 rounded-lg text-slate-600 dark:text-slate-400">
                 <section.icon size={24} />
               </div>
               <div>

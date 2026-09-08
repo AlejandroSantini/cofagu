@@ -454,8 +454,8 @@ export const GroupsPage: React.FC = () => {
           </div>
 
           {/* Group Header Hero Card */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-slate-200/80 dark:border-zinc-800 shadow-2xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-slate-200/80 dark:border-zinc-800 shadow-2xs flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
               <Users size={24} />
             </div>
             <div className="min-w-0 flex-1">
@@ -470,7 +470,7 @@ export const GroupsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200/80 dark:border-zinc-800 shadow-xs space-y-8">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200/80 dark:border-zinc-800 shadow-xs space-y-8">
             {/* Section 1: Basic Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
@@ -497,7 +497,7 @@ export const GroupsPage: React.FC = () => {
                     Descripción (Opcional)
                   </label>
                   <textarea
-                    className="w-full bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-all resize-none h-24"
+                    className="w-full bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-all resize-none h-24"
                     placeholder="Ej: Transportistas habilitados para transporte de cereales a granel..."
                     value={groupDescription}
                     onChange={(e) => setGroupDescription(e.target.value)}
@@ -551,7 +551,7 @@ export const GroupsPage: React.FC = () => {
                 ) : (
                   <>
                     {/* Add Member Form */}
-                    <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 space-y-3">
+                    <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-lg border border-slate-200/70 dark:border-zinc-800 space-y-3">
                       <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider block">
                         Asignar Nuevo Integrante
                       </span>
@@ -563,7 +563,7 @@ export const GroupsPage: React.FC = () => {
                             setSelectedMemberType("carrier");
                             setSelectedMemberToAdd("");
                           }}
-                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${
+                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-md border transition-all ${
                             selectedMemberType === "carrier"
                               ? "bg-emerald-500 text-white border-emerald-500"
                               : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-emerald-400"
@@ -576,7 +576,7 @@ export const GroupsPage: React.FC = () => {
                             setSelectedMemberType("logistics");
                             setSelectedMemberToAdd("");
                           }}
-                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition-all ${
+                          className={`flex-1 px-3 py-2 text-xs font-bold rounded-md border transition-all ${
                             selectedMemberType === "logistics"
                               ? "bg-blue-500 text-white border-blue-500"
                               : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-blue-400"
@@ -668,7 +668,7 @@ export const GroupsPage: React.FC = () => {
 
                       if (membersList.length === 0) {
                         return (
-                          <p className="text-sm text-slate-500 dark:text-zinc-500 italic p-6 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800">
+                          <p className="text-sm text-slate-500 dark:text-zinc-500 italic p-6 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-lg border border-dashed border-slate-200 dark:border-zinc-800">
                             Este grupo aún no tiene integrantes asignados.
                             Utiliza el selector superior para añadir el primero.
                           </p>
@@ -682,12 +682,12 @@ export const GroupsPage: React.FC = () => {
                             return (
                               <div
                                 key={key}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 transition-all shadow-2xs"
                               >
                                 <div className="flex items-start justify-between gap-3 min-w-0 flex-1 w-full">
                                   <div className="flex items-start gap-3 min-w-0 flex-1">
                                     <div
-                                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
+                                      className={`w-9 h-9 rounded-md flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
                                         member.member_type === "carrier"
                                           ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                           : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
@@ -778,7 +778,7 @@ export const GroupsPage: React.FC = () => {
           <ErrorMessage message={error} />
 
           {/* Search Filter */}
-          <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
+          <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
             <div className="relative w-full">
               <Search
                 size={18}
@@ -790,7 +790,7 @@ export const GroupsPage: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onBlur={fetchGroups}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
               />
             </div>
           </div>

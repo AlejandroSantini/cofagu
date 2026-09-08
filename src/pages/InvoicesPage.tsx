@@ -233,7 +233,7 @@ export const InvoicesPage: React.FC = () => {
       />
 
       {isCarrier && (
-        <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm">
           <div>
             <span className="text-sm font-semibold text-slate-500">Viajes completados pendientes de facturación</span>
             <h3 className="text-xl font-black text-slate-800 dark:text-zinc-200 mt-0.5">
@@ -256,7 +256,7 @@ export const InvoicesPage: React.FC = () => {
       )}
 
       {showCreateForm && isCarrier && (
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
           <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
             <FileText size={20} className="text-emerald-600" />
             Nueva Factura Global
@@ -264,7 +264,7 @@ export const InvoicesPage: React.FC = () => {
 
           <form onSubmit={handleSubmitInvoice} className="space-y-6">
             {error && (
-              <div className="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-600 rounded-xl border border-rose-100 dark:border-rose-900/30 text-sm font-semibold">
+              <div className="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-600 rounded-lg border border-rose-100 dark:border-rose-900/30 text-sm font-semibold">
                 {error}
               </div>
             )}
@@ -278,7 +278,7 @@ export const InvoicesPage: React.FC = () => {
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                 />
                 
-                <div className="p-4 bg-slate-50 dark:bg-zinc-850/50 rounded-xl border border-slate-200/50 dark:border-zinc-800">
+                <div className="p-4 bg-slate-50 dark:bg-zinc-850/50 rounded-lg border border-slate-200/50 dark:border-zinc-800">
                   <span className="text-xs font-bold text-slate-400 block uppercase mb-2">Viajes Seleccionados ({selectedLoadIds.length})</span>
                   {selectedLoadIds.length === 0 ? (
                     <span className="text-sm text-slate-500 italic block">Seleccione los viajes en la tabla inferior.</span>
@@ -317,7 +317,7 @@ export const InvoicesPage: React.FC = () => {
       )}
 
       {isCarrier && completedLoads.length > 0 && (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-6 space-y-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm p-6 space-y-4">
           <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
             1. Seleccionar viajes a facturar
           </h3>
@@ -329,7 +329,7 @@ export const InvoicesPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-6 space-y-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm p-6 space-y-4">
         <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
           Historial de Facturas Enviadas
         </h3>
@@ -377,7 +377,7 @@ export const InvoicesPage: React.FC = () => {
                   href={selectedInvoice.invoicePhotoUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold rounded-lg hover:bg-emerald-100 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold rounded-md hover:bg-emerald-100 transition-colors"
                 >
                   <Eye size={18} /> Ver Comprobante
                 </a>

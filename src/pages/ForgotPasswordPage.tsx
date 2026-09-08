@@ -57,7 +57,7 @@ export const ForgotPasswordPage: React.FC = () => {
           />
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-10 rounded-3xl border border-slate-100 dark:border-zinc-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">
+        <div className="bg-white dark:bg-zinc-900 p-10 rounded-xl border border-slate-100 dark:border-zinc-800 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all">
 
           {success ? (
             <div className="text-center space-y-4 py-4">

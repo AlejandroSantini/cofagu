@@ -255,7 +255,7 @@ export const CarriersPage: React.FC = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Se ha creado automáticamente un usuario transportista (`CARRIER`) para el acceso a la plataforma. Comparte estos datos con la empresa:
             </p>
-            <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800 space-y-3">
+            <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-lg border border-slate-100 dark:border-zinc-800 space-y-3">
               <div>
                 <span className="text-xs font-bold text-slate-400 block uppercase">Correo Electrónico</span>
                 <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{credentialsModal.email}</span>
@@ -265,7 +265,7 @@ export const CarriersPage: React.FC = () => {
                 <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 font-mono">{credentialsModal.password || '12345'}</span>
               </div>
             </div>
-            <div className="flex gap-2 p-3 bg-amber-500/10 rounded-xl text-amber-600 text-xs items-start">
+            <div className="flex gap-2 p-3 bg-amber-500/10 rounded-lg text-amber-600 text-xs items-start">
               <Info size={16} className="mt-0.5 shrink-0" />
               <span>
                 El transportista tiene la bandera `mustChangePassword` activa, por lo que el sistema le obligará a actualizar su contraseña inmediatamente después de su primer inicio de sesión.
@@ -302,7 +302,7 @@ export const CarriersPage: React.FC = () => {
       <ErrorMessage message={error} className="mb-6" />
 
       {showForm ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-slate-200 dark:border-zinc-800 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input label="Nombre / Razón Social" placeholder="Ej: Transportes del Norte S.A." icon={Building} {...register('name')} error={errors.name?.message} />

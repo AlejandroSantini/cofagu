@@ -68,8 +68,8 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
             <ShieldAlert size={20} />
           </div>
           <div>
@@ -77,8 +77,8 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
             <span className="text-sm font-black text-slate-800 dark:text-zinc-200 font-mono">{carrier.cuit}</span>
           </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
             <Mail size={20} />
           </div>
           <div>
@@ -86,8 +86,8 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
             <span className="text-sm font-black text-slate-800 dark:text-zinc-200">{carrier.contactEmail}</span>
           </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600">
             <Phone size={20} />
           </div>
           <div>
