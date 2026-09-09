@@ -1,5 +1,8 @@
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
+// La versión DEBE coincidir con la del SDK que usa la app (firebase en package.json).
+// Un desfasaje de major (p. ej. SW 10.x con app 12.x) hace que el token se obtenga
+// pero las notificaciones en segundo plano nunca se muestren.
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
 // Configuración de Firebase - las credenciales se inyectan dinámicamente desde el entorno
 const params = new URLSearchParams(self.location.search);
