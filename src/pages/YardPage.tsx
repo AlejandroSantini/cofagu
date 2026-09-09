@@ -11,7 +11,7 @@ import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
-  Search, User, Building, XCircle, RefreshCw, Clock
+  Search, User, Building, XCircle, RefreshCw, Clock, Wheat
 } from 'lucide-react';
 
 export const YardPage: React.FC = () => {
@@ -110,6 +110,10 @@ export const YardPage: React.FC = () => {
     return { truck, driver, carrier };
   };
 
+  // El endpoint de playa devuelve la carga; los datos del viaje (cereal, franja
+  // horaria, ruta) vienen en `load.trip`.
+  const resolveTrip = (load: any) => load.trip || load;
+
   const columns = [
     {
       header: 'Patente',
@@ -167,6 +171,23 @@ export const YardPage: React.FC = () => {
       }
     },
     {
+      header: 'Cereal',
+      render: (load: any) => {
+        const t = resolveTrip(load);
+        const cereal = t.cereal || load.cereal;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Wheat size={14} />
+            </div>
+            <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
+              {cereal || 'S/D'}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
       header: 'Estado',
       render: (load: Load) => (
         <Badge variant={getStatusVariant(load.status)}>
@@ -177,11 +198,12 @@ export const YardPage: React.FC = () => {
     {
       header: 'Franja Horaria',
       render: (load: any) => {
+        const t = resolveTrip(load);
         let timeSlot = 'S/H';
-        if (load.loadingTimeStart && load.loadingTimeEnd) {
-          timeSlot = `${load.loadingTimeStart} - ${load.loadingTimeEnd}`;
-        } else if (load.loading_time_start && load.loading_time_end) {
-          timeSlot = `${load.loading_time_start} - ${load.loading_time_end}`;
+        const start = t.loadingTimeStart || t.loading_time_start || load.loadingTimeStart || load.loading_time_start;
+        const end = t.loadingTimeEnd || t.loading_time_end || load.loadingTimeEnd || load.loading_time_end;
+        if (start && end) {
+          timeSlot = `${start} - ${end} hs`;
         } else if (load.timeSlot || load.time_slot) {
           timeSlot = load.timeSlot || load.time_slot;
         } else if (load.timeWindow || load.time_window) {
@@ -193,8 +215,8 @@ export const YardPage: React.FC = () => {
         }
 
         return (
-          <div className="flex items-center gap-1.5">
-            <Clock size={14} className="text-slate-400" />
+          <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <Clock size={14} className="text-slate-400 shrink-0" />
             <span className="font-mono text-xs font-bold text-slate-600 dark:text-zinc-400">
               {timeSlot}
             </span>

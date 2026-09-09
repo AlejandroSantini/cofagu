@@ -4,13 +4,18 @@ import { apiOk, fulfill, loginAs } from "./utils";
 const YARD_LOAD = {
   id: 99,
   status: "ASSIGNED",
-  origin: "Campo La Esperanza",
-  destination: "Planta Urdinarrain",
   truck: { chassisPlate: "AB123CD" },
   driver: { name: "Pepe Grillo", dni: "12345678" },
   carrier: { name: "Logística X" },
-  loadingTimeStart: "08:00",
-  loadingTimeEnd: "10:00",
+  // El endpoint de playa devuelve la carga; cereal / franja horaria / ruta
+  // vienen anidados en `trip`.
+  trip: {
+    origin: "Campo La Esperanza",
+    destination: "Planta Urdinarrain",
+    cereal: "Maíz",
+    loadingTimeStart: "08:00",
+    loadingTimeEnd: "10:00",
+  },
 };
 
 test.describe("Control de Playa", () => {
@@ -30,6 +35,10 @@ test.describe("Control de Playa", () => {
     await expect(page.getByText("AB123CD")).toBeVisible();
     await expect(page.getByText("Pepe Grillo")).toBeVisible();
     await expect(page.getByText("Logística X")).toBeVisible();
+
+    // Cereal y franja horaria (vienen de load.trip)
+    await expect(page.getByText("Maíz")).toBeVisible();
+    await expect(page.getByText("08:00 - 10:00 hs")).toBeVisible();
 
     // Abrir el modal de rechazo
     await page.getByRole("button", { name: "Rechazar" }).click();
