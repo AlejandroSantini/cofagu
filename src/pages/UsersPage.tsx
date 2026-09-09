@@ -26,10 +26,7 @@ export const UsersPage: React.FC = () => {
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const [page, setPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  
+
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delData, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
 
@@ -46,7 +43,6 @@ export const UsersPage: React.FC = () => {
       const response = await authService.getUsers();
       if (response.data.success) {
         setUsers(response.data.data || []);
-        setTotalItems(response.data.pagination?.total || response.data.data?.length || 0);
       }
     } catch (err) {
       console.error('Error loading users', err);
@@ -66,7 +62,6 @@ export const UsersPage: React.FC = () => {
         if (mounted) {
           if (usersRes.data.success) {
             setUsers(usersRes.data.data || []);
-            setTotalItems(usersRes.data.pagination?.total || usersRes.data.data?.length || 0);
           }
           if (carriersRes.data.success) {
             setCarriers(carriersRes.data.data || []);
@@ -349,19 +344,11 @@ export const UsersPage: React.FC = () => {
           </form>
         </div>
       ) : (
-        <Table 
-          columns={columns} 
-          data={users} 
-          isLoading={fetching} 
-          onRowClick={handleEdit} 
-          pagination={{
-            page,
-            total: totalItems,
-            onPageChange: (newPage) => {
-              setPage(newPage);
-              setTimeout(loadUsers, 0);
-            }
-          }}
+        <Table
+          columns={columns}
+          data={users}
+          isLoading={fetching}
+          onRowClick={handleEdit}
         />
       )}
     </div>
