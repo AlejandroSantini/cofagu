@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { PageHeader } from '../ui/PageHeader';
 import { Table } from '../ui/Table';
 import { Badge } from '../ui/Badge';
+import { Skeleton } from '../ui/Skeleton';
 import { ShieldAlert, Mail, Phone, Building, Plus, ChevronLeft, Copy } from 'lucide-react';
 
 import type { Carrier, Driver, Truck, User } from '../../types';
@@ -99,7 +100,22 @@ const CarrierDetails: React.FC<CarrierDetailsProps> = ({
 
       {/* Tabs */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 font-medium italic">Cargando detalles asociados...</div>
+        <div className="space-y-6">
+          <div className="flex gap-2 border-b border-slate-200 dark:border-zinc-800 pb-0.5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-28" />
+            ))}
+          </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm divide-y divide-slate-100 dark:divide-zinc-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-6 py-4 flex items-center gap-4">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-16 ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Tab Headers */}

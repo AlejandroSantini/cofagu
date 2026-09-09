@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Table } from '../../components/ui/Table';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 
 
@@ -24,7 +25,7 @@ import { LoadsTable } from './LoadsTable';
 import { LoadForm } from './LoadForm';
 import { LoadDetails } from './LoadDetails';
 
-import { Plus, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, ChevronLeft, AlertTriangle } from 'lucide-react';
 
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -697,9 +698,31 @@ export const LoadsPage: React.FC = () => {
       <ErrorMessage message={error} className="mb-6" />
 
       {id && !selectedLoad && !loadError ? (
-        <div className="flex flex-col items-center justify-center p-24 space-y-4">
-          <Loader2 className="animate-spin text-emerald-500" size={48} />
-          <p className="text-slate-500 font-medium animate-pulse">Cargando información del viaje...</p>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
+            <div className="flex justify-between items-start gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton radius="md" className="h-7 w-64 max-w-full" />
+              </div>
+              <Skeleton className="h-6 w-24 shrink-0" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800/50">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton radius="md" className="h-11 w-11 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-2.5 w-16" />
+                    <Skeleton className="h-3.5 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
+            <Skeleton radius="md" className="h-5 w-56" />
+            <Skeleton lines={3} />
+          </div>
         </div>
       ) : id && loadError ? (
         <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-md flex flex-col items-center justify-center text-center max-w-md mx-auto my-12">

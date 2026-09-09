@@ -7,8 +7,9 @@ import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import {
-  Search, FileText, Download, Building, Scale, DollarSign, Loader2, AlertTriangle, Package
+  Search, FileText, Download, Building, Scale, DollarSign, AlertTriangle, Package
 } from 'lucide-react';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const ControlViajesPage: React.FC = () => {
   const [ctgInput, setCtgInput] = useState('');
@@ -157,11 +158,30 @@ export const ControlViajesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Searching Spinner */}
+      {/* Searching Skeleton */}
       {searching && (
-        <div className="flex flex-col items-center justify-center py-12 space-y-3">
-          <Loader2 className="animate-spin text-emerald-500" size={40} />
-          <p className="text-slate-500 dark:text-zinc-400 font-medium animate-pulse">Buscando viaje...</p>
+        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center gap-3">
+            <Skeleton radius="md" className="h-10 w-10 shrink-0" />
+            <div className="space-y-2">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800"
+              >
+                <Skeleton radius="md" className="h-10 w-10 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-2.5 w-16" />
+                  <Skeleton className="h-3.5 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

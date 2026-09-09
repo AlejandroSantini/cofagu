@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from './Skeleton';
 
 interface Column<T> {
   header: string;
@@ -13,14 +13,17 @@ interface TableProps<T> {
   isLoading?: boolean;
   emptyMessage?: string;
   onRowClick?: (item: T) => void;
+  /** Filas de esqueleto a mostrar mientras `isLoading`. Default 5. */
+  skeletonRows?: number;
 }
 
-export function Table<T>({ 
-  columns, 
-  data = [], 
-  isLoading, 
+export function Table<T>({
+  columns,
+  data = [],
+  isLoading,
   emptyMessage = "No hay registros disponibles.",
   onRowClick,
+  skeletonRows = 5,
   itemsPerPage = 10,
   pagination
 }: TableProps<T> & { itemsPerPage?: number, pagination?: { total: number, page: number, onPageChange: (p: number) => void } }) {
@@ -52,9 +55,9 @@ export function Table<T>({
           <thead>
             <tr className="bg-slate-50 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-800">
               {columns.map((col, idx) => (
-                <th 
-                  key={idx} 
-                  className={`px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider ${col.className || ''}`}
+                <th
+                  key={idx}
+                  className={`px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider whitespace-nowrap ${col.className || ''}`}
                 >
                   {col.header}
                 </th>
@@ -63,14 +66,23 @@ export function Table<T>({
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
             {isLoading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center text-slate-400">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="animate-spin text-emerald-600" size={24} />
-                    <p className="text-sm font-medium italic">Cargando datos...</p>
-                  </div>
-                </td>
-              </tr>
+              Array.from({ length: skeletonRows }).map((_, rowIdx) => (
+                <tr key={`skeleton-${rowIdx}`}>
+                  {columns.map((col, colIdx) => (
+                    <td key={colIdx} className={`px-6 py-4 ${col.className || ''}`}>
+                      <Skeleton
+                        className={
+                          colIdx === 0
+                            ? 'w-24'
+                            : colIdx === columns.length - 1
+                              ? 'w-16'
+                              : 'w-32 max-w-full'
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : displayedData.length > 0 ? (
               displayedData.map((item, rowIdx) => (
                 <tr 

@@ -10,7 +10,8 @@ import { StatCard } from '../components/StatCard';
 import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
-import { Loader2, Box, Truck, AlertTriangle, CheckCircle, FilePlus, Users } from 'lucide-react';
+import { Skeleton } from '../components/ui/Skeleton';
+import { Box, Truck, AlertTriangle, CheckCircle, FilePlus, Users } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -93,15 +94,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-500 gap-4">
-        <Loader2 className="animate-spin text-emerald-600" size={40} />
-        <p className="font-medium">Cargando panel de control...</p>
-      </div>
-    );
-  }
-
   const columns = [
     {
       header: 'Fecha',
@@ -139,6 +131,23 @@ export const Dashboard: React.FC = () => {
       )
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-8">
+        <Skeleton radius="md" className="h-9 w-56" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StatCard key={i} loading title="" value="" icon={Box} color="bg-slate-300" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <Skeleton radius="md" className="h-6 w-40" />
+          <Table columns={columns} data={[]} isLoading />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loadSchema, type LoadFormValues } from "../../schemas/load.schema";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { MapPin, Calendar, DollarSign, Save, Truck } from "lucide-react";
 import { groupService } from "../../api/services";
 import { type CarrierGroup } from "../../types";
@@ -184,9 +185,20 @@ export const LoadForm: React.FC<LoadFormProps> = ({
           </div>
 
           {groups.length === 0 ? (
-            <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-sm border border-slate-150/50">
-              Cargando grupos...
-            </p>
+            <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-md p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-4 rounded-md border border-slate-200/60 dark:border-zinc-800"
+                >
+                  <div className="flex items-center gap-3">
+                    <Skeleton radius="sm" className="h-4 w-4 shrink-0" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <Skeleton className="h-8 w-1/3" />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-md p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-4">
               <div className="flex flex-col gap-3">

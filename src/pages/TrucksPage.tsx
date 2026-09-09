@@ -288,19 +288,19 @@ export const TrucksPage: React.FC = () => {
             {isSuspended ? (
               <span 
                 title={`Suspendido hasta el ${t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'N/D'} por inasistencias`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 w-fit"
+                className="inline-flex items-center whitespace-nowrap gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 w-fit"
               >
                 Suspendido ({t.suspendedUntil ? new Date(t.suspendedUntil).toLocaleDateString('es-AR') : 'Inasistencia'})
               </span>
             ) : isHabilitado ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/40 w-fit">
+              <span className="inline-flex items-center whitespace-nowrap gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/40 w-fit">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 Habilitado
               </span>
             ) : isPending ? (
               <span 
                 title="Requiere seguros vigentes y aprobados por la administración"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/40 cursor-help w-fit"
+                className="inline-flex items-center whitespace-nowrap gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/40 cursor-help w-fit"
               >
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 En Revisión
@@ -308,7 +308,7 @@ export const TrucksPage: React.FC = () => {
             ) : (
               <span 
                 title="Requiere seguros vigentes y aprobados por la administración"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/40 cursor-help w-fit"
+                className="inline-flex items-center whitespace-nowrap gap-1.5 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/40 cursor-help w-fit"
               >
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
                 Inhabilitado
@@ -370,17 +370,17 @@ export const TrucksPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1">
             <div className="flex items-center gap-1.5">
               {status === 'PENDING' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/55 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50">
+                <span className="inline-flex items-center whitespace-nowrap gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/55 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   Pendiente de Revisión
                 </span>
               ) : status === 'APPROVED' && !expired ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/55 dark:bg-emerald-950/20 dark:text-emerald-450 dark:border-emerald-900/50">
+                <span className="inline-flex items-center whitespace-nowrap gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/55 dark:bg-emerald-950/20 dark:text-emerald-450 dark:border-emerald-900/50">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-550" />
                   Aprobado / Vigente
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
+                <span className="inline-flex items-center whitespace-nowrap gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200/55 dark:bg-rose-950/20 dark:text-rose-450 dark:border-rose-900/50">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                   {expired ? 'Vencido' : 'Rechazado / Incompleto'}
                 </span>

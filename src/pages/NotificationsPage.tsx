@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Bell, CheckCircle, Clock, Check, Loader2, ArrowRight } from 'lucide-react';
+import { Bell, CheckCircle, Clock, Check, ArrowRight } from 'lucide-react';
+import { Skeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { notificationService } from '../api/services';
@@ -184,9 +185,17 @@ export default function NotificationsPage() {
 
       <div className="bg-white dark:bg-zinc-900 shadow-sm rounded-lg border border-slate-200 dark:border-zinc-800 overflow-hidden">
         {loading ? (
-          <div className="flex justify-center items-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <ul className="divide-y divide-slate-100 dark:divide-zinc-800/50">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <li key={i} className="px-4 py-4 sm:px-6 flex items-center gap-4">
+                <Skeleton radius="md" className="h-9 w-9 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : notifications.length > 0 ? (
           <ul className="divide-y divide-slate-100 dark:divide-zinc-800/50">
             {notifications.map((notification) => (

@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // La suite contra el backend real vive en tests/live/ y corre con
+  // playwright.live.config.ts (npm run test:live). Acá se ignora.
+  testIgnore: ['live/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

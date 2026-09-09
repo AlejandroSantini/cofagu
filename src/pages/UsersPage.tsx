@@ -200,7 +200,7 @@ export const UsersPage: React.FC = () => {
     { 
       header: 'Rol', 
       render: (u: User) => (
-        <span className={`px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-wider ${
+        <span className={`inline-block whitespace-nowrap px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-wider ${
           u.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
           u.role === 'LOGISTICS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' :
           u.role === 'TECHNICAL_CENTER' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-400' :
@@ -209,7 +209,7 @@ export const UsersPage: React.FC = () => {
           u.role === 'CARRIER' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' :
           'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
         }`}>
-          {u.role === 'ADMIN' ? 'ADMINISTRADOR' : u.role === 'EMPLOYEE' ? 'EMPLEADO: BALANZA' : u.role === 'PLAYERO' ? 'PLAYA DE CAMIONES' : u.role === 'GAS_STATION' ? 'COMBUSTIBLES' : u.role === 'TECHNICAL_CENTER' ? 'CENTRO AGROTÉCNICO' : u.role === 'OPERATOR' || u.role === 'CONTROL_VIAJES' ? 'CONTROL DE FLETES' : u.role === 'LOGISTICS' ? 'LOGÍSTICA' : u.role === 'CARRIER' ? 'TRANSPORTISTA' : u.role}
+          {u.role === 'ADMIN' ? 'ADMINISTRADOR' : u.role === 'EMPLOYEE' ? 'EMPLEADO: BALANZA' : u.role === 'PLAYERO' ? 'PLAYA DE CAMIONES' : u.role === 'GAS_STATION' ? 'COMBUSTIBLES' : u.role === 'TECHNICAL_CENTER' ? 'CENTRO AGROTÉCNICO' : u.role === 'OPERATOR' ? 'OPERADOR' : u.role === 'CONTROL_VIAJES' ? 'CONTROL VIAJES' : u.role === 'LOGISTICS' ? 'LOGÍSTICA' : u.role === 'CARRIER' ? 'TRANSPORTISTA' : u.role}
         </span>
       )
     },
@@ -315,7 +315,8 @@ export const UsersPage: React.FC = () => {
                   { value: 'PLAYERO', label: 'Empleado: Playa de Camiones' },
                   { value: 'GAS_STATION', label: 'Empleado: Combustibles' },
                   { value: 'TECHNICAL_CENTER', label: 'Empleado: Centro Agrotécnico (Visualización)' },
-                  { value: 'OPERATOR', label: 'Empleado: Control de Fletes (Descarga / CTG)' },
+                  { value: 'OPERATOR', label: 'Empleado: Operador' },
+                  { value: 'CONTROL_VIAJES', label: 'Empleado: Control de Viajes (Descarga / CTG)' },
                   { value: 'CARRIER', label: 'Transportistas' },
                   { value: 'LOGISTICS', label: 'Logísticas' }
                 ]}

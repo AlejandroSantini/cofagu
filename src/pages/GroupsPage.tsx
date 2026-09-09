@@ -11,6 +11,7 @@ import {
 import { Badge } from "../components/ui/Badge";
 import { getErrorMessage } from "../api/errorUtils";
 import { Table } from "../components/ui/Table";
+import { Skeleton } from "../components/ui/Skeleton";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -30,7 +31,6 @@ import {
   Building,
   Briefcase,
   Search,
-  RefreshCw,
   Save,
   Users,
 } from "lucide-react";
@@ -361,7 +361,7 @@ export const GroupsPage: React.FC = () => {
           g.carriers?.length ??
           0;
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-bold text-xs rounded-full border border-emerald-200/50 dark:border-emerald-800/30">
+          <span className="inline-flex items-center whitespace-nowrap gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-bold text-xs rounded-full border border-emerald-200/50 dark:border-emerald-800/30">
             <Building size={14} />
             {count} {count === 1 ? "integrante" : "integrantes"}
           </span>
@@ -373,7 +373,7 @@ export const GroupsPage: React.FC = () => {
       render: (g: CarrierGroup) => {
         const count = g._count?.loads ?? 0;
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 font-bold text-xs rounded-full border border-blue-200/50 dark:border-blue-800/30">
+          <span className="inline-flex items-center whitespace-nowrap gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 font-bold text-xs rounded-full border border-blue-200/50 dark:border-blue-800/30">
             <Briefcase size={14} />
             {count} {count === 1 ? "carga" : "cargas"}
           </span>
@@ -542,11 +542,17 @@ export const GroupsPage: React.FC = () => {
                 </div>
 
                 {groupDetailsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <RefreshCw
-                      className="animate-spin text-emerald-500"
-                      size={24}
-                    />
+                  <div className="space-y-2 py-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 p-3 rounded-md border border-slate-200/70 dark:border-zinc-800"
+                      >
+                        <Skeleton radius="full" className="h-8 w-8 shrink-0" />
+                        <Skeleton className="h-4 w-40 max-w-[50%]" />
+                        <Skeleton className="h-4 w-16 ml-auto" />
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <>

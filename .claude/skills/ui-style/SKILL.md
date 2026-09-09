@@ -79,6 +79,11 @@ Todo lo que se agregue debe tener su variante `dark:`.
 - Labels de formulario: `font-bold text-slate-700 dark:text-slate-300`.
 - Badges y headers de tabla: `font-black uppercase tracking-wider`, tamaño
   `text-xs` o `text-[10px]`.
+- **Badges, pills y headers de tabla nunca se parten en dos líneas.** Siempre
+  `whitespace-nowrap` (ya está en `Badge` y en el `<th>` de `Table`); un label de
+  dos palabras como "CENTRO AGROTÉCNICO" ensancha la celda, no envuelve. Si el
+  pill se arma a mano en un `render:` de columna, agregarle `whitespace-nowrap`
+  (y `inline-block`/`inline-flex` si tiene padding).
 - Texto de datos en tablas: `font-bold ... text-xs sm:text-sm`.
 - Body / descripciones: `text-sm leading-relaxed text-slate-500 dark:text-slate-400`.
 - En mobile los `input/select/textarea` van a `font-size: 16px` (regla global,
@@ -119,10 +124,57 @@ Importar y componer estos. No duplicar su lógica.
 | `Input` | Campo de texto | `label`, `icon`, `rightElement`, `error`; usa `forwardRef` (compatible con react-hook-form) |
 | `Select` | Desplegable | mismo patrón que `Input` |
 | `Modal` | Diálogos / confirmaciones | `type`: `danger` \| `success` \| `info`; `onConfirm`, `isLoading`; cierra con Esc y backdrop |
-| `Table` | Listados | genérico `<T>`: `columns` (`{ header, render, className }`), `data`, `isLoading`, `pagination` opcional server-side |
+| `Table` | Listados | genérico `<T>`: `columns` (`{ header, render, className }`), `data`, `isLoading` (muestra filas skeleton), `skeletonRows` (default 5), `pagination` opcional server-side |
 | `PageHeader` | Encabezado de pantalla | `title`, `icon`, `iconColor`, `showBack` |
+| `Skeleton` | Placeholder de carga | `className` (dar `h-*`/`w-*` reales), `lines` (>1 = bloque de texto), `radius`: `sm` \| `md` \| `lg` \| `full` |
 | `Toast` / `ErrorMessage` | Feedback | — |
 | `ImageUpload` | Subida de imágenes | — |
+
+## Estados de carga (skeletons)
+
+Regla: **mientras se resuelve un fetch se muestra un skeleton con la forma del
+contenido real**, no un spinner centrado ni texto "Cargando...". El spinner
+solo sobrevive en: botones (`Button isLoading`), acciones dentro de un `Modal`
+(`Modal isLoading`), progreso de subida (`ImageUpload`) y redirecciones
+instantáneas (`EntityRedirects`).
+
+- **Componente:** `Skeleton` de `src/components/ui/`. Pulso suave
+  (`animate-pulse`, `bg-slate-100 dark:bg-zinc-800`), sin barrido de brillo
+  (shimmer) — tiene que pasar desapercibido, no llamar la atención.
+- **Sin salto de layout:** el skeleton ocupa el mismo alto/ancho aproximado que
+  el dato. Reutilizá las clases del contenedor real (mismo `grid`, `p-*`,
+  `divide-y`, alturas de fila) y meté `Skeleton` adentro.
+- **Tablas:** `<Table isLoading>` ya renderea filas skeleton solo con pasarle el
+  flag. No armar un loader aparte antes de la tabla; renderizala siempre y
+  dejale el estado a `isLoading`.
+- **Re-fetch sobre datos ya visibles** (búsquedas con debounce, auto-refresh):
+  **no** cambiar a skeleton — dejar los datos viejos en pantalla. El skeleton es
+  solo para la **primera** carga (`isLoading && data.length === 0`).
+- **KPIs / `StatCard`:** pasar `loading` → el valor y el label salen como
+  skeleton.
+- Cantidad de filas/tiles fantasma: ~3–6. Ni una (se ve pobre) ni una pantalla
+  entera (se ve lento).
+
+```tsx
+// Bloque simple: dale la forma con className
+<Skeleton className="h-7 w-64 max-w-full" radius="md" />
+
+// Texto multilínea (última línea al 60%)
+<Skeleton lines={3} />
+
+// Grilla de tiles que copia el layout real
+<div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+  {Array.from({ length: 6 }).map((_, i) => (
+    <div key={i} className="flex items-center gap-3">
+      <Skeleton radius="md" className="h-11 w-11 shrink-0" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-2.5 w-16" />
+        <Skeleton className="h-3.5 w-24" />
+      </div>
+    </div>
+  ))}
+</div>
+```
 
 ## Stack y patrones
 
@@ -151,3 +203,6 @@ Importar y componer estos. No duplicar su lógica.
 4. ¿Radios y sombras siguen la tabla de "Forma y profundidad"?
 5. ¿Sin `enum` / sin imports o vars sin usar? (`npm run build` limpio)
 6. ¿Textos en español (es-AR)?
+7. ¿Los estados de carga son skeletons con la forma del contenido (no spinner
+   centrado ni "Cargando...")? ¿El re-fetch sobre datos ya visibles NO parpadea
+   a skeleton?

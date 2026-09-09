@@ -128,14 +128,14 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
                 
                 if (l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS' || l.status === 'COMPLETED' || cupos <= 0) {
                   return (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-1 rounded-sm border border-rose-200/50 dark:border-rose-900/40">
+                    <span className="text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-1 rounded-sm whitespace-nowrap border border-rose-200/50 dark:border-rose-900/40">
                       Sin cupo disponible
                     </span>
                   );
                 }
 
                 return (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-1 rounded-sm border border-emerald-200/50 dark:border-emerald-900/40">
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-1 rounded-sm whitespace-nowrap border border-emerald-200/50 dark:border-emerald-900/40">
                     {cupos} {cupos === 1 ? 'cupo libre' : 'cupos libres'}
                   </span>
                 );
@@ -149,7 +149,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
                 const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
                 const maxCapacity = l.maxTrucks || 1;
                 return (
-                  <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-sm">
+                  <span className="text-xs font-bold text-slate-700 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded-sm whitespace-nowrap">
                     {acceptedCount} / {maxCapacity}
                   </span>
                 );
@@ -158,7 +158,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
             {
               header: 'Postulantes',
               render: (l: Load) => (
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-sm">
+                <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded-sm whitespace-nowrap">
                   {l.applications?.filter(a => a.status === 'PENDING').length || 0}
                 </span>
               )

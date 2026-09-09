@@ -133,12 +133,6 @@ export const TechnicalCenterSearchPage: React.FC = () => {
         </div>
       )}
 
-      {loading && !results.length && (
-        <div className="flex justify-center p-8">
-          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-
       {!loading && hasSearched && filteredResults.length === 0 && !error && (
         <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800">
           <Truck size={48} className="mx-auto text-slate-300 dark:text-zinc-600 mb-4" />
@@ -149,7 +143,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
         </div>
       )}
 
-      {filteredResults.length > 0 && (
+      {(loading || filteredResults.length > 0) && (
         <Table
           columns={[
             {
@@ -223,7 +217,7 @@ export const TechnicalCenterSearchPage: React.FC = () => {
             }
           ]}
           data={filteredResults}
-          isLoading={loading}
+          isLoading={loading && filteredResults.length === 0}
         />
       )}
     </div>
