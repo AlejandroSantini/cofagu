@@ -1,6 +1,5 @@
 import { test, expect, openModal } from './fixtures';
 import { missingConfig, PREFIX } from './env';
-import { seedTrip } from './api';
 
 /**
  * PLAYERO — función: controlar los camiones en la playa y rechazar uno
@@ -11,8 +10,8 @@ const skip = missingConfig(['CARRIER', 'PLAYERO'], [['ADMIN', 'OPERATOR', 'LOGIS
 test.describe('PLAYERO · control de playa', () => {
   test.skip(!!skip, skip || '');
 
-  test('encuentra el camión y lo rechaza con motivo', async ({ pageAs }) => {
-    const trip = await seedTrip('assigned');
+  test('encuentra el camión y lo rechaza con motivo', async ({ pageAs, seed }) => {
+    const trip = await seed('assigned');
     const plate = trip.seed.truckChassisPlate || trip.seed.truckPlate;
     test.skip(!plate, 'El camión resuelto no tiene patente cargada en el backend');
 

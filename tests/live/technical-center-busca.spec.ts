@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
 import { missingConfig } from './env';
-import { seedTrip } from './api';
 
 /**
  * TECHNICAL_CENTER (Centro Agrotécnico) — función: buscar camiones cargados hoy
@@ -11,10 +10,10 @@ const skip = missingConfig(['CARRIER', 'TECHNICAL_CENTER'], [['ADMIN', 'OPERATOR
 test.describe('TECHNICAL_CENTER · buscador de camiones', () => {
   test.skip(!!skip, skip || '');
 
-  test('encuentra el camión cargado hoy por patente', async ({ pageAs }) => {
-    const trip = await seedTrip('departed');
-    const { seed } = trip;
-    const plate = seed.truckChassisPlate || seed.truckPlate;
+  test('encuentra el camión cargado hoy por patente', async ({ pageAs, seed }) => {
+    const trip = await seed('departed');
+    const s = trip.seed;
+    const plate = s.truckChassisPlate || s.truckPlate;
     test.skip(!plate, 'El camión resuelto no tiene patente cargada en el backend');
 
     const page = await pageAs('TECHNICAL_CENTER');
@@ -26,8 +25,8 @@ test.describe('TECHNICAL_CENTER · buscador de camiones', () => {
     await expect(
       page.getByRole('cell').filter({ hasText: plate }).first(),
     ).toBeVisible({ timeout: 15_000 });
-    if (seed.carrierName) {
-      await expect(page.getByRole('cell').filter({ hasText: seed.carrierName }).first()).toBeVisible();
+    if (s.carrierName) {
+      await expect(page.getByRole('cell').filter({ hasText: s.carrierName }).first()).toBeVisible();
     }
   });
 });

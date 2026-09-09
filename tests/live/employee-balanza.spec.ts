@@ -1,6 +1,5 @@
 import { test, expect, textField, openModal } from './fixtures';
 import { missingConfig } from './env';
-import { seedTrip } from './api';
 
 /**
  * EMPLOYEE (balancero) — función: registrar la Carta de Porte (CTG) y el peso
@@ -12,8 +11,8 @@ const skip = missingConfig(['CARRIER', 'EMPLOYEE'], [['ADMIN', 'OPERATOR', 'LOGI
 test.describe('EMPLOYEE · balanza y Carta de Porte', () => {
   test.skip(!!skip, skip || '');
 
-  test('carga el CTG y los kilos de balanza', async ({ pageAs }) => {
-    const trip = await seedTrip('assigned');
+  test('carga el CTG y los kilos de balanza', async ({ pageAs, seed }) => {
+    const trip = await seed('assigned');
     const ctg = ('2' + String(Date.now())).slice(-11);
 
     const page = await pageAs('EMPLOYEE');

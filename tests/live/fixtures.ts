@@ -12,11 +12,17 @@ import {
   type Page,
   type BrowserContext,
 } from '@playwright/test';
-import { login } from './api';
+import { ApiClient, login, seedTrip, type SeedStage, type SeededTrip } from './api';
 import type { E2ERole } from './env';
 
 interface Fixtures {
   pageAs: (role: E2ERole) => Promise<Page>;
+  /**
+   * Igual que `seedTrip`, pero registra el viaje para borrarlo al terminar el
+   * test. Sin esto, el único camión seed queda ocupado y los tests siguientes
+   * fallan con "no tiene ningún camión disponible".
+   */
+  seed: (stage: SeedStage, overrides?: Record<string, unknown>) => Promise<SeededTrip>;
 }
 
 export const test = base.extend<Fixtures>({
@@ -42,6 +48,29 @@ export const test = base.extend<Fixtures>({
     await provide(factory);
 
     for (const c of contexts) await c.close();
+  },
+
+  // eslint-disable-next-line no-empty-pattern -- Playwright exige el patrón de fixtures aunque no use deps
+  seed: async ({}, provide) => {
+    const tripIds: number[] = [];
+
+    await provide(async (stage, overrides) => {
+      const trip = await seedTrip(stage, overrides);
+      tripIds.push(trip.tripId);
+      return trip;
+    });
+
+    if (tripIds.length > 0) {
+      const admin = await ApiClient.as('ADMIN');
+      for (const id of tripIds) {
+        try {
+          await admin.deleteTrip(id);
+        } catch {
+          /* best effort — el sweep de test:e2e:cleanup lo agarra */
+        }
+      }
+      await admin.dispose();
+    }
   },
 });
 

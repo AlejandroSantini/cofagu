@@ -311,11 +311,12 @@ function makeCtg(): string {
 }
 
 /**
- * Crear viajes / leer grupos es ADMIN-only en este backend (OPERATOR y LOGISTICS
- * reciben 403), así que la siembra necesita sí o sí la cuenta ADMIN.
+ * Este backend es muy restrictivo: crear viajes, leer grupos y aceptar
+ * postulaciones son ADMIN-only (OPERATOR/LOGISTICS → 403). Registrar el CTG en
+ * balanza lo puede hacer el balancero.
  */
 const WRITE_ROLES: E2ERole[] = ['ADMIN'];
-const ACCEPT_ROLES: E2ERole[] = ['OPERATOR', 'ADMIN'];
+const DEPART_ROLES: E2ERole[] = ['EMPLOYEE', 'OPERATOR', 'ADMIN'];
 
 function tripPayload(seed: ResolvedSeed, overrides: Record<string, unknown>) {
   const iso = new Date().toISOString();
@@ -377,40 +378,45 @@ export async function seedTrip(
       result.appId = app.id;
       if (stage === 'applied') return result;
 
-      // ── assigned ───────────────────────────────────────────
-      // Aceptar la postulación: OPERATOR si hay credenciales, si no ADMIN.
-      const operator = await ApiClient.asFirst(ACCEPT_ROLES);
-      try {
-        await operator.acceptApplication(result.appId, {
-          driverId: seed.driverId,
-          truckId: seed.truckId,
-        });
-        const assigned = await admin.getTrip(result.tripId);
-        const subLoad = (assigned.loads ?? []).find(
-          (l: any) =>
-            l.carrierId === seed.carrierId &&
-            (l.truckId === seed.truckId || l.truck?.id === seed.truckId),
+      // ── assigned (aceptar la postulación: ADMIN-only) ──────
+      await admin.acceptApplication(result.appId, {
+        driverId: seed.driverId,
+        truckId: seed.truckId,
+      });
+      const assigned = await admin.getTrip(result.tripId);
+      const subLoad = (assigned.loads ?? []).find(
+        (l: any) =>
+          l.carrierId === seed.carrierId &&
+          (l.truckId === seed.truckId || l.truck?.id === seed.truckId),
+      );
+      result.loadId = subLoad ? Number(subLoad.id) : null;
+      if (stage === 'assigned') return result;
+
+      // ── departed (CTG + peso de balanza: balancero) ────────
+      if (!result.loadId) {
+        throw new Error(
+          'El viaje quedó asignado pero no se pudo resolver el sub-load para cargar el CTG',
         );
-        result.loadId = subLoad ? Number(subLoad.id) : null;
-        if (stage === 'assigned') return result;
-
-        // ── departed (CTG + peso de balanza) ─────────────────
-        if (!result.loadId) {
-          throw new Error(
-            'El viaje quedó asignado pero no se pudo resolver el sub-load para cargar el CTG',
-          );
-        }
-        const ctg = makeCtg();
-        await operator.confirmDeparture(result.loadId, { ctg, loadedWeight: 30000 });
-        result.ctg = ctg;
-        if (stage === 'departed') return result;
-
-        // ── in_progress ─────────────────────────────────────
-        await carrier.startTrip(result.appId, ctg);
-        return result;
-      } finally {
-        await operator.dispose();
       }
+      const ctg = makeCtg();
+      const balancero = await ApiClient.asFirst(DEPART_ROLES);
+      try {
+        await balancero.confirmDeparture(result.loadId, { ctg, loadedWeight: 30000 });
+      } finally {
+        await balancero.dispose();
+      }
+      result.ctg = ctg;
+      // Ojo: en este backend confirm-departure ya deja el viaje EN VIAJE
+      // (loads[].status = IN_PROGRESS). 'departed' e 'in_progress' son lo mismo.
+      if (stage === 'departed' || stage === 'in_progress') {
+        try {
+          await carrier.startTrip(result.appId, ctg);
+        } catch {
+          /* ya está EN VIAJE; el start-trip explícito no aplica */
+        }
+        return result;
+      }
+      return result;
     } finally {
       await carrier.dispose();
     }

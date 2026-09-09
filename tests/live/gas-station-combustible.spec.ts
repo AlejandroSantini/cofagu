@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
 import { missingConfig } from './env';
-import { seedTrip } from './api';
 
 /**
  * GAS_STATION — función: consultar qué camiones activos están autorizados a
@@ -12,8 +11,8 @@ const skip = missingConfig(['CARRIER', 'GAS_STATION'], [['ADMIN', 'OPERATOR', 'L
 test.describe('GAS_STATION · control de combustible', () => {
   test.skip(!!skip, skip || '');
 
-  test('busca por patente y ve el camión autorizado', async ({ pageAs }) => {
-    const trip = await seedTrip('assigned', { maxTrucks: 2 });
+  test('busca por patente y ve el camión autorizado', async ({ pageAs, seed }) => {
+    const trip = await seed('assigned', { maxTrucks: 2 });
     const plate = trip.seed.truckChassisPlate || trip.seed.truckPlate;
     test.skip(!plate, 'El camión resuelto no tiene patente cargada en el backend');
 
