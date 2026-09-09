@@ -11,7 +11,7 @@ import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
-  Search, User, Building, XCircle, RefreshCw, Clock, Wheat
+  Search, XCircle, RefreshCw, Clock
 } from 'lucide-react';
 
 export const YardPage: React.FC = () => {
@@ -138,18 +138,13 @@ export const YardPage: React.FC = () => {
       render: (load: any) => {
         const { driver } = resolveResource(load);
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <User size={14} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm truncate">
-                {driver?.name || 'N/D'}
-              </span>
-              {driver?.dni && (
-                <span className="text-[11px] text-slate-400 font-mono">DNI: {driver.dni}</span>
-              )}
-            </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm truncate">
+              {driver?.name || 'N/D'}
+            </span>
+            {driver?.dni && (
+              <span className="text-[11px] text-slate-400 font-mono">DNI: {driver.dni}</span>
+            )}
           </div>
         );
       }
@@ -159,14 +154,9 @@ export const YardPage: React.FC = () => {
       render: (load: any) => {
         const { carrier } = resolveResource(load);
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <Building size={14} />
-            </div>
-            <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
-              {carrier?.name || 'N/D'}
-            </span>
-          </div>
+          <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
+            {carrier?.name || 'N/D'}
+          </span>
         );
       }
     },
@@ -176,14 +166,9 @@ export const YardPage: React.FC = () => {
         const t = resolveTrip(load);
         const cereal = t.cereal || load.cereal;
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Wheat size={14} />
-            </div>
-            <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
-              {cereal || 'S/D'}
-            </span>
-          </div>
+          <span className="font-semibold text-slate-700 dark:text-zinc-300 text-sm truncate">
+            {cereal || 'S/D'}
+          </span>
         );
       }
     },
@@ -308,14 +293,14 @@ export const YardPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full h-12 pl-10 pr-4 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
             />
           </div>
           <Button
             variant="primary"
             icon={Search}
             onClick={handleSearch}
-            className="w-full sm:w-auto px-6"
+            className="w-full sm:w-auto h-12 px-6"
           >
             Buscar
           </Button>
