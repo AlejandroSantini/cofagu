@@ -251,11 +251,28 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   // Con paginación no podemos saber si TODOS los camiones del transportista ya están postulados
   // (solo tenemos los camiones de la página actual cargada).
   // Por eso nunca ocultamos el botón basándonos en eso: dejamos que el modal informe si no hay disponibles.
+  // Un camión sigue "ocupado" mientras su postulación esté PENDING, o
+  // ACCEPTED con el viaje todavía sin completar. Una vez CANCELLED,
+  // REJECTED o completado, el camión vuelve a estar libre para postularse
+  // de nuevo en la misma publicación (el backend ya lo permite: confirmado
+  // contra el backend real). El estado real de "completado" vive en el
+  // sub-load (`load.loads[].status`), no en `application.tripStatus` (que
+  // puede quedar desactualizado) — mismo criterio que se usa más abajo
+  // para pintar cada tarjeta de camión.
   const appliedTruckIds = new Set(
     (load.applications || [])
-      .filter(
-        (a) => a.carrierId === effectiveCarrierId && a.status !== "CANCELLED",
-      )
+      .filter((a) => {
+        if (a.carrierId !== effectiveCarrierId) return false;
+        if (a.status === "PENDING") return true;
+        if (a.status !== "ACCEPTED") return false;
+        const matchedLoad = load.loads?.find(
+          (l: any) =>
+            l.carrierId === a.carrierId &&
+            (l.truckId === a.truckId || l.truckId === a.truck?.id),
+        );
+        const effectiveTripStatus = matchedLoad?.status || a.tripStatus;
+        return effectiveTripStatus !== "COMPLETED";
+      })
       .map((a) => a.truckId),
   );
   // El botón se oculta solo si el carrier YA tiene una postulación activa Y no hay camiones disponibles
