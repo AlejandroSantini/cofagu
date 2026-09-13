@@ -51,6 +51,15 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       )
     },
     {
+      header: 'Cereal',
+      className: 'min-w-[100px]',
+      render: (l: Load) => (
+        <span className="font-medium text-slate-700 dark:text-zinc-300 text-xs sm:text-sm">
+          {l.cereal || (l as any).trip?.cereal || 'N/D'}
+        </span>
+      )
+    },
+    {
       header: 'Tarifa',
       className: 'min-w-[110px]',
       render: (l: Load) => {

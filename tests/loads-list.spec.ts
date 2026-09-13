@@ -13,6 +13,7 @@ import { apiOk, fulfill, loginAs } from "./utils";
  *    Cupo (antes sólo mostraba una única columna "Fecha").
  * 8) La tarifa mostrada respeta `resolvedRate` (tarifa específica de grupo)
  *    por sobre `rate` (tarifa general) cuando el backend la envía.
+ * 9) Columna "Cereal", visible para todos los roles.
  */
 test.describe("Cargas y Viajes — listado", () => {
   test("un viaje CANCELLED no aparece en 'Disponibles' aunque el backend lo incluya", async ({ page }) => {
@@ -146,5 +147,29 @@ test.describe("Cargas y Viajes — listado", () => {
 
     await expect(page.getByText("$10")).toBeVisible();
     await expect(page.getByText("$20")).toHaveCount(0);
+  });
+
+  test("la columna Cereal se muestra para cualquier rol (ej. EMPLOYEE)", async ({ page }) => {
+    await loginAs(page, "EMPLOYEE");
+    await page.route("**/api/loads?status=ASSIGNED*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 65,
+            status: "ASSIGNED",
+            origin: "Rosario",
+            destination: "Nelson Regner",
+            cereal: "Trigo",
+            carrier: { name: "Alejandro Santini" },
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    await expect(page.getByRole("columnheader", { name: "Cereal" })).toBeVisible();
+    await expect(page.getByText("Trigo")).toBeVisible();
   });
 });

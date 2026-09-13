@@ -17,6 +17,7 @@ const TRIP_DETAIL = {
   maxTrucks: 1,
   loadingTimeStart: "09:00",
   loadingTimeEnd: "11:00",
+  cereal: "Soja",
   applications: [
     {
       id: 200,
@@ -51,6 +52,8 @@ test.describe("Detalle de viaje — franja horaria y combustible por camión", (
     // Aparece dos veces: el resumen general del viaje y la tarjeta del camión.
     await expect(page.getByText("09:00 - 11:00 hs")).toHaveCount(2);
     await expect(page.getByText("80 Lts")).toBeVisible();
+    // Cereal también por tarjeta de camión (además del resumen del viaje).
+    await expect(page.getByText("Soja")).toHaveCount(2);
   });
 
   test("sin tarifa por camión del backend, no se muestra 'Tarifa a Pagar'", async ({ page }) => {

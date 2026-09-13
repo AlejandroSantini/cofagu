@@ -1436,6 +1436,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                     : "No especificado"}
                                 </span>
                               </div>
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">
+                                  Cereal
+                                </span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200">
+                                  {(matchedLoad as any)?.cereal || load.cereal || "No especificado"}
+                                </span>
+                              </div>
                               {(() => {
                                 // Tarifa resuelta específicamente para ESTE camión/logística
                                 // (no la tarifa general del viaje). Pendiente de que el
