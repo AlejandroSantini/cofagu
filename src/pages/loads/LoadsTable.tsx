@@ -10,9 +10,10 @@ interface LoadsTableProps {
   isCarrier?: boolean;
   myCarrierId?: number | null;
   isAdmin?: boolean;
+  isEmployee?: boolean;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, isEmployee }) => {
   const columns = [
     {
       header: 'Fecha de Carga',
@@ -150,6 +151,13 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
     ) : [])
   ].filter(col => {
     if (!isCarrier && (col.header === 'Transportista' || col.header === 'Chofer / Camión')) {
+      return false;
+    }
+    // El backend todavía no resuelve bien la tarifa por grupo en las cargas
+    // ya asignadas (siempre devuelve la del grupo General). Para el usuario
+    // de Balanza, que necesita saber exactamente cuánto pagarle a cada
+    // transporte, es mejor no mostrar un número que puede ser incorrecto.
+    if (isEmployee && col.header === 'Tarifa') {
       return false;
     }
     return true;

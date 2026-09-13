@@ -1072,6 +1072,7 @@ export const LoadsPage: React.FC = () => {
             statusFilter={activeTab}
             isCarrier={isCarrier}
             isAdmin={user?.role === 'ADMIN'}
+            isEmployee={isEmployee}
             myCarrierId={user?.carrierId}
           />
         </div>
