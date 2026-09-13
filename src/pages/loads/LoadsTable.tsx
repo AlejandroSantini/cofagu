@@ -14,47 +14,30 @@ interface LoadsTableProps {
 
 export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier }) => {
   const columns = [
-    ...(statusFilter === 'ACTIVE' 
-      ? [
-          {
-            header: 'Fecha',
-            className: 'min-w-[100px]',
-            render: (l: Load) => {
-              const dateVal = (l as any).loadingDate || l.date || (l as any).quotaDate;
-              return (
-                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-                  {dateVal ? new Date(dateVal).toLocaleDateString('es-AR') : 'N/D'}
-                </span>
-              );
-            }
-          }
-        ]
-      : [
-          {
-            header: 'Fecha de Carga',
-            className: 'min-w-[100px]',
-            render: (l: Load) => {
-              const loadingDate = (l as any).loadingDate || (l as any).trip?.loadingDate;
-              return (
-                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-                  {loadingDate ? new Date(loadingDate).toLocaleDateString('es-AR') : 'A Confirmar'}
-                </span>
-              );
-            }
-          },
-          {
-            header: 'Fecha de Cupo',
-            className: 'min-w-[100px]',
-            render: (l: Load) => {
-              const quotaDate = (l as any).quotaDate || l.date || (l as any).trip?.quotaDate || (l as any).trip?.date;
-              return (
-                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-                  {quotaDate ? new Date(quotaDate).toLocaleDateString('es-AR') : 'N/D'}
-                </span>
-              );
-            }
-          }
-        ]),
+    {
+      header: 'Fecha de Carga',
+      className: 'min-w-[100px]',
+      render: (l: Load) => {
+        const loadingDate = (l as any).loadingDate || (l as any).trip?.loadingDate;
+        return (
+          <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+            {loadingDate ? new Date(loadingDate).toLocaleDateString('es-AR') : 'A Confirmar'}
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Fecha de Cupo',
+      className: 'min-w-[100px]',
+      render: (l: Load) => {
+        const quotaDate = (l as any).quotaDate || l.date || (l as any).trip?.quotaDate || (l as any).trip?.date;
+        return (
+          <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+            {quotaDate ? new Date(quotaDate).toLocaleDateString('es-AR') : 'N/D'}
+          </span>
+        );
+      }
+    },
     {
       header: 'Ruta',
       className: 'min-w-[170px]',
@@ -70,7 +53,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Tarifa',
       className: 'min-w-[110px]',
       render: (l: Load) => {
-        const rateValue = l.rate ?? (l as any).trip?.rate;
+        const rateValue = l.resolvedRate ?? l.rate ?? (l as any).trip?.resolvedRate ?? (l as any).trip?.rate;
         const baseRate = Number(rateValue);
         return (
           <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs sm:text-sm">

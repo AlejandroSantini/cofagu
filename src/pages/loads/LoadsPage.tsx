@@ -7,6 +7,7 @@ import { type LoadFormValues } from '../../schemas/load.schema';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -75,9 +76,14 @@ export const LoadsPage: React.FC = () => {
           ? await loadService.getTrips(loadParams) 
           : await loadService.getLoads(loadParams);
         if (active && res.data && res.data.success !== false) {
-          const rawData = Array.isArray(res.data) ? res.data : res.data.data;
-          
-          setLoads(rawData);
+          const rawData: Load[] = Array.isArray(res.data) ? res.data : res.data.data;
+          // El backend a veces devuelve viajes/cargas CANCELLED o REJECTED
+          // mezclados aunque se filtre por otro status. Nunca deben quedar
+          // "flotando" en una pestaña que no sea la de Cancelados.
+          const filtered = activeTab === 'CANCELLED'
+            ? rawData
+            : rawData.filter((l) => (l.status as string) !== 'CANCELLED' && (l.status as string) !== 'REJECTED');
+          setLoads(filtered);
         }
       } catch (err) {
         console.error(err);
@@ -512,9 +518,17 @@ export const LoadsPage: React.FC = () => {
   const assignedFuelLoads = React.useMemo(() => {
     if (!isPlayero) return loads;
     const result: any[] = [];
+    // Un registro deja de necesitar carga de combustible (y por lo tanto
+    // desaparece de esta lista) si el viaje se canceló, se completó, o ya
+    // se registró si cargó o no combustible (fuelConsumption != null).
+    const needsFuelControl = (item: any) =>
+      item.status !== 'CANCELLED' && item.status !== 'COMPLETED' &&
+      item.tripStatus !== 'CANCELLED' && item.tripStatus !== 'COMPLETED' &&
+      item.fuelConsumption == null;
+
     loads.forEach((trip: any) => {
-      const activeLoads = trip.loads?.filter((l: any) => l.status !== 'CANCELLED' && (l.carrier || l.truck || l.driver)) || [];
-      const activeApps = trip.applications?.filter((a: any) => a.status === 'ACCEPTED' && (a.carrier || a.truck || a.driver)) || [];
+      const activeLoads = trip.loads?.filter((l: any) => needsFuelControl(l) && (l.carrier || l.truck || l.driver)) || [];
+      const activeApps = trip.applications?.filter((a: any) => a.status === 'ACCEPTED' && needsFuelControl(a) && (a.carrier || a.truck || a.driver)) || [];
 
       if (activeLoads.length > 0) {
         activeLoads.forEach((loadItem: any) => {
@@ -544,7 +558,7 @@ export const LoadsPage: React.FC = () => {
             cereal: trip.cereal || appItem.cereal,
           });
         });
-      } else if (trip.carrier || trip.truck || trip.driver) {
+      } else if (needsFuelControl(trip) && (trip.carrier || trip.truck || trip.driver)) {
         result.push(trip);
       }
     });
@@ -564,6 +578,41 @@ export const LoadsPage: React.FC = () => {
         return chassis.includes(q) || trailer.includes(q) || plate.includes(q) || driverName.includes(q) || carrierName.includes(q);
       })
     : loads;
+
+  // --- Combustible: marcar si un camión cargó o no combustible ---
+  const [fuelModalLoad, setFuelModalLoad] = useState<{ id: number | string } | null>(null);
+  const [fuelLitersInput, setFuelLitersInput] = useState('');
+  const [fuelActionLoadingId, setFuelActionLoadingId] = useState<number | string | null>(null);
+
+  const handleRegisterFuel = async (id: number | string, fuelConsumption: number) => {
+    setFuelActionLoadingId(id);
+    try {
+      const res = await loadService.updateLoad(id, { fuelConsumption });
+      if (res.data && res.data.success !== false) {
+        showToast(
+          fuelConsumption > 0 ? 'Carga de combustible registrada' : 'Se registró que el camión no cargó combustible',
+          'success'
+        );
+        setFuelModalLoad(null);
+        setFuelLitersInput('');
+        triggerRefresh();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al registrar el combustible.'), 'error');
+    } finally {
+      setFuelActionLoadingId(null);
+    }
+  };
+
+  const handleConfirmFuelLoaded = () => {
+    if (!fuelModalLoad) return;
+    const liters = Number(fuelLitersInput);
+    if (!fuelLitersInput || isNaN(liters) || liters <= 0) {
+      showToast('Ingresá una cantidad de litros válida.', 'error');
+      return;
+    }
+    handleRegisterFuel(fuelModalLoad.id, liters);
+  };
 
   const [noShowModalLoad, setNoShowModalLoad] = useState<{ loadId: number; appId?: number } | null>(null);
 
@@ -601,6 +650,30 @@ export const LoadsPage: React.FC = () => {
         confirmText="Confirmar Inasistencia"
         isLoading={submitLoading}
       />
+
+      <Modal
+        isOpen={!!fuelModalLoad}
+        onClose={() => {
+          setFuelModalLoad(null);
+          setFuelLitersInput('');
+        }}
+        onConfirm={handleConfirmFuelLoaded}
+        title="Registrar Carga de Combustible"
+        description="Ingresá la cantidad de litros cargados por el camión."
+        type="success"
+        confirmText="Confirmar Carga"
+        isLoading={fuelActionLoadingId === fuelModalLoad?.id}
+      >
+        <Input
+          label="Litros Cargados *"
+          type="number"
+          min="1"
+          step="any"
+          placeholder="Ej: 150"
+          value={fuelLitersInput}
+          onChange={(e) => setFuelLitersInput(e.target.value)}
+        />
+      </Modal>
 
       <Modal
         isOpen={loadError}
@@ -790,11 +863,21 @@ export const LoadsPage: React.FC = () => {
                   )
                 },
                 {
+                  header: 'Ruta',
+                  render: (loadItem: any) => (
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-zinc-300 text-xs whitespace-nowrap">
+                      <span>{loadItem.origin || 'N/D'}</span>
+                      <span className="text-emerald-500 font-black shrink-0">→</span>
+                      <span>{loadItem.destination || 'N/D'}</span>
+                    </div>
+                  )
+                },
+                {
                   header: 'Franja Horaria',
                   render: (loadItem: Load) => (
                     <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      {loadItem.loadingTimeStart && loadItem.loadingTimeEnd 
-                        ? `${loadItem.loadingTimeStart} - ${loadItem.loadingTimeEnd} hs` 
+                      {loadItem.loadingTimeStart && loadItem.loadingTimeEnd
+                        ? `${loadItem.loadingTimeStart} - ${loadItem.loadingTimeEnd} hs`
                         : '08:00 - 12:00'}
                     </span>
                   )
@@ -805,6 +888,48 @@ export const LoadsPage: React.FC = () => {
                     <span className="font-medium text-slate-600 dark:text-zinc-400">
                       {loadItem.cereal || 'Soja'}
                     </span>
+                  )
+                },
+                {
+                  header: 'Tarifa',
+                  render: (loadItem: any) => {
+                    const rateValue = Number(loadItem.resolvedRate ?? loadItem.rate);
+                    return (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                        {!isNaN(rateValue) && rateValue > 0 ? `$${rateValue.toLocaleString('es-AR')}` : 'S/I'}
+                      </span>
+                    );
+                  }
+                },
+                {
+                  header: 'Acciones',
+                  render: (loadItem: any) => (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="text-xs font-bold whitespace-nowrap"
+                        isLoading={fuelActionLoadingId === loadItem.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFuelModalLoad({ id: loadItem.id });
+                        }}
+                      >
+                        Cargó
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs font-bold whitespace-nowrap"
+                        isLoading={fuelActionLoadingId === loadItem.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRegisterFuel(loadItem.id, 0);
+                        }}
+                      >
+                        No cargó
+                      </Button>
+                    </div>
                   )
                 }
               ]}

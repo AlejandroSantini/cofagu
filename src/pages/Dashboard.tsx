@@ -115,7 +115,7 @@ export const Dashboard: React.FC = () => {
       header: 'Tarifa',
       render: (l: Load) => (
         <span className="text-emerald-600 dark:text-emerald-400 font-black">
-          ${Number(l.rate).toLocaleString('es-AR')}
+          ${Number(l.resolvedRate ?? l.rate).toLocaleString('es-AR')}
         </span>
       )
     },

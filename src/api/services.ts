@@ -127,7 +127,10 @@ export const loadService = {
     api.post<ApiResponse<Load>>("/trips", data),
   updateLoad: (
     id: number | string,
-    data: Partial<CreateLoadPayload> & { differenceAdjusted?: boolean },
+    data: Partial<CreateLoadPayload> & {
+      differenceAdjusted?: boolean;
+      fuelConsumption?: number;
+    },
   ) => api.put<ApiResponse<Load>>(`/loads/${id}`, data),
   deleteLoad: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/loads/${id}`),

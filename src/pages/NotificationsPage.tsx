@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Bell, CheckCircle, Clock, Check, ArrowRight } from 'lucide-react';
+import { Bell, CheckCircle, Clock, Check, ArrowRight, XCircle } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
@@ -81,6 +81,8 @@ export default function NotificationsPage() {
         return <CheckCircle className="h-6 w-6 text-green-500" />;
       case 'TRIP_DELAYED':
         return <Clock className="h-6 w-6 text-yellow-500" />;
+      case 'TRIP_CANCELLED':
+        return <XCircle className="h-6 w-6 text-rose-500" />;
       default:
         return <Bell className="h-6 w-6 text-gray-500" />;
     }

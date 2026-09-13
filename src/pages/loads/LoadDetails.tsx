@@ -858,9 +858,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       Tarifa
                     </span>
                     <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {load.rate != null && !isNaN(Number(load.rate))
-                        ? `$${Number(load.rate).toLocaleString("es-AR")}`
-                        : "S/I"}
+                      {(() => {
+                        const resolved = load.resolvedRate ?? load.rate;
+                        return resolved != null && !isNaN(Number(resolved))
+                          ? `$${Number(resolved).toLocaleString("es-AR")}`
+                          : "S/I";
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -1383,7 +1386,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         )}
 
                         <div className="space-y-3 mt-3">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                               <div>
                                 <span className="text-slate-400 font-bold block uppercase">
                                   Camión
@@ -1405,6 +1408,31 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                     "N/D"}
                                 </span>
                               </div>
+                              <div>
+                                <span className="text-slate-400 font-bold block uppercase">
+                                  Franja Horaria
+                                </span>
+                                <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">
+                                  {(matchedLoad?.loadingTimeStart || load.loadingTimeStart) &&
+                                  (matchedLoad?.loadingTimeEnd || load.loadingTimeEnd)
+                                    ? `${matchedLoad?.loadingTimeStart || load.loadingTimeStart} - ${matchedLoad?.loadingTimeEnd || load.loadingTimeEnd} hs`
+                                    : "No especificado"}
+                                </span>
+                              </div>
+                              {isAccepted && (
+                                <div>
+                                  <span className="text-slate-400 font-bold block uppercase">
+                                    Combustible
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-zinc-200">
+                                    {matchedLoad?.fuelConsumption != null
+                                      ? matchedLoad.fuelConsumption > 0
+                                        ? `${matchedLoad.fuelConsumption} Lts`
+                                        : "No cargó"
+                                      : "Pendiente"}
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {isAccepted && tripCtg && (

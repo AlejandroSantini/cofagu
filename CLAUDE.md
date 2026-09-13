@@ -17,6 +17,27 @@ en Railway. Web app + PWA con push notifications. Toda la UI está en **español
 
 Antes de dar por terminado cualquier cambio: **`npm run build` tiene que pasar limpio.**
 
+## Tests E2E (obligatorio)
+
+**Toda funcionalidad nueva o corregida debe sumar un test E2E en `tests/`
+(Playwright, mockeando `**/api/**` con los helpers de `tests/utils.ts` — no
+tocar el backend real desde estos tests) que la cubra.** Un cambio no está
+terminado hasta que:
+1. El test nuevo está escrito y **corrido localmente** (`npx playwright test <archivo>`)
+   confirmando que pasa contra el código nuevo.
+2. `npx playwright test` (suite completa, sin `tests/live/`) sigue pasando —
+   sin regresiones.
+
+Si al validar un cambio algo no funciona como se espera y la causa parece
+estar del lado del backend (endpoint no filtra como debería, campo faltante
+en la respuesta, tarifa mal resuelta, etc.), no lo des por bueno silenciosamente:
+dejá un mensaje claro (qué endpoint, qué se esperaba recibir/filtrar, qué se
+recibió en realidad) para pasarle al equipo de backend.
+
+`tests/live/` es la excepción: corre contra el backend real (Railway) con
+`npm run test:live` y no se ejecuta en cada cambio; no es el lugar para los
+tests de cobertura de una feature nueva salvo que se pida explícitamente.
+
 ## Stack
 
 - **React 19** + **TypeScript** (strict), **Vite 8**, plugin `@vitejs/plugin-react`.

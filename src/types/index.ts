@@ -132,6 +132,7 @@ export interface Load {
   destination: string;
   date: string;
   rate?: number; // Pre-calculated for carriers, might be null if none matches.
+  resolvedRate?: number; // Algunos endpoints devuelven la tarifa específica de grupo bajo este nombre.
   status: 'ACTIVE' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   notes?: string;
   targetGroups?: { groupId: number; rate: number; group?: CarrierGroup }[];
