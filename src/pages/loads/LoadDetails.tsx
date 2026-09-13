@@ -1436,6 +1436,29 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                     : "No especificado"}
                                 </span>
                               </div>
+                              {(() => {
+                                // Tarifa resuelta específicamente para ESTE camión/logística
+                                // (no la tarifa general del viaje). Pendiente de que el
+                                // backend la incluya en applications[]/loads[] — hasta
+                                // entonces no se muestra nada (mejor nada que un monto
+                                // potencialmente incorrecto).
+                                const perTruckRate =
+                                  matchedLoad?.resolvedRate ??
+                                  matchedLoad?.rate ??
+                                  (app as any).resolvedRate ??
+                                  (app as any).rate;
+                                if (perTruckRate == null || isNaN(Number(perTruckRate))) return null;
+                                return (
+                                  <div>
+                                    <span className="text-slate-400 font-bold block uppercase">
+                                      Tarifa a Pagar
+                                    </span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                      ${Number(perTruckRate).toLocaleString("es-AR")}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                               {isAccepted && (
                                 <div>
                                   <span className="text-slate-400 font-bold block uppercase">

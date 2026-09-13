@@ -54,7 +54,13 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Tarifa',
       className: 'min-w-[110px]',
       render: (l: Load) => {
-        const rateValue = l.resolvedRate ?? l.rate ?? (l as any).trip?.resolvedRate ?? (l as any).trip?.rate;
+        // Para Balanza sólo confiamos en `resolvedRate`: es el campo que el
+        // backend todavía tiene que empezar a resolver bien por grupo en las
+        // cargas ya asignadas (hoy `rate` siempre cae en la tarifa General).
+        // Apenas lo mande, esto se muestra solo — no hace falta tocar nada más.
+        const rateValue = isEmployee
+          ? l.resolvedRate
+          : (l.resolvedRate ?? l.rate ?? (l as any).trip?.resolvedRate ?? (l as any).trip?.rate);
         const baseRate = Number(rateValue);
         return (
           <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs sm:text-sm">
@@ -149,15 +155,19 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
             }
           ]
     ) : [])
-  ].filter(col => {
+  ];
+
+  // Balanza: mientras ninguna carga tenga `resolvedRate`, ocultamos la
+  // columna entera (mejor nada que un monto potencialmente incorrecto).
+  // El día que el backend empiece a mandar `resolvedRate`, esta condición
+  // pasa a ser true sola y la columna aparece con el valor ya correcto.
+  const employeeHasResolvedRate = loads.some((l) => l.resolvedRate != null);
+
+  const visibleColumns = columns.filter(col => {
     if (!isCarrier && (col.header === 'Transportista' || col.header === 'Chofer / Camión')) {
       return false;
     }
-    // El backend todavía no resuelve bien la tarifa por grupo en las cargas
-    // ya asignadas (siempre devuelve la del grupo General). Para el usuario
-    // de Balanza, que necesita saber exactamente cuánto pagarle a cada
-    // transporte, es mejor no mostrar un número que puede ser incorrecto.
-    if (isEmployee && col.header === 'Tarifa') {
+    if (isEmployee && col.header === 'Tarifa' && !employeeHasResolvedRate) {
       return false;
     }
     return true;
@@ -165,7 +175,7 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
 
   return (
     <Table
-      columns={columns}
+      columns={visibleColumns}
       data={loads}
       isLoading={isLoading}
       onRowClick={onRowClick}

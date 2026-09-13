@@ -52,4 +52,33 @@ test.describe("Detalle de viaje — franja horaria y combustible por camión", (
     await expect(page.getByText("09:00 - 11:00 hs")).toHaveCount(2);
     await expect(page.getByText("80 Lts")).toBeVisible();
   });
+
+  test("sin tarifa por camión del backend, no se muestra 'Tarifa a Pagar'", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/trips/1", (r) => fulfill(r, apiOk(TRIP_DETAIL)));
+
+    await page.goto("/loads/1?type=trip");
+
+    await expect(page.getByText("AB123CD")).toBeVisible();
+    await expect(page.getByText("Tarifa a Pagar")).toHaveCount(0);
+  });
+
+  test("con tarifa por camión (simulando el fix de backend), se muestra 'Tarifa a Pagar'", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/trips/1", (r) =>
+      fulfill(
+        r,
+        apiOk({
+          ...TRIP_DETAIL,
+          loads: [{ ...TRIP_DETAIL.loads[0], resolvedRate: 20000 }],
+        }),
+      ),
+    );
+
+    await page.goto("/loads/1?type=trip");
+
+    await expect(page.getByText("AB123CD")).toBeVisible();
+    await expect(page.getByText("Tarifa a Pagar")).toBeVisible();
+    await expect(page.getByText("$20.000")).toBeVisible();
+  });
 });

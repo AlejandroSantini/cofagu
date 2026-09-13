@@ -91,6 +91,8 @@ export interface Application {
   waybillUrl?: string;
   fuelConsumption?: number;
   mileage?: number;
+  rate?: number; // Tarifa resuelta para ESTE camión/logística puntual (pendiente de que backend la envíe).
+  resolvedRate?: number;
   createdByUser?: User;
   appliedBy?: User | string | any;
   logisticsUser?: User;
