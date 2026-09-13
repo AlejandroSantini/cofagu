@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
+import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -208,9 +209,9 @@ export const LoadsPage: React.FC = () => {
       const res = await loadService.createTrip({
         ...data,
         maxTrucks: Number(data.maxTrucks),
-        loadingDate: new Date(data.loadingDate).toISOString(),
-        quotaDate: new Date(data.quotaDate).toISOString(),
-        date: new Date(data.loadingDate).toISOString()
+        loadingDate: dateOnlyToISOString(data.loadingDate),
+        quotaDate: dateOnlyToISOString(data.quotaDate),
+        date: dateOnlyToISOString(data.loadingDate)
       });
       if (res.data && res.data.success !== false) {
         showToast('Carga publicada con éxito');

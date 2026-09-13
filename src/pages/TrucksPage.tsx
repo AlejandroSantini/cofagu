@@ -6,6 +6,7 @@ import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
 import { truckService, carrierService } from '../api/services';
 import { type Truck, type Carrier } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
+import { dateOnlyToISOString } from '../utils/dateOnly';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
@@ -221,7 +222,7 @@ export const TrucksPage: React.FC = () => {
         capacity: Number(data.capacity),
         cargoInsurancePolicy: data.cargoInsurancePolicy,
         cargoInsuranceCompany: data.cargoInsuranceCompany || undefined,
-        cargoInsuranceExpiration: new Date(data.cargoInsuranceExpiration).toISOString(),
+        cargoInsuranceExpiration: dateOnlyToISOString(data.cargoInsuranceExpiration),
         cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl
       };
 
