@@ -13,7 +13,7 @@ interface LoadsTableProps {
   isEmployee?: boolean;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, isEmployee }) => {
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, myCarrierId, isEmployee }) => {
   const columns = [
     {
       header: 'Fecha de Carga',
@@ -82,9 +82,16 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Transportista',
       className: 'min-w-[140px]',
       render: (l: any) => {
-        const carrier = l.carrier || 
-          l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED')?.carrier || 
-          l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED')?.carrier;
+        // En "Disponibles" el backend hoy devuelve applications[]/loads[] de
+        // TODOS los transportistas (no sólo el que consulta) — hasta que lo
+        // corrijan, nunca mostramos ahí la identidad de otro transportista.
+        const onlyMine = statusFilter === 'ACTIVE';
+        const belongsToMe = (entityCarrierId: number | undefined) =>
+          !onlyMine || myCarrierId == null || entityCarrierId === myCarrierId;
+
+        const carrier = (l.carrier && belongsToMe(l.carrierId) ? l.carrier : undefined) ||
+          l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.carrier ||
+          l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.carrier;
 
         if (carrier?.name) {
           return <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-sm">{carrier.name}</span>;
@@ -96,13 +103,17 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Chofer / Camión',
       className: 'min-w-[140px]',
       render: (l: any) => {
-        const driver = l.driver || 
-          l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED')?.driver || 
-          l.applications?.find((app: any) => app.driver && app.status === 'ACCEPTED')?.driver;
+        const onlyMine = statusFilter === 'ACTIVE';
+        const belongsToMe = (entityCarrierId: number | undefined) =>
+          !onlyMine || myCarrierId == null || entityCarrierId === myCarrierId;
 
-        const truck = l.truck || 
-          l.loads?.find((load: any) => load.truck && load.status !== 'CANCELLED')?.truck || 
-          l.applications?.find((app: any) => app.truck && app.status === 'ACCEPTED')?.truck;
+        const driver = (l.driver && belongsToMe(l.carrierId) ? l.driver : undefined) ||
+          l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.driver ||
+          l.applications?.find((app: any) => app.driver && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.driver;
+
+        const truck = (l.truck && belongsToMe(l.carrierId) ? l.truck : undefined) ||
+          l.loads?.find((load: any) => load.truck && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.truck ||
+          l.applications?.find((app: any) => app.truck && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.truck;
 
         if (driver || truck) {
           return (

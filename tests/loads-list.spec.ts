@@ -172,4 +172,87 @@ test.describe("Cargas y Viajes — listado", () => {
     await expect(page.getByRole("columnheader", { name: "Cereal" })).toBeVisible();
     await expect(page.getByText("Trigo")).toBeVisible();
   });
+
+  test("un transportista no ve la identidad de otros transportistas en 'Disponibles'", async ({ page }) => {
+    // Confirmado contra el backend real: GET /trips?status=ACTIVE devuelve
+    // applications[]/loads[] de TODOS los transportistas, no solo del que
+    // consulta. Hasta que backend lo filtre, el frontend nunca debe mostrar
+    // la identidad de un transportista ajeno en el listado de Disponibles.
+    await loginAs(page, "CARRIER", { carrierId: 1 });
+    await page.route("**/api/trips*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 50,
+            status: "ACTIVE",
+            origin: "planta cofagu",
+            destination: "britos",
+            maxTrucks: 5,
+            applications: [
+              {
+                id: 1,
+                status: "ACCEPTED",
+                carrierId: 3, // otro transportista, no el que consulta (carrierId 1)
+                carrier: { name: "tommasi nicolas" },
+                driver: { name: "Rios" },
+                truck: { plate: "ABC 300" },
+              },
+            ],
+            loads: [
+              {
+                id: 1,
+                status: "COMPLETED",
+                carrierId: 3,
+                carrier: { name: "tommasi nicolas" },
+                driver: { name: "Rios" },
+                truck: { plate: "ABC 300" },
+              },
+            ],
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    await expect(page.getByText("planta cofagu")).toBeVisible();
+    await expect(page.getByText("tommasi nicolas")).toHaveCount(0);
+    await expect(page.getByText("Rios")).toHaveCount(0);
+    await expect(page.getByText("ABC 300")).toHaveCount(0);
+    await expect(page.getByText("Sin Asignar")).toBeVisible();
+  });
+
+  test("sí ve su propia identidad cuando el camión asignado es suyo", async ({ page }) => {
+    await loginAs(page, "CARRIER", { carrierId: 1 });
+    await page.route("**/api/trips*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 50,
+            status: "ACTIVE",
+            origin: "planta cofagu",
+            destination: "britos",
+            maxTrucks: 5,
+            applications: [
+              {
+                id: 1,
+                status: "ACCEPTED",
+                carrierId: 1, // el mismo transportista que consulta
+                carrier: { name: "Mi Empresa" },
+                driver: { name: "Juan Perez" },
+                truck: { plate: "AB123CD" },
+              },
+            ],
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    await expect(page.getByText("Mi Empresa")).toBeVisible();
+    await expect(page.getByText("Juan Perez")).toBeVisible();
+  });
 });
