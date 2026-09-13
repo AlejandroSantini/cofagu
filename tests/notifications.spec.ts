@@ -58,4 +58,38 @@ test.describe("Notificaciones — tipos nuevos", () => {
     await expect(item).toBeVisible();
     await expect(item.locator("svg.text-green-500")).toBeVisible();
   });
+
+  /**
+   * Confirmado contra el backend real: al rechazar un camión en la playa
+   * (origen, por no llegar a horario), el tipo de notificación es
+   * TRIP_REJECTED. El texto del mensaje hoy dice mal "rechazado en
+   * destino" (pendiente de que backend lo corrija) y el transportista no
+   * recibe ninguna notificación — ambos son bugs de backend, no de acá.
+   * Este test solo cubre que el ícono ya está listo para ese tipo.
+   */
+  test("TRIP_REJECTED se muestra con ícono de rechazo", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/notifications", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: "n3",
+            userId: "1",
+            type: "TRIP_REJECTED",
+            title: "🚨 Viaje Rechazado",
+            message: "El camión AB123CD (Chofer: Alejandro Santini) ha sido reportado como rechazado en destino.",
+            read: false,
+            createdAt: new Date().toISOString(),
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/notifications");
+
+    const item = page.locator("li", { hasText: "Viaje Rechazado" });
+    await expect(item).toBeVisible();
+    await expect(item.locator("svg.text-rose-500")).toBeVisible();
+  });
 });
