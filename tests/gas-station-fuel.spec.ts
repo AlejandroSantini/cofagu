@@ -69,21 +69,23 @@ test.describe("GAS_STATION · control de combustible", () => {
     expect(tripsCalled, "La pantalla de combustible no debe depender de /trips").toBe(false);
   });
 
-  test("al tocar 'No cargó' se envía fuelConsumption: 0 y el registro desaparece (aunque el backend no lo persista)", async ({
-    page,
-  }) => {
+  test("al tocar 'No cargó' se envía fuelConsumption: 0 y el registro desaparece", async ({ page }) => {
     await loginAs(page, "GAS_STATION");
 
-    // El backend real hoy acepta el PUT (200) pero NO persiste
-    // fuelConsumption — el refetch sigue trayendo el mismo registro. El
-    // frontend lo tiene que sacar de la lista igual, localmente.
-    await page.route("**/api/loads?status=ASSIGNED*", (r) => fulfill(r, apiOk([ASSIGNED_LOAD])));
+    // Confirmado contra el backend real: el PUT persiste fuelConsumption
+    // de verdad. El mock simula esa persistencia devolviendo el registro
+    // actualizado en el refetch posterior al PUT.
+    let fuelConsumption: number | null = null;
+    await page.route("**/api/loads?status=ASSIGNED*", (r) =>
+      fulfill(r, apiOk([{ ...ASSIGNED_LOAD, fuelConsumption }])),
+    );
 
     let putBody: unknown = null;
     await page.route("**/api/loads/105", (route) => {
       if (route.request().method() !== "PUT") return route.fallback();
       putBody = JSON.parse(route.request().postData() || "{}");
-      return fulfill(route, apiOk({ ...ASSIGNED_LOAD, fuelConsumption: null }));
+      fuelConsumption = 0;
+      return fulfill(route, apiOk({ ...ASSIGNED_LOAD, fuelConsumption }));
     });
 
     await page.goto("/loads");
@@ -96,15 +98,19 @@ test.describe("GAS_STATION · control de combustible", () => {
     await expect(page.getByText("AB123CD")).toHaveCount(0);
   });
 
-  test("al tocar 'Cargó' pide los litros y los envía en el PUT", async ({ page }) => {
+  test("al tocar 'Cargó' pide los litros, los envía en el PUT y el registro desaparece", async ({ page }) => {
     await loginAs(page, "GAS_STATION");
-    await page.route("**/api/loads?status=ASSIGNED*", (r) => fulfill(r, apiOk([ASSIGNED_LOAD])));
+    let fuelConsumption: number | null = null;
+    await page.route("**/api/loads?status=ASSIGNED*", (r) =>
+      fulfill(r, apiOk([{ ...ASSIGNED_LOAD, fuelConsumption }])),
+    );
 
     let putBody: unknown = null;
     await page.route("**/api/loads/105", (route) => {
       if (route.request().method() !== "PUT") return route.fallback();
       putBody = JSON.parse(route.request().postData() || "{}");
-      return fulfill(route, apiOk({ ...ASSIGNED_LOAD, fuelConsumption: null }));
+      fuelConsumption = 150;
+      return fulfill(route, apiOk({ ...ASSIGNED_LOAD, fuelConsumption }));
     });
 
     await page.goto("/loads");

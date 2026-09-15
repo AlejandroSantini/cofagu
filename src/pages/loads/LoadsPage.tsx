@@ -525,22 +525,14 @@ export const LoadsPage: React.FC = () => {
 
   const [plateSearch, setPlateSearch] = useState('');
 
-  // El backend hoy acepta el PUT de "Cargó"/"No cargó" (200) pero todavía
-  // no persiste fuelConsumption (confirmado contra el backend real) — un
-  // refetch (manual o el auto-refresh periódico) trae de nuevo el registro
-  // como si nada. Hasta que lo persista, recordamos acá qué ids ya se
-  // marcaron en esta sesión y los excluimos siempre, sin importar lo que
-  // diga el próximo fetch.
-  const [locallyHandledFuelIds, setLocallyHandledFuelIds] = useState<Set<number | string>>(new Set());
-
   // /loads?status=ASSIGNED ya trae un registro por camión asignado, sin
   // depender de si el viaje padre se llenó o no. Filtramos los que ya
-  // tengan fuelConsumption cargado (por si el backend llega a persistirlo)
-  // y los que se marcaron localmente en esta sesión.
+  // tengan fuelConsumption cargado (confirmado contra el backend real:
+  // "Cargó"/"No cargó" persiste bien, así que alcanza con este chequeo).
   const assignedFuelLoads = React.useMemo(() => {
     if (!isPlayero) return loads;
-    return loads.filter((l: any) => l.fuelConsumption == null && !locallyHandledFuelIds.has(l.id));
-  }, [loads, isPlayero, locallyHandledFuelIds]);
+    return loads.filter((l: any) => l.fuelConsumption == null);
+  }, [loads, isPlayero]);
 
   // Loads filtered for playero fuel search (search input only)
   const fuelFilteredLoads = isPlayero
@@ -572,7 +564,6 @@ export const LoadsPage: React.FC = () => {
         );
         setFuelModalLoad(null);
         setFuelLitersInput('');
-        setLocallyHandledFuelIds((prev) => new Set(prev).add(id));
         triggerRefresh();
       }
     } catch (err) {
