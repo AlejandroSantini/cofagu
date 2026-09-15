@@ -47,4 +47,33 @@ test.describe("Panel de Control — KPIs", () => {
     await page.getByRole("button", { name: "Publicar Nueva Carga" }).click();
     await expect(page).toHaveURL(/\/loads$/);
   });
+
+  /**
+   * Bug reportado: clickear una fila de "Cargas Recientes" siempre navegaba
+   * al listado genérico /loads, nunca a esa carga puntual — si la carga no
+   * estaba en la pestaña "Disponibles" (ej. ya Completada), quedaba como
+   * si "no se encontrara".
+   */
+  test("clickear una carga reciente navega a SU detalle, no al listado genérico", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    // id=5 es un sub-load individual (tripId=99): el detalle correcto es
+    // el del viaje padre, no el id del sub-load.
+    await page.route("**/api/loads", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          { id: 5, tripId: 99, status: "COMPLETED", origin: "Campo Reciente", destination: "Planta", rate: 1000, contingencies: [] },
+        ]),
+      ),
+    );
+    await page.route("**/api/trips/99", (r) =>
+      fulfill(r, apiOk({ id: 99, status: "COMPLETED", origin: "Campo Reciente", destination: "Planta", rate: 1000, applications: [] })),
+    );
+
+    await page.goto("/");
+    await page.getByText("Campo Reciente").click();
+
+    await expect(page).toHaveURL(/\/loads\/99\?type=trip/);
+    await expect(page.getByRole("heading", { name: "Detalle de Carga" })).toBeVisible();
+  });
 });

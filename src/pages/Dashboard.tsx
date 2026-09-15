@@ -242,7 +242,13 @@ export const Dashboard: React.FC = () => {
           columns={columns}
           data={recentLoads}
           isLoading={false}
-          onRowClick={() => navigate('/loads')}
+          onRowClick={(l) => {
+            // Navegar a la carga puntual, no al listado genérico — si no,
+            // una carga que ya no está en "Disponibles" (Asignada,
+            // Completada, etc.) parece "no encontrarse".
+            const targetId = l.tripId || l.id;
+            navigate(`/loads/${targetId}?type=trip`);
+          }}
         />
       </div>
     </div>
