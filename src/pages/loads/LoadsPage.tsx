@@ -72,10 +72,20 @@ export const LoadsPage: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const loadParams: { status?: string } = { status: activeTab };
-        const res = activeTab === 'ACTIVE' 
-          ? await loadService.getTrips(loadParams) 
-          : await loadService.getLoads(loadParams);
+        // Combustible: se arma con /loads?status=ASSIGNED (un registro por
+        // camión ya asignado), NO con /trips?status=ACTIVE. Un viaje
+        // desaparece de "ACTIVE" apenas se llenan todos sus cupos, y con
+        // eso el camión ya asignado dejaba de verse acá aunque siguiera
+        // esperando cargar combustible (confirmado contra el backend real).
+        // Además, /loads?status=ASSIGNED ya excluye los que despacharon
+        // (IN_PROGRESS/COMPLETED) — el combustible se carga antes que el
+        // cereal, así que un camión que ya salió no debe seguir en la cola.
+        const loadParams: { status?: string } = { status: isPlayero ? 'ASSIGNED' : activeTab };
+        const res = isPlayero
+          ? await loadService.getLoads(loadParams)
+          : activeTab === 'ACTIVE'
+            ? await loadService.getTrips(loadParams)
+            : await loadService.getLoads(loadParams);
         if (active && res.data && res.data.success !== false) {
           const rawData: Load[] = Array.isArray(res.data) ? res.data : res.data.data;
           // El backend a veces devuelve viajes/cargas CANCELLED o REJECTED
@@ -515,59 +525,25 @@ export const LoadsPage: React.FC = () => {
 
   const [plateSearch, setPlateSearch] = useState('');
 
-  // Flatten trips into individual assigned loads for fuel control
+  // El backend hoy acepta el PUT de "Cargó"/"No cargó" (200) pero todavía
+  // no persiste fuelConsumption (confirmado contra el backend real) — un
+  // refetch (manual o el auto-refresh periódico) trae de nuevo el registro
+  // como si nada. Hasta que lo persista, recordamos acá qué ids ya se
+  // marcaron en esta sesión y los excluimos siempre, sin importar lo que
+  // diga el próximo fetch.
+  const [locallyHandledFuelIds, setLocallyHandledFuelIds] = useState<Set<number | string>>(new Set());
+
+  // /loads?status=ASSIGNED ya trae un registro por camión asignado, sin
+  // depender de si el viaje padre se llenó o no. Filtramos los que ya
+  // tengan fuelConsumption cargado (por si el backend llega a persistirlo)
+  // y los que se marcaron localmente en esta sesión.
   const assignedFuelLoads = React.useMemo(() => {
     if (!isPlayero) return loads;
-    const result: any[] = [];
-    // Un registro deja de necesitar carga de combustible (y por lo tanto
-    // desaparece de esta lista) si el viaje se canceló, se completó, o ya
-    // se registró si cargó o no combustible (fuelConsumption != null).
-    const needsFuelControl = (item: any) =>
-      item.status !== 'CANCELLED' && item.status !== 'COMPLETED' &&
-      item.tripStatus !== 'CANCELLED' && item.tripStatus !== 'COMPLETED' &&
-      item.fuelConsumption == null;
-
-    loads.forEach((trip: any) => {
-      const activeLoads = trip.loads?.filter((l: any) => needsFuelControl(l) && (l.carrier || l.truck || l.driver)) || [];
-      const activeApps = trip.applications?.filter((a: any) => a.status === 'ACCEPTED' && needsFuelControl(a) && (a.carrier || a.truck || a.driver)) || [];
-
-      if (activeLoads.length > 0) {
-        activeLoads.forEach((loadItem: any) => {
-          result.push({
-            ...trip,
-            ...loadItem,
-            id: loadItem.id || trip.id,
-            carrier: loadItem.carrier || trip.carrier,
-            driver: loadItem.driver || trip.driver,
-            truck: loadItem.truck || trip.truck,
-            loadingTimeStart: trip.loadingTimeStart || loadItem.loadingTimeStart,
-            loadingTimeEnd: trip.loadingTimeEnd || loadItem.loadingTimeEnd,
-            cereal: trip.cereal || loadItem.cereal,
-          });
-        });
-      } else if (activeApps.length > 0) {
-        activeApps.forEach((appItem: any) => {
-          result.push({
-            ...trip,
-            ...appItem,
-            id: appItem.id || trip.id,
-            carrier: appItem.carrier || trip.carrier,
-            driver: appItem.driver || trip.driver,
-            truck: appItem.truck || trip.truck,
-            loadingTimeStart: trip.loadingTimeStart || appItem.loadingTimeStart,
-            loadingTimeEnd: trip.loadingTimeEnd || appItem.loadingTimeEnd,
-            cereal: trip.cereal || appItem.cereal,
-          });
-        });
-      } else if (needsFuelControl(trip) && (trip.carrier || trip.truck || trip.driver)) {
-        result.push(trip);
-      }
-    });
-    return result;
-  }, [loads, isPlayero]);
+    return loads.filter((l: any) => l.fuelConsumption == null && !locallyHandledFuelIds.has(l.id));
+  }, [loads, isPlayero, locallyHandledFuelIds]);
 
   // Loads filtered for playero fuel search (search input only)
-  const fuelFilteredLoads = isPlayero 
+  const fuelFilteredLoads = isPlayero
     ? assignedFuelLoads.filter(l => {
         if (!plateSearch) return true;
         const q = plateSearch.toLowerCase().trim();
@@ -596,6 +572,7 @@ export const LoadsPage: React.FC = () => {
         );
         setFuelModalLoad(null);
         setFuelLitersInput('');
+        setLocallyHandledFuelIds((prev) => new Set(prev).add(id));
         triggerRefresh();
       }
     } catch (err) {
@@ -879,7 +856,7 @@ export const LoadsPage: React.FC = () => {
                     <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">
                       {loadItem.loadingTimeStart && loadItem.loadingTimeEnd
                         ? `${loadItem.loadingTimeStart} - ${loadItem.loadingTimeEnd} hs`
-                        : '08:00 - 12:00'}
+                        : 'No especificado'}
                     </span>
                   )
                 },
@@ -887,20 +864,9 @@ export const LoadsPage: React.FC = () => {
                   header: 'Cereal',
                   render: (loadItem: Load) => (
                     <span className="font-medium text-slate-600 dark:text-zinc-400">
-                      {loadItem.cereal || 'Soja'}
+                      {loadItem.cereal || 'N/D'}
                     </span>
                   )
-                },
-                {
-                  header: 'Tarifa',
-                  render: (loadItem: any) => {
-                    const rateValue = Number(loadItem.resolvedRate ?? loadItem.rate);
-                    return (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs">
-                        {!isNaN(rateValue) && rateValue > 0 ? `$${rateValue.toLocaleString('es-AR')}` : 'S/I'}
-                      </span>
-                    );
-                  }
                 },
                 {
                   header: 'Acciones',
