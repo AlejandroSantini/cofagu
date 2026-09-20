@@ -102,9 +102,13 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         const belongsToMe = (entityCarrierId: number | undefined) =>
           !onlyMine || myCarrierId == null || entityCarrierId === myCarrierId;
 
+        // Un cupo ya COMPLETED no es "el transportista" de esta fila: la fila
+        // representa el cupo que sigue libre. Mostrar ahí al que ya terminó
+        // confunde (parece que el cupo libre fuera suyo, cuando en realidad
+        // ya cumplió el suyo y queda otro sin nadie).
         const carrier = (l.carrier && belongsToMe(l.carrierId) ? l.carrier : undefined) ||
-          l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.carrier ||
-          l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.carrier;
+          l.loads?.find((load: any) => load.carrier && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && belongsToMe(load.carrierId))?.carrier ||
+          l.applications?.find((app: any) => app.carrier && app.status === 'ACCEPTED' && app.tripStatus !== 'COMPLETED' && belongsToMe(app.carrierId))?.carrier;
 
         if (carrier?.name) {
           return <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-sm">{carrier.name}</span>;
@@ -120,13 +124,15 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         const belongsToMe = (entityCarrierId: number | undefined) =>
           !onlyMine || myCarrierId == null || entityCarrierId === myCarrierId;
 
+        // Mismo criterio que Transportista: un cupo COMPLETED no representa
+        // el cupo libre de esta fila.
         const driver = (l.driver && belongsToMe(l.carrierId) ? l.driver : undefined) ||
-          l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.driver ||
-          l.applications?.find((app: any) => app.driver && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.driver;
+          l.loads?.find((load: any) => load.driver && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && belongsToMe(load.carrierId))?.driver ||
+          l.applications?.find((app: any) => app.driver && app.status === 'ACCEPTED' && app.tripStatus !== 'COMPLETED' && belongsToMe(app.carrierId))?.driver;
 
         const truck = (l.truck && belongsToMe(l.carrierId) ? l.truck : undefined) ||
-          l.loads?.find((load: any) => load.truck && load.status !== 'CANCELLED' && belongsToMe(load.carrierId))?.truck ||
-          l.applications?.find((app: any) => app.truck && app.status === 'ACCEPTED' && belongsToMe(app.carrierId))?.truck;
+          l.loads?.find((load: any) => load.truck && load.status !== 'CANCELLED' && load.status !== 'COMPLETED' && belongsToMe(load.carrierId))?.truck ||
+          l.applications?.find((app: any) => app.truck && app.status === 'ACCEPTED' && app.tripStatus !== 'COMPLETED' && belongsToMe(app.carrierId))?.truck;
 
         if (driver || truck) {
           return (

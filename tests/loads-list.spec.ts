@@ -317,4 +317,58 @@ test.describe("Cargas y Viajes — listado", () => {
     await expect(page.getByText("Mi Empresa")).toBeVisible();
     await expect(page.getByText("Juan Perez")).toBeVisible();
   });
+
+  test("un cupo ya COMPLETED no se muestra como 'el transportista' del cupo libre restante", async ({ page }) => {
+    // Reportado desde un screenshot real: un viaje con 2 cupos, uno ya
+    // completado por un camión, seguía mostrando ese mismo camión en
+    // Transportista/Chofer aunque la fila representa el cupo que sigue
+    // libre — parecía que el cupo disponible fuera de ese transportista,
+    // cuando en realidad ya cumplió el suyo.
+    await loginAs(page, "CARRIER", { carrierId: 1 });
+    await page.route("**/api/trips*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 175,
+            status: "ACTIVE",
+            origin: "E2E-Origen",
+            destination: "E2E-Destino",
+            maxTrucks: 2,
+            cuposPendientes: 1,
+            applications: [
+              {
+                id: 1,
+                status: "ACCEPTED",
+                tripStatus: "COMPLETED",
+                carrierId: 1, // el mismo transportista que consulta, pero YA completó
+                carrier: { name: "Transportes Rápidos S.A." },
+                driver: { name: "Alejandro Santini" },
+                truck: { chassisPlate: "AB123CD" },
+              },
+            ],
+            loads: [
+              {
+                id: 300,
+                status: "COMPLETED",
+                carrierId: 1,
+                carrier: { name: "Transportes Rápidos S.A." },
+                driver: { name: "Alejandro Santini" },
+                truck: { chassisPlate: "AB123CD" },
+              },
+            ],
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    await expect(page.getByText("E2E-Origen")).toBeVisible();
+    await expect(page.getByText("Transportes Rápidos S.A.")).toHaveCount(0);
+    await expect(page.getByText("Alejandro Santini")).toHaveCount(0);
+    await expect(page.getByText("AB123CD")).toHaveCount(0);
+    await expect(page.getByText("Sin Asignar")).toBeVisible();
+    await expect(page.getByText("N/A")).toBeVisible();
+  });
 });
