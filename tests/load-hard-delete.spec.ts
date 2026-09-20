@@ -114,4 +114,50 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
 
     await expect.poll(() => deleteCalled).toBe(true);
   });
+
+  test("viaje con un camión ya EN CURSO: cancelar no lo borra ni lo afecta", async ({ page }) => {
+    // Reportado: "¿y si esa publicación no completa se cancela y ya salieron
+    // algunos trips?" — antes, si ningún cupo estaba COMPLETED todavía, el
+    // botón borraba el viaje entero vía DELETE /trips/:id, afectando también
+    // a los camiones IN_PROGRESS (ya en ruta con carga). Ahora, cualquier
+    // sub-load que no esté CANCELLED (asignado, demorado, en curso o
+    // completado) bloquea el borrado del viaje completo.
+    await loginAs(page, "ADMIN");
+    await mockGet(page, "**/api/trips/5", {
+      ...baseTrip,
+      id: 5,
+      status: "ACTIVE",
+      maxTrucks: 2,
+      loads: [
+        { id: 500, status: "IN_PROGRESS", carrierId: 10, truckId: 5 },
+      ],
+    });
+    let deleteTripCalled = false;
+    let deleteLoadCalled = false;
+    await page.route("**/api/trips/5", (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      deleteTripCalled = true;
+      return fulfill(route, apiOk(null));
+    });
+    await page.route("**/api/loads/500", (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      deleteLoadCalled = true;
+      return fulfill(route, apiOk(null));
+    });
+
+    await page.goto("/loads/5?type=trip");
+
+    await page.getByRole("button", { name: "Cancelar Viaje Completo" }).click();
+    await page.getByRole("button", { name: "Cancelar Carga" }).click();
+
+    await expect(
+      page.getByText(
+        "Este viaje ya tiene camiones asignados, en curso o completados — no se puede cancelar la publicación completa sin afectarlos.",
+      ),
+    ).toBeVisible();
+
+    // Ni el viaje ni el camión en curso se tocaron.
+    await expect.poll(() => deleteTripCalled).toBe(false);
+    await expect.poll(() => deleteLoadCalled).toBe(false);
+  });
 });
