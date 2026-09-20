@@ -243,6 +243,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     load.status === "COMPLETED"
       ? 1
       : 0);
+  // Cualquier sub-load no CANCELLED representa un camión ya comprometido
+  // (asignado, demorado, en curso o completado) — cancelar el viaje
+  // completo lo afectaría.
+  const hasCommittedSubloads =
+    load.loads !== undefined && load.loads.some((l: any) => l.status !== "CANCELLED");
   const maxCapacity = load.maxTrucks || 1;
 
 
@@ -1101,6 +1106,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   variant="danger"
                   icon={Trash2}
                   className="w-full sm:w-auto"
+                  disabled={hasCommittedSubloads}
+                  title={
+                    hasCommittedSubloads
+                      ? "Ya hay camiones asignados, en curso o completados — cancelá esa postulación puntual desde su tarjeta, o usá \"Cerrar Cupos Restantes\" para dejar de aceptar nuevos."
+                      : undefined
+                  }
                   onClick={() => onCancelLoad(load.id)}
                 >
                   {load.loads !== undefined ? "Cancelar Viaje Completo" : "Cancelar Carga"}
@@ -1110,7 +1121,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               load.loads !== undefined &&
               load.status !== "CANCELLED" &&
               load.status !== "COMPLETED" &&
-              load.loads.some((l: any) => l.status !== "CANCELLED") &&
+              hasCommittedSubloads &&
               (load.maxTrucks || 0) > acceptedCount && (
                 <Button
                   variant="outline"

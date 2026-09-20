@@ -115,13 +115,16 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
     await expect.poll(() => deleteCalled).toBe(true);
   });
 
-  test("viaje con un camión ya EN CURSO: cancelar no lo borra ni lo afecta", async ({ page }) => {
+  test("viaje con un camión ya EN CURSO: 'Cancelar Viaje Completo' aparece deshabilitado", async ({
+    page,
+  }) => {
     // Reportado: "¿y si esa publicación no completa se cancela y ya salieron
     // algunos trips?" — antes, si ningún cupo estaba COMPLETED todavía, el
     // botón borraba el viaje entero vía DELETE /trips/:id, afectando también
     // a los camiones IN_PROGRESS (ya en ruta con carga). Ahora, cualquier
     // sub-load que no esté CANCELLED (asignado, demorado, en curso o
-    // completado) bloquea el borrado del viaje completo.
+    // completado) deja el botón deshabilitado directamente — ni siquiera se
+    // puede intentar. Ver también "Cerrar Cupos Restantes" más abajo.
     await loginAs(page, "ADMIN");
     await mockGet(page, "**/api/trips/5", {
       ...baseTrip,
@@ -147,14 +150,12 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
 
     await page.goto("/loads/5?type=trip");
 
-    await page.getByRole("button", { name: "Cancelar Viaje Completo" }).click();
-    await page.getByRole("button", { name: "Cancelar Carga" }).click();
-
-    await expect(
-      page.getByText(
-        "Este viaje ya tiene camiones asignados, en curso o completados — no se puede cancelar la publicación completa sin afectarlos.",
-      ),
-    ).toBeVisible();
+    const cancelBtn = page.getByRole("button", { name: "Cancelar Viaje Completo" });
+    await expect(cancelBtn).toBeDisabled();
+    await expect(cancelBtn).toHaveAttribute(
+      "title",
+      /Ya hay camiones asignados, en curso o completados/,
+    );
 
     // Ni el viaje ni el camión en curso se tocaron.
     await expect.poll(() => deleteTripCalled).toBe(false);
