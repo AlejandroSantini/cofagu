@@ -73,7 +73,7 @@ test.describe('Volver a postularse tras completar un viaje (mismo camión)', () 
             loadingTimeEnd: '12:00',
             cereal: 'Soja',
             maxTrucks: 2,
-            notes: `${PREFIX}reaplicar tras completar (borrar con npm run test:e2e:cleanup)`,
+            notes: `${PREFIX}reaplicar tras completar (borrar con pnpm test:e2e:cleanup)`,
             targetGroups: general ? [{ groupId: general.id, rate: 1000 }] : undefined,
           }),
         }),

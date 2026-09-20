@@ -201,7 +201,7 @@ instantáneas (`EntityRedirects`).
 2. ¿Cada clase de color tiene su par `dark:`?
 3. ¿Usa los tokens de escala (`emerald-600`) y no hex sueltos?
 4. ¿Radios y sombras siguen la tabla de "Forma y profundidad"?
-5. ¿Sin `enum` / sin imports o vars sin usar? (`npm run build` limpio)
+5. ¿Sin `enum` / sin imports o vars sin usar? (`pnpm build` limpio)
 6. ¿Textos en español (es-AR)?
 7. ¿Los estados de carga son skeletons con la forma del contenido (no spinner
    centrado ni "Cargando...")? ¿El re-fetch sobre datos ya visibles NO parpadea

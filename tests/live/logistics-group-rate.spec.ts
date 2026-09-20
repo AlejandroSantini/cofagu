@@ -73,7 +73,7 @@ test.describe('Bug de tarifa por grupo (LOGISTICS)', () => {
           loadingTimeEnd: '12:00',
           cereal: 'Soja',
           maxTrucks: 1,
-          notes: `${PREFIX}viaje de prueba de tarifa por grupo (borrar con npm run test:e2e:cleanup)`,
+          notes: `${PREFIX}viaje de prueba de tarifa por grupo (borrar con pnpm test:e2e:cleanup)`,
           targetGroups: [
             { groupId: general.id, rate: 20000 },
             { groupId: newGroup.id, rate: 10000 },

@@ -9,13 +9,13 @@ en Railway. Web app + PWA con push notifications. Toda la UI está en **español
 
 | Comando | Qué hace |
 |---|---|
-| `npm run dev` | Vite dev server en `http://localhost:3000` (`strictPort`, no cambia de puerto) |
-| `npm run build` | `tsc -b && vite build` — el typecheck corre primero y **frena el build** ante cualquier error |
-| `npm run lint` | ESLint sobre todo el repo |
-| `npm run preview` | Sirve el `dist/` ya compilado |
-| `npx playwright test` | Tests E2E de `tests/` (levanta su propio Vite en el puerto 3001) |
+| `pnpm dev` | Vite dev server en `http://localhost:3000` (`strictPort`, no cambia de puerto) |
+| `pnpm build` | `tsc -b && vite build` — el typecheck corre primero y **frena el build** ante cualquier error |
+| `pnpm lint` | ESLint sobre todo el repo |
+| `pnpm preview` | Sirve el `dist/` ya compilado |
+| `pnpm exec playwright test` | Tests E2E de `tests/` (levanta su propio Vite en el puerto 3001) |
 
-Antes de dar por terminado cualquier cambio: **`npm run build` tiene que pasar limpio.**
+Antes de dar por terminado cualquier cambio: **`pnpm build` tiene que pasar limpio.**
 
 ## Tests E2E (obligatorio)
 
@@ -23,9 +23,9 @@ Antes de dar por terminado cualquier cambio: **`npm run build` tiene que pasar l
 (Playwright, mockeando `**/api/**` con los helpers de `tests/utils.ts` — no
 tocar el backend real desde estos tests) que la cubra.** Un cambio no está
 terminado hasta que:
-1. El test nuevo está escrito y **corrido localmente** (`npx playwright test <archivo>`)
+1. El test nuevo está escrito y **corrido localmente** (`pnpm exec playwright test <archivo>`)
    confirmando que pasa contra el código nuevo.
-2. `npx playwright test` (suite completa, sin `tests/live/`) sigue pasando —
+2. `pnpm exec playwright test` (suite completa, sin `tests/live/`) sigue pasando —
    sin regresiones.
 
 Si al validar un cambio algo no funciona como se espera y la causa parece
@@ -35,7 +35,7 @@ dejá un mensaje claro (qué endpoint, qué se esperaba recibir/filtrar, qué se
 recibió en realidad) para pasarle al equipo de backend.
 
 `tests/live/` es la excepción: corre contra el backend real (Railway) con
-`npm run test:live` y no se ejecuta en cada cambio; no es el lugar para los
+`pnpm test:live` y no se ejecuta en cada cambio; no es el lugar para los
 tests de cobertura de una feature nueva salvo que se pida explícitamente.
 
 ## Stack

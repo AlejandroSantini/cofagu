@@ -4,7 +4,7 @@ Estos specs **no mockean** `/api`: pegan al backend de Railway con cuentas
 reales y crean/mueven viajes de verdad. Sirven para verificar el ciclo
 completo de un viaje tocando la función de cada rol.
 
-La suite mockeada de siempre (`tests/*.spec.ts`, `npm test`) no se toca.
+La suite mockeada de siempre (`tests/*.spec.ts`, `pnpm test`) no se toca.
 
 ## Puesta a punto (una vez)
 
@@ -30,13 +30,13 @@ mensaje que lo explica.
 ## Correr
 
 ```bash
-npm run test:live            # toda la suite (headless, workers=1, serial)
-npm run test:live -- --ui    # modo UI para ver el flujo paso a paso
-npm run test:live -- carrier # solo los specs de un rol
-npm run test:e2e:cleanup     # borra los viajes E2E- que hayan quedado
+pnpm test:live            # toda la suite (headless, workers=1, serial)
+pnpm test:live -- --ui    # modo UI para ver el flujo paso a paso
+pnpm test:live -- carrier # solo los specs de un rol
+pnpm test:e2e:cleanup     # borra los viajes E2E- que hayan quedado
 ```
 
-Reporte HTML: `playwright-report-live/` (`npx playwright show-report playwright-report-live`).
+Reporte HTML: `playwright-report-live/` (`pnpm exec playwright show-report playwright-report-live`).
 
 ## Qué prueba cada archivo
 
@@ -54,7 +54,7 @@ Reporte HTML: `playwright-report-live/` (`npx playwright show-report playwright-
 
 Cada spec siembra su propio viaje por API (`seedTrip`) hasta el estado que
 necesita: no dependen del orden entre archivos. La limpieza es aparte
-(`npm run test:e2e:cleanup`), no la hace cada test.
+(`pnpm test:e2e:cleanup`), no la hace cada test.
 
 ## Piezas
 

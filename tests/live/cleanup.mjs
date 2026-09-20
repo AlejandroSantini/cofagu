@@ -3,7 +3,7 @@
  * Borra del backend real todos los viajes de prueba (prefijo E2E-) que hayan
  * quedado de la suite `tests/live/`.
  *
- *   npm run test:e2e:cleanup
+ *   pnpm test:e2e:cleanup
  *
  * Lee `.env.e2e` (o process.env). Usa la cuenta ADMIN. No toca nada que no
  * empiece con el prefijo en origen / destino / observaciones.

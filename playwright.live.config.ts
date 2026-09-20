@@ -6,9 +6,9 @@ import { API_URL } from './tests/live/env';
  * Suite E2E contra el backend REAL (Railway). NO intercepta `/api`.
  * Config aparte de `playwright.config.ts` (que es la suite mockeada).
  *
- *   npm run test:live            # corre todo
- *   npm run test:live -- --ui    # modo UI para ver el flujo
- *   npm run test:e2e:cleanup     # borra los viajes E2E- que hayan quedado
+ *   pnpm test:live            # corre todo
+ *   pnpm test:live -- --ui    # modo UI para ver el flujo
+ *   pnpm test:e2e:cleanup     # borra los viajes E2E- que hayan quedado
  */
 export default defineConfig({
   testDir: './tests/live',
@@ -31,7 +31,7 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: 'npx vite --port 3002',
+    command: 'pnpm exec vite --port 3002',
     url: 'http://localhost:3002',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

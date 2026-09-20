@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   // La suite contra el backend real vive en tests/live/ y corre con
-  // playwright.live.config.ts (npm run test:live). Acá se ignora.
+  // playwright.live.config.ts (pnpm test:live). Acá se ignora.
   testIgnore: ['live/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -26,7 +26,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: 'npx vite --port 3001',
+    command: 'pnpm exec vite --port 3001',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     env: {
