@@ -40,7 +40,7 @@ test.describe("Personal / Usuarios — modal de credenciales al crear", () => {
     await page.getByRole("button", { name: "Crear Cuenta" }).click();
 
     await expect(page.getByText("Usuario creado con éxito")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "🔑 Credenciales de Acceso Creadas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Credenciales de Acceso Creadas" })).toBeVisible();
     await expect(page.getByText("logistica@cofagu.com")).toBeVisible();
     await expect(page.getByText("clave-secreta-123")).toBeVisible();
 
@@ -69,7 +69,7 @@ test.describe("Personal / Usuarios — modal de credenciales al crear", () => {
 
     await expect(page.getByText("Usuario actualizado")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "🔑 Credenciales de Acceso Creadas" }),
+      page.getByRole("heading", { name: "Credenciales de Acceso Creadas" }),
     ).toHaveCount(0);
   });
 });

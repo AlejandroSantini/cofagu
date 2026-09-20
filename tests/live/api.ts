@@ -171,6 +171,10 @@ export class ApiClient {
     return this.json('delete', `/trips/${id}`);
   }
 
+  deleteUser(id: number | string) {
+    return this.json('delete', `/users/${id}`);
+  }
+
   getLoad(id: number | string) {
     return this.json('get', `/loads/${id}`);
   }

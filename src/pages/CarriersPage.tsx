@@ -246,7 +246,7 @@ export const CarriersPage: React.FC = () => {
       <Modal
         isOpen={credentialsModal !== null}
         onClose={() => setCredentialsModal(null)}
-        title="🔑 Credenciales de Acceso Creadas"
+        title="Credenciales de Acceso Creadas"
         confirmText="Copiar y Cerrar"
         onConfirm={() => { handleCopyCredentials(); setCredentialsModal(null); }}
       >
