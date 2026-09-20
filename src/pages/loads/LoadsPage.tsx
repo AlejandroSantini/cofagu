@@ -66,10 +66,22 @@ export const LoadsPage: React.FC = () => {
   // Auto-refresh using global configuration interval
   useAutoRefresh(triggerRefresh);
 
+  // Buscador del Control de Combustible (rol PLAYERO/GAS_STATION): filtra
+  // server-side (GET /loads?search=...), no en el cliente. Debounce de
+  // 300ms antes de disparar el fetch.
+  const [plateSearch, setPlateSearch] = useState('');
+  const [debouncedPlateSearch, setDebouncedPlateSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPlateSearch(plateSearch), 300);
+    return () => clearTimeout(timer);
+  }, [plateSearch]);
+
   useEffect(() => {
     let active = true;
     const fetchLoads = async () => {
-      setLoading(true);
+      // En Control de Combustible, si ya hay datos en pantalla (típico de
+      // una búsqueda mientras se escribe), no volver a mostrar el skeleton.
+      if (!(isPlayero && loads.length > 0)) setLoading(true);
       setError('');
       try {
         // Combustible: se arma con /loads?status=ASSIGNED (un registro por
@@ -80,7 +92,10 @@ export const LoadsPage: React.FC = () => {
         // Además, /loads?status=ASSIGNED ya excluye los que despacharon
         // (IN_PROGRESS/COMPLETED) — el combustible se carga antes que el
         // cereal, así que un camión que ya salió no debe seguir en la cola.
-        const loadParams: { status?: string } = { status: isPlayero ? 'ASSIGNED' : activeTab };
+        const loadParams: { status?: string; search?: string } = { status: isPlayero ? 'ASSIGNED' : activeTab };
+        if (isPlayero && debouncedPlateSearch.trim()) {
+          loadParams.search = debouncedPlateSearch.trim();
+        }
         const res = isPlayero
           ? await loadService.getLoads(loadParams)
           : activeTab === 'ACTIVE'
@@ -105,7 +120,7 @@ export const LoadsPage: React.FC = () => {
     };
     fetchLoads();
     return () => { active = false; };
-  }, [activeTab, refreshTrigger, isPlayero]);
+  }, [activeTab, refreshTrigger, isPlayero, debouncedPlateSearch]);
 
 
   useEffect(() => {
@@ -523,30 +538,17 @@ export const LoadsPage: React.FC = () => {
     setActiveTab(tab);
   };
 
-  const [plateSearch, setPlateSearch] = useState('');
-
   // /loads?status=ASSIGNED ya trae un registro por camión asignado, sin
   // depender de si el viaje padre se llenó o no. Filtramos los que ya
   // tengan fuelConsumption cargado (confirmado contra el backend real:
   // "Cargó"/"No cargó" persiste bien, así que alcanza con este chequeo).
+  // La búsqueda por patente/chofer/transportista ya la resuelve el backend
+  // (ver `debouncedPlateSearch` más arriba); acá sólo queda este filtro de
+  // negocio, que no depende de lo que el usuario haya escrito.
   const assignedFuelLoads = React.useMemo(() => {
     if (!isPlayero) return loads;
     return loads.filter((l: any) => l.fuelConsumption == null);
   }, [loads, isPlayero]);
-
-  // Loads filtered for playero fuel search (search input only)
-  const fuelFilteredLoads = isPlayero
-    ? assignedFuelLoads.filter(l => {
-        if (!plateSearch) return true;
-        const q = plateSearch.toLowerCase().trim();
-        const chassis = l.truck?.chassisPlate?.toLowerCase() || '';
-        const trailer = l.truck?.trailerPlate?.toLowerCase() || '';
-        const plate = l.truck?.plate?.toLowerCase() || '';
-        const driverName = l.driver?.name?.toLowerCase() || '';
-        const carrierName = l.carrier?.name?.toLowerCase() || '';
-        return chassis.includes(q) || trailer.includes(q) || plate.includes(q) || driverName.includes(q) || carrierName.includes(q);
-      })
-    : loads;
 
   // --- Combustible: marcar si un camión cargó o no combustible ---
   const [fuelModalLoad, setFuelModalLoad] = useState<{ id: number | string } | null>(null);
@@ -604,6 +606,11 @@ export const LoadsPage: React.FC = () => {
       setSubmitLoading(false);
     }
   };
+
+  const delTargetLoad = (selectedLoad && (selectedLoad.id === delId || String(selectedLoad.id) === String(delId)))
+    ? selectedLoad
+    : loads.find(l => l.id === delId || String(l.id) === String(delId));
+  const isHardDelete = (delTargetLoad?.status as string) === 'CANCELLED' || (delTargetLoad?.status as string) === 'REJECTED';
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -674,10 +681,14 @@ export const LoadsPage: React.FC = () => {
         isOpen={isDelOpen}
         onClose={cancelDelete}
         onConfirm={handleDelete}
-        title="Cancelar Carga"
-        description="¿Estás seguro de que deseas cancelar esta publicación? Se desactivará del listado."
+        title={isHardDelete ? "Eliminar Definitivamente" : "Cancelar Carga"}
+        description={
+          isHardDelete
+            ? "Esta acción es permanente y no se puede deshacer. La publicación va a desaparecer completamente del sistema."
+            : "¿Estás seguro de que deseas cancelar esta publicación? Se desactivará del listado."
+        }
         type="danger"
-        confirmText="Cancelar Carga"
+        confirmText={isHardDelete ? "Confirmar Eliminación" : "Cancelar Carga"}
         isLoading={submitLoading}
       />
 
@@ -891,7 +902,7 @@ export const LoadsPage: React.FC = () => {
                   )
                 }
               ]}
-              data={fuelFilteredLoads}
+              data={assignedFuelLoads}
               isLoading={loading}
               emptyMessage="No se encontraron camiones autorizados para combustible."
             />

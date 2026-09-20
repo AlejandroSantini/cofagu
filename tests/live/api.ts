@@ -170,6 +170,19 @@ export class ApiClient {
   deleteTrip(id: number | string) {
     return this.json('delete', `/trips/${id}`);
   }
+
+  getLoad(id: number | string) {
+    return this.json('get', `/loads/${id}`);
+  }
+
+  patchLoadStatus(id: number | string, status: string) {
+    return this.json('patch', `/loads/${id}/status`, { status });
+  }
+
+  /** loads?status=X — mismo endpoint que usan las pestañas del admin. */
+  getLoadsByStatus(status: string): Promise<any[]> {
+    return this.json('get', `/loads?status=${encodeURIComponent(status)}`);
+  }
 }
 
 /** Datos con los que se hace avanzar un viaje. Se descubren solos del backend. */
@@ -330,7 +343,7 @@ function tripPayload(seed: ResolvedSeed, overrides: Record<string, unknown>) {
     loadingTimeEnd: '23:59',
     cereal: 'Soja',
     maxTrucks: 2,
-    notes: `${PREFIX}viaje automatizado (borrar con npm run test:e2e:cleanup)`,
+    notes: `${PREFIX}viaje automatizado (borrar con pnpm test:e2e:cleanup)`,
     targetGroups: [{ groupId: seed.groupId, rate: seed.groupRate }],
     ...overrides,
   };
@@ -338,7 +351,7 @@ function tripPayload(seed: ResolvedSeed, overrides: Record<string, unknown>) {
 
 /**
  * Siembra un viaje y lo hace avanzar hasta `stage` usando solo la API.
- * No borra nada: la limpieza es aparte (`npm run test:e2e:cleanup`).
+ * No borra nada: la limpieza es aparte (`pnpm test:e2e:cleanup`).
  */
 export async function seedTrip(
   stage: SeedStage,

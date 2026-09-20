@@ -1113,6 +1113,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   {load.loads !== undefined ? "Cancelar Viaje Completo" : "Cancelar Carga"}
                 </Button>
               )}
+            {isAdmin &&
+              ((load.status as string) === "CANCELLED" || (load.status as string) === "REJECTED") && (
+                <Button
+                  variant="danger"
+                  icon={Trash2}
+                  className="w-full sm:w-auto"
+                  onClick={() => onCancelLoad(load.id)}
+                >
+                  Eliminar Definitivamente
+                </Button>
+              )}
             {(isCarrier || isLogistics) && (
               <>
                 {load.status === "ACTIVE" && !hasApplied && load.cuposPendientes !== 0 && (
@@ -1299,7 +1310,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               }
 
               return (
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
                   {appsToShow.map((app) => {
                     const matchedLoad = load.loads?.find((l: any) => 
                       l.carrierId === app.carrierId && 
@@ -1804,8 +1815,16 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             : load.status === "IN_PROGRESS"
                               ? "IN_PROGRESS"
                               : "ASSIGNED");
+                        // "Reportar Demorado" pasa el sub-load a DELAYED sin
+                        // sacarlo del viaje — sigue en curso, solo que tarde.
+                        // Si no se reconoce acá, la tarjeta lo trata como
+                        // recién asignado (vuelve a ofrecer "Iniciar Viaje")
+                        // y el transportista pierde para siempre la opción
+                        // de confirmar la llegada y cargar los kg de
+                        // descarga. Confirmado con un caso real.
                         const isTripInProgress =
                           effectiveTripStatus === "IN_PROGRESS" ||
+                          (effectiveTripStatus as string) === "DELAYED" ||
                           load.status === "IN_PROGRESS";
                         const tripCtg = matchedLoad?.ctg || trip.ctg || "";
                         const loadedW = matchedLoad?.loadedWeight ?? trip.loadedWeight;
@@ -1847,16 +1866,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 variant={
                                   isTripCompleted
                                     ? "success"
-                                    : isTripInProgress
-                                      ? "primary"
-                                      : "info"
+                                    : (effectiveTripStatus as string) === "DELAYED"
+                                      ? "warning"
+                                      : isTripInProgress
+                                        ? "primary"
+                                        : "info"
                                 }
                               >
                                 {isTripCompleted
                                   ? "COMPLETADO"
-                                  : isTripInProgress
-                                    ? "EN VIAJE"
-                                    : "ASIGNADO"}
+                                  : (effectiveTripStatus as string) === "DELAYED"
+                                    ? "DEMORADO"
+                                    : isTripInProgress
+                                      ? "EN VIAJE"
+                                      : "ASIGNADO"}
                               </Badge>
                             </div>
 

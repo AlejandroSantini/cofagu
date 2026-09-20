@@ -34,6 +34,15 @@ export function Table<T>({
   const totalItems = isServerSide ? pagination.total : data.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
+  // Si `data` se filtra (búsqueda, etc.) y la página actual queda fuera de
+  // rango, volver a la 1 — si no, la tabla muestra "sin resultados" aunque
+  // sí los haya, solo porque quedaron en una página anterior.
+  React.useEffect(() => {
+    if (!isServerSide && localPage > totalPages) {
+      setLocalPage(1);
+    }
+  }, [isServerSide, localPage, totalPages]);
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       if (isServerSide) {

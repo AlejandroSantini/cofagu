@@ -70,9 +70,19 @@ export const GroupsPage: React.FC = () => {
     cancel: cancelDelete,
   } = useConfirm<CarrierGroup>();
 
+  // Ref en vez de dependencia de useCallback: fetchGroups se llama desde
+  // varios puntos (alta/baja/edición de miembros) sin volver a pasar el
+  // término de búsqueda; con el ref siempre lee el valor actual sin que
+  // fetchGroups pierda su identidad estable entre renders.
+  const searchTermRef = React.useRef(searchTerm);
+  useEffect(() => {
+    searchTermRef.current = searchTerm;
+  }, [searchTerm]);
+
   const fetchGroups = useCallback(async () => {
     try {
-      const res = await groupService.getGroups();
+      const search = searchTermRef.current.trim();
+      const res = await groupService.getGroups(search ? { search } : undefined);
       if (res.data.success && res.data.data) {
         setGroups(res.data.data);
       }
@@ -83,6 +93,24 @@ export const GroupsPage: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // Búsqueda: debounce de 300ms antes de pegarle al backend. Se salta la
+  // primera corrida (la carga inicial ya la hace loadInitialData).
+  const isFirstSearchRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
+      return;
+    }
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) fetchGroups();
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, fetchGroups]);
 
   const fetchCarriers = useCallback(async () => {
     try {
@@ -327,13 +355,6 @@ export const GroupsPage: React.FC = () => {
       setRemovingMemberId(null);
     }
   };
-
-  const filteredGroups = groups.filter(
-    (g) =>
-      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (g.description &&
-        g.description.toLowerCase().includes(searchTerm.toLowerCase())),
-  );
 
   const columns = [
     {
@@ -795,7 +816,6 @@ export const GroupsPage: React.FC = () => {
                 placeholder="Buscar grupo por nombre o descripción..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onBlur={fetchGroups}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
               />
             </div>
@@ -804,7 +824,7 @@ export const GroupsPage: React.FC = () => {
           {/* Groups Table */}
           <Table
             columns={columns}
-            data={filteredGroups}
+            data={groups}
             isLoading={loading}
             emptyMessage="No se encontraron grupos de transportistas registrados."
             onRowClick={(g) => handleOpenEdit(g)}

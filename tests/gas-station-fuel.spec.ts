@@ -138,4 +138,31 @@ test.describe("GAS_STATION · control de combustible", () => {
     await expect(page.getByText("AB123CD")).toHaveCount(0);
     await expect(page.getByText("No se encontraron camiones autorizados para combustible.")).toBeVisible();
   });
+
+  test("el buscador de patente/chofer/transportista se manda al backend por query param", async ({
+    page,
+  }) => {
+    await loginAs(page, "GAS_STATION");
+    const searches: (string | null)[] = [];
+    await page.route("**/api/loads*", (route) => {
+      const url = new URL(route.request().url());
+      const search = url.searchParams.get("search");
+      searches.push(search);
+      const matches = !search || "ab123cd".includes(search.toLowerCase());
+      return fulfill(route, apiOk(matches ? [ASSIGNED_LOAD] : []));
+    });
+
+    await page.goto("/loads");
+    await expect(page.getByText("AB123CD")).toBeVisible();
+
+    await page
+      .getByPlaceholder("Buscar por Patente (Chasis/Acoplado), Chofer o Transportista...")
+      .fill("ab123cd");
+
+    await expect.poll(() => searches).toContain("ab123cd");
+    // Mientras esperaba la respuesta del backend, el dato viejo no debió
+    // parpadear a skeleton (regla del proyecto: no re-skeletonear un
+    // refetch sobre datos ya visibles).
+    await expect(page.getByText("AB123CD")).toBeVisible();
+  });
 });

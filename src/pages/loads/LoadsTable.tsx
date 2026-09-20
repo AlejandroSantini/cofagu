@@ -67,9 +67,22 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
         // backend todavía tiene que empezar a resolver bien por grupo en las
         // cargas ya asignadas (hoy `rate` siempre cae en la tarifa General).
         // Apenas lo mande, esto se muestra solo — no hace falta tocar nada más.
+        // Publicación dirigida a un solo grupo específico (no General): ni
+        // `rate` ni `resolvedRate` vienen del backend en ese caso, pero la
+        // tarifa que el admin asignó a ese grupo sí está en `targetGroups`
+        // (mismo dato que ya se muestra en el detalle, "Publicación
+        // Dirigida a Grupos"). Si hay más de un grupo con tarifas distintas,
+        // no hay una única tarifa que mostrar acá — se deja "Consultar".
+        const singleTargetGroupRate = (groups?: { rate: number }[]) =>
+          groups && groups.length === 1 ? groups[0].rate : undefined;
         const rateValue = isEmployee
           ? l.resolvedRate
-          : (l.resolvedRate ?? l.rate ?? (l as any).trip?.resolvedRate ?? (l as any).trip?.rate);
+          : (l.resolvedRate ??
+              l.rate ??
+              (l as any).trip?.resolvedRate ??
+              (l as any).trip?.rate ??
+              singleTargetGroupRate(l.targetGroups) ??
+              singleTargetGroupRate((l as any).trip?.targetGroups));
         const baseRate = Number(rateValue);
         return (
           <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs sm:text-sm">

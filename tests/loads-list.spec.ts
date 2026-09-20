@@ -149,6 +149,68 @@ test.describe("Cargas y Viajes — listado", () => {
     await expect(page.getByText("$20")).toHaveCount(0);
   });
 
+  test("ADMIN ve la tarifa de una publicación dirigida a un solo grupo (no General), en vez de 'Consultar'", async ({
+    page,
+  }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/trips*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 1,
+            status: "ACTIVE",
+            origin: "planta cofagu",
+            destination: "crushing",
+            cereal: "soja",
+            maxTrucks: 1,
+            // Publicada a un grupo específico, no a General: sin `rate` ni
+            // `resolvedRate`, la única fuente de la tarifa es targetGroups.
+            targetGroups: [{ groupId: 5, rate: 1500, group: { id: 5, name: "Grupo X" } }],
+            applications: [],
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    await expect(page.getByText("$1.500")).toBeVisible();
+    await expect(page.getByText("Consultar")).toHaveCount(0);
+  });
+
+  test("con más de un grupo destinatario (tarifas distintas), la lista sigue mostrando 'Consultar'", async ({
+    page,
+  }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/trips*", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          {
+            id: 1,
+            status: "ACTIVE",
+            origin: "planta cofagu",
+            destination: "crushing",
+            cereal: "soja",
+            maxTrucks: 1,
+            targetGroups: [
+              { groupId: 5, rate: 1500, group: { id: 5, name: "Grupo X" } },
+              { groupId: 6, rate: 2000, group: { id: 6, name: "Grupo Y" } },
+            ],
+            applications: [],
+          },
+        ]),
+      ),
+    );
+
+    await page.goto("/loads");
+
+    // No hay una única tarifa que mostrar en la columna: mejor "Consultar"
+    // que elegir arbitrariamente la del primer grupo.
+    await expect(page.getByText("Consultar")).toBeVisible();
+  });
+
   test("la columna Cereal se muestra para cualquier rol (ej. EMPLOYEE)", async ({ page }) => {
     await loginAs(page, "EMPLOYEE");
     await page.route("**/api/loads?status=ASSIGNED*", (r) =>

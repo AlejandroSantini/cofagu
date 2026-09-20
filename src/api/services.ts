@@ -97,6 +97,8 @@ export const truckService = {
     carrierId?: number;
     available?: boolean;
     tripId?: number;
+    /** Filtra por nombre de transportista (server-side). Ver: docs/api/trucks.md */
+    search?: string;
   }) => api.get<ApiResponse<Truck[]>>("/trucks", { params }),
   getTruck: (id: number) => api.get<ApiResponse<Truck>>(`/trucks/${id}`),
   createTruck: (data: CreateTruckPayload) =>
@@ -108,7 +110,8 @@ export const truckService = {
 
 // --- LOADS & APPLICATIONS ---
 export const loadService = {
-  getLoads: (params?: { status?: string; carrierId?: number }) =>
+  /** `search`: filtra por patente, chofer o transportista (server-side). Ver: docs/api/loads.md */
+  getLoads: (params?: { status?: string; carrierId?: number; search?: string }) =>
     api.get<ApiResponse<Load[]>>("/loads", { params }),
   searchTechnicalCenterLoads: (search?: string) =>
     api.get<ApiResponse<TechnicalCenterSearchResult[]>>("/loads/technical-center/loads/search", { params: { search } }),
@@ -265,7 +268,9 @@ export const uploadService = {
 };
 
 export const groupService = {
-  getGroups: () => api.get<ApiResponse<CarrierGroup[]>>("/groups"),
+  /** `search`: filtra por nombre o descripción (server-side). Ver: docs/api/groups.md */
+  getGroups: (params?: { search?: string }) =>
+    api.get<ApiResponse<CarrierGroup[]>>("/groups", { params }),
   getGroup: (id: number) => api.get<ApiResponse<CarrierGroup>>(`/groups/${id}`),
   createGroup: (data: { name: string; description?: string }) =>
     api.post<ApiResponse<CarrierGroup>>("/groups", data),

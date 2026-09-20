@@ -84,4 +84,15 @@ test.describe("Detalle de viaje — franja horaria y combustible por camión", (
     await expect(page.getByText("Tarifa a Pagar")).toBeVisible();
     await expect(page.getByText("$20.000")).toBeVisible();
   });
+
+  test("el área de scroll de Postulaciones y Viajes Asignados tiene 700px de alto", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/trips/1", (r) => fulfill(r, apiOk(TRIP_DETAIL)));
+
+    await page.goto("/loads/1?type=trip");
+
+    const scrollArea = page.locator("div.overflow-y-auto", { hasText: "AB123CD" });
+    await expect(scrollArea).toHaveCount(1);
+    await expect(scrollArea).toHaveCSS("max-height", "700px");
+  });
 });

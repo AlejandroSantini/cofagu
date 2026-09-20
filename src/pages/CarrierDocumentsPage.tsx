@@ -28,9 +28,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   Eye,
+  Search,
 } from "lucide-react";
 import { ImageUpload, SecureImage } from "../components/ui/ImageUpload";
 import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
 
 const CURRENT_TIME = Date.now();
 
@@ -43,6 +45,7 @@ export const CarrierDocumentsPage: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [carrierSearch, setCarrierSearch] = useState("");
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -61,9 +64,15 @@ export const CarrierDocumentsPage: React.FC = () => {
     },
   });
 
-  const loadData = async () => {
+  // `search` sólo tiene efecto para isAdmin: filtra por nombre de
+  // transportista del lado del backend (GET /trucks?search=...), no en el
+  // cliente — con muchas pólizas cargadas, traer todo y filtrar acá no
+  // escala. Ver docs/api/trucks.md.
+  const loadData = async (search?: string) => {
     try {
-      const trucksRes = await truckService.getTrucks();
+      const trucksRes = await truckService.getTrucks(
+        isAdmin && search ? { search } : undefined,
+      );
       if (trucksRes.data.success) {
         // Only map trucks that actually have a policy photo or insurance policy data uploaded
         const trucksWithInsurance = trucksRes.data.data.filter(
@@ -98,52 +107,33 @@ export const CarrierDocumentsPage: React.FC = () => {
     }
   };
 
+  // Primera carga (sin búsqueda).
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const trucksRes = await truckService.getTrucks();
-        if (active && trucksRes.data.success) {
-          const trucksWithInsurance = trucksRes.data.data.filter(
-            (t) => t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || t.cargoInsurancePolicy || t.insurancePolicy
-          );
-          const mappedDocs: CarrierDocument[] = trucksWithInsurance.map((t) => ({
-            id: t.id,
-            carrierId: t.carrierId || 0,
-            carrier: t.carrier,
-            truck: t,
-            type: "SEGURO_CARGA",
-            fileUrl: t.cargoInsurancePhotoUrl || t.insurancePolicyPhotoUrl || "",
-            expirationDate: t.cargoInsuranceExpiration || t.insuranceExpiration || new Date().toISOString(),
-            status: (t.cargoInsuranceStatus || t.insuranceStatus || "PENDING") as any,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            deletedAt: null
-          }));
-          setDocuments(mappedDocs);
-        }
-        if (active && isAdmin) {
-          const carriersRes = await carrierService.getCarriers();
-          if (active && carriersRes.data.success) {
-            setCarriers(carriersRes.data.data);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        if (active) setError("Error al cargar la información de documentos.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    load();
-
-
-    return () => {
-      active = false;
-    };
+    setLoading(true);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sólo en mount/cambio de rol; la búsqueda tiene su propio efecto debounced
   }, [isAdmin]);
 
-  // Handle load data effect
+  // Búsqueda: debounce de 300ms antes de pegarle al backend, y sin volver a
+  // mostrar skeleton (los datos viejos quedan visibles hasta que llega la
+  // respuesta nueva). Se salta la primera corrida: la carga inicial (sin
+  // búsqueda) ya la hace el efecto de arriba.
+  const isFirstSearchRun = React.useRef(true);
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
+      return;
+    }
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) loadData(carrierSearch);
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [isAdmin, carrierSearch]);
 
   const onSubmit = async (_data: CarrierDocumentFormValues) => {
     setSubmitLoading(true);
@@ -170,8 +160,7 @@ export const CarrierDocumentsPage: React.FC = () => {
           status === "APPROVED" ? "Póliza aprobada" : "Póliza rechazada",
           "success",
         );
-        setLoading(true);
-        loadData();
+        loadData(carrierSearch);
       }
     } catch (err) {
       console.error(err);
@@ -233,15 +222,17 @@ export const CarrierDocumentsPage: React.FC = () => {
       : latestDoc.status
     : "MISSING";
 
+  const getCarrierName = (doc: CarrierDocument) =>
+    doc.carrier?.name ||
+    carriers.find((c) => c.id === doc.carrierId)?.name ||
+    `ID: ${doc.carrierId}`;
+
   // Admin columns
   const adminColumns = [
     {
       header: "Transportista",
       render: (doc: CarrierDocument) => {
-        const carrierName =
-          doc.carrier?.name ||
-          carriers.find((c) => c.id === doc.carrierId)?.name ||
-          `ID: ${doc.carrierId}`;
+        const carrierName = getCarrierName(doc);
         return (
           <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Building size={16} className="text-slate-400" />
@@ -448,15 +439,34 @@ export const CarrierDocumentsPage: React.FC = () => {
       {isAdmin ? (
         // ================= ADMIN AUDIT VIEW =================
         <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+          <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="text-lg font-black text-slate-900 dark:text-white">
               Pólizas Presentadas
             </h3>
-            <span className="text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-              Total: {documents.length}
-            </span>
+            <div className="flex items-center gap-3">
+              <div className="w-full sm:w-64">
+                <Input
+                  icon={Search}
+                  placeholder="Buscar transportista..."
+                  value={carrierSearch}
+                  onChange={(e) => setCarrierSearch(e.target.value)}
+                />
+              </div>
+              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                Total: {documents.length}
+              </span>
+            </div>
           </div>
-          <Table columns={adminColumns} data={documents} isLoading={loading} />
+          <Table
+            columns={adminColumns}
+            data={documents}
+            isLoading={loading}
+            emptyMessage={
+              carrierSearch.trim()
+                ? "No se encontraron pólizas para ese transportista."
+                : undefined
+            }
+          />
         </div>
       ) : (
         // ================= CARRIER MANAGEMENT VIEW =================
