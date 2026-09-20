@@ -121,6 +121,9 @@ export const loadService = {
   getLoad: (id: number | string) => api.get<ApiResponse<Load>>(`/loads/${id}`),
   deleteTrip: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/trips/${id}`),
+  /** Confirmado contra backend real: acepta actualización parcial (solo los campos enviados). */
+  updateTrip: (id: number | string, data: { maxTrucks?: number }) =>
+    api.put<ApiResponse<Load>>(`/trips/${id}`, data),
   getApplication: (id: number) =>
     api.get<ApiResponse<Application>>(`/loads/applications/${id}`),
   getContingency: (id: number) =>

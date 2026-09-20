@@ -27,6 +27,7 @@ import {
   Clock,
   XCircle,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 
 import { api } from "../../api/axios";
@@ -111,6 +112,7 @@ interface LoadDetailsProps {
   load: Load;
   user: UserType | null;
   onCancelLoad: (id: number | string) => void;
+  onCloseRemainingCupos: (id: number | string, newMaxTrucks: number) => void;
   onApply: (
     notes: string,
     driverId: number,
@@ -149,6 +151,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   load,
   user,
   onCancelLoad,
+  onCloseRemainingCupos,
   onApply,
   onStatusChange,
   onReportContingency,
@@ -1101,6 +1104,21 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   onClick={() => onCancelLoad(load.id)}
                 >
                   {load.loads !== undefined ? "Cancelar Viaje Completo" : "Cancelar Carga"}
+                </Button>
+              )}
+            {(isAdmin || isOperator) &&
+              load.loads !== undefined &&
+              load.status !== "CANCELLED" &&
+              load.status !== "COMPLETED" &&
+              load.loads.some((l: any) => l.status !== "CANCELLED") &&
+              (load.maxTrucks || 0) > acceptedCount && (
+                <Button
+                  variant="outline"
+                  icon={Lock}
+                  className="w-full sm:w-auto"
+                  onClick={() => onCloseRemainingCupos(load.id, acceptedCount)}
+                >
+                  Cerrar Cupos Restantes
                 </Button>
               )}
             {isAdmin &&

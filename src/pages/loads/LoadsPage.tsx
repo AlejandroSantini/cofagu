@@ -60,6 +60,13 @@ export const LoadsPage: React.FC = () => {
   const [error, setError] = useState('');
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delId, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number | string>();
+  const {
+    isOpen: isCloseCuposOpen,
+    data: closeCuposData,
+    ask: askCloseCupos,
+    confirm: confirmCloseCupos,
+    cancel: cancelCloseCupos,
+  } = useConfirm<{ id: number | string; newMaxTrucks: number }>();
 
   const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -296,6 +303,29 @@ export const LoadsPage: React.FC = () => {
     } catch (err) {
       setError(getErrorMessage(err, 'Error al eliminar la carga.'));
       cancelDelete();
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleCloseRemainingCupos = async () => {
+    if (!closeCuposData) return;
+    setSubmitLoading(true);
+    try {
+      const res = await loadService.updateTrip(closeCuposData.id, {
+        maxTrucks: closeCuposData.newMaxTrucks,
+      });
+      if (res.data && res.data.success !== false) {
+        showToast(
+          'Se cerraron los cupos restantes. Los camiones ya asignados no se vieron afectados.',
+          'success',
+        );
+        confirmCloseCupos();
+        refreshDetails();
+        triggerRefresh();
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al cerrar los cupos restantes.'), 'error');
     } finally {
       setSubmitLoading(false);
     }
@@ -691,6 +721,17 @@ export const LoadsPage: React.FC = () => {
         isLoading={submitLoading}
       />
 
+      <Modal
+        isOpen={isCloseCuposOpen}
+        onClose={cancelCloseCupos}
+        onConfirm={handleCloseRemainingCupos}
+        title="Cerrar Cupos Restantes"
+        description="Esto deja de aceptar nuevos postulantes para este viaje. Los camiones ya asignados, en curso o completados NO se ven afectados."
+        type="danger"
+        confirmText="Cerrar Cupos"
+        isLoading={submitLoading}
+      />
+
       {!(id && !selectedLoad && !loadError) && (
         <div className="flex flex-col gap-6 mb-8">
           <PageHeader
@@ -915,6 +956,7 @@ export const LoadsPage: React.FC = () => {
           load={selectedLoad}
           user={user}
           onCancelLoad={askDelete}
+          onCloseRemainingCupos={(id, newMaxTrucks) => askCloseCupos({ id, newMaxTrucks })}
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}

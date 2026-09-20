@@ -160,4 +160,41 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
     await expect.poll(() => deleteTripCalled).toBe(false);
     await expect.poll(() => deleteLoadCalled).toBe(false);
   });
+
+  test("'Cerrar Cupos Restantes' actualiza maxTrucks al número ya asignado, sin tocar el camión en curso", async ({
+    page,
+  }) => {
+    // Pedido explícito: cuando "Cancelar Viaje Completo" queda bloqueado
+    // porque ya hay camiones comprometidos, tiene que existir alguna forma
+    // de cerrar los cupos que quedan libres sin afectarlos. Usa el mismo
+    // PUT /trips/:id (parcial) que ya soporta el backend real.
+    await loginAs(page, "ADMIN");
+    await mockGet(page, "**/api/trips/6", {
+      ...baseTrip,
+      id: 6,
+      status: "ACTIVE",
+      maxTrucks: 3,
+      loads: [{ id: 600, status: "IN_PROGRESS", carrierId: 10, truckId: 5 }],
+      applications: [
+        { id: 700, status: "ACCEPTED", carrierId: 10, truckId: 5, tripStatus: "IN_PROGRESS" },
+      ],
+    });
+    let putBody: unknown = null;
+    await page.route("**/api/trips/6", (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      putBody = JSON.parse(route.request().postData() || "{}");
+      return fulfill(route, apiOk({ id: 6, maxTrucks: 1 }));
+    });
+
+    await page.goto("/loads/6?type=trip");
+
+    await page.getByRole("button", { name: "Cerrar Cupos Restantes" }).click();
+    await expect(
+      page.getByText("Esto deja de aceptar nuevos postulantes para este viaje."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Cerrar Cupos", exact: true }).click();
+
+    await expect.poll(() => putBody).toEqual({ maxTrucks: 1 });
+    await expect(page.getByText("Se cerraron los cupos restantes.")).toBeVisible();
+  });
 });
