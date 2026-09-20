@@ -271,8 +271,13 @@ export const CarriersPage: React.FC = () => {
                 El transportista tiene la bandera `mustChangePassword` activa, por lo que el sistema le obligará a actualizar su contraseña inmediatamente después de su primer inicio de sesión.
               </span>
             </div>
-            <Button variant="outline" onClick={handleCopyCredentials} className="w-full flex items-center justify-center gap-2">
-              {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+            <Button
+              variant="outline"
+              icon={copied ? Check : Copy}
+              iconClassName={copied ? 'text-emerald-500' : ''}
+              onClick={handleCopyCredentials}
+              className="w-full"
+            >
               {copied ? 'Copiado' : 'Copiar al portapapeles'}
             </Button>
           </div>

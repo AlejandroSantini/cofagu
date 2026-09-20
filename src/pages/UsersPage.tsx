@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, Plus, ChevronLeft, Shield, Mail, Trash2, Save, Building } from 'lucide-react';
+import { Users, Plus, ChevronLeft, Shield, Mail, Trash2, Save, Building, Copy, Check } from 'lucide-react';
 import { authService, carrierService } from '../api/services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Input } from '../components/ui/Input';
@@ -29,6 +29,8 @@ export const UsersPage: React.FC = () => {
 
   const { toast, showToast, hideToast } = useToast();
   const { isOpen: isDelOpen, data: delData, ask: askDelete, confirm: confirmDelete, cancel: cancelDelete } = useConfirm<number>();
+  const [credentialsModal, setCredentialsModal] = useState<{ email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -157,6 +159,12 @@ export const UsersPage: React.FC = () => {
 
       if (response.data.success) {
         loadUsers();
+        // Guardar antes de resetear el form: sin esto no hay forma de
+        // volver a ver el email/contraseña recién creados para
+        // reenviárselos a la persona (pedido explícito de un admin).
+        if (!editingId) {
+          setCredentialsModal({ email: formData.email, password: formData.password.trim() });
+        }
         if (id) {
           navigate('/users');
         } else {
@@ -171,6 +179,14 @@ export const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyCredentials = () => {
+    if (!credentialsModal) return;
+    const text = `Email: ${credentialsModal.email}\nContraseña: ${credentialsModal.password}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const columns = [
@@ -238,6 +254,43 @@ export const UsersPage: React.FC = () => {
         confirmText="Eliminar Usuario"
         isLoading={loading}
       />
+
+      {/* Credentials modal */}
+      <Modal
+        isOpen={credentialsModal !== null}
+        onClose={() => setCredentialsModal(null)}
+        title="🔑 Credenciales de Acceso Creadas"
+        confirmText="Copiar y Cerrar"
+        onConfirm={() => { handleCopyCredentials(); setCredentialsModal(null); }}
+        hideIcon
+      >
+        {credentialsModal && (
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Se creó el usuario. Comparte estos datos con la persona que va a usarlo:
+            </p>
+            <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-md border border-slate-100 dark:border-zinc-800 space-y-3">
+              <div>
+                <span className="text-xs font-bold text-slate-400 block uppercase">Correo Electrónico</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{credentialsModal.email}</span>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-400 block uppercase">Contraseña</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 font-mono">{credentialsModal.password}</span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              icon={copied ? Check : Copy}
+              iconClassName={copied ? 'text-emerald-500' : ''}
+              onClick={handleCopyCredentials}
+              className="w-full"
+            >
+              {copied ? 'Copiado' : 'Copiar al portapapeles'}
+            </Button>
+          </div>
+        )}
+      </Modal>
 
       <div className="flex flex-col gap-4 mb-8">
         <PageHeader 
