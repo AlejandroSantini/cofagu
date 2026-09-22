@@ -179,6 +179,14 @@ export class ApiClient {
     return this.json('get', `/loads/${id}`);
   }
 
+  reportContingency(loadId: number | string, body: { description: string; reportedBy: string }) {
+    return this.json('post', `/loads/${loadId}/contingencies`, body);
+  }
+
+  getContingency(id: number | string) {
+    return this.json('get', `/loads/contingencies/${id}`);
+  }
+
   patchLoadStatus(id: number | string, status: string) {
     return this.json('patch', `/loads/${id}/status`, { status });
   }
