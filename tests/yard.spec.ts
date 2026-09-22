@@ -13,6 +13,7 @@ const YARD_LOAD = {
     origin: "Campo La Esperanza",
     destination: "Planta Urdinarrain",
     cereal: "Maíz",
+    loadingDate: "2026-03-10T00:00:00.000Z",
     loadingTimeStart: "08:00",
     loadingTimeEnd: "10:00",
   },
@@ -35,6 +36,10 @@ test.describe("Control de Playa", () => {
     await expect(page.getByText("AB123CD")).toBeVisible();
     await expect(page.getByText("Pepe Grillo")).toBeVisible();
     await expect(page.getByText("Logística X")).toBeVisible();
+
+    // Fecha de Carga (viene de load.trip.loadingDate)
+    await expect(page.getByRole("columnheader", { name: "Fecha de Carga" })).toBeVisible();
+    await expect(page.getByText("9/3/2026")).toBeVisible();
 
     // Cereal y franja horaria (vienen de load.trip)
     await expect(page.getByText("Maíz")).toBeVisible();

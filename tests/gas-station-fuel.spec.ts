@@ -27,7 +27,6 @@ const ASSIGNED_LOAD = {
   origin: "Córdoba",
   destination: "Rosario",
   cereal: "Soja",
-  loadingDate: "2026-03-10T00:00:00.000Z",
   loadingTimeStart: "08:00",
   loadingTimeEnd: "12:00",
   rate: 15000,
@@ -37,15 +36,13 @@ const ASSIGNED_LOAD = {
 };
 
 test.describe("GAS_STATION · control de combustible", () => {
-  test("muestra Fecha de Carga, Ruta, Franja Horaria y Cereal, pero NO Tarifa", async ({ page }) => {
+  test("muestra Ruta, Franja Horaria y Cereal, pero NO Tarifa", async ({ page }) => {
     await loginAs(page, "GAS_STATION");
     await page.route("**/api/loads?status=ASSIGNED*", (r) => fulfill(r, apiOk([ASSIGNED_LOAD])));
 
     await page.goto("/loads");
 
     await expect(page.getByText("AB123CD")).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Fecha de Carga" })).toBeVisible();
-    await expect(page.getByText("9/3/2026")).toBeVisible();
     await expect(page.getByText("Córdoba")).toBeVisible();
     await expect(page.getByText("Rosario")).toBeVisible();
     await expect(page.getByText("08:00 - 12:00 hs")).toBeVisible();

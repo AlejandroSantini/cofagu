@@ -849,14 +849,6 @@ export const LoadsPage: React.FC = () => {
             <Table
               columns={[
                 {
-                  header: 'Fecha de Carga',
-                  render: (loadItem: Load) => (
-                    <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap">
-                      {loadItem.loadingDate ? new Date(loadItem.loadingDate).toLocaleDateString('es-AR') : 'A Confirmar'}
-                    </span>
-                  )
-                },
-                {
                   header: 'Patente (Chasis / Acoplado)',
                   render: (loadItem: any) => (
                     <div className="flex flex-col">

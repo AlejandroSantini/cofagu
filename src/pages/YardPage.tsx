@@ -117,6 +117,18 @@ export const YardPage: React.FC = () => {
 
   const columns = [
     {
+      header: 'Fecha de Carga',
+      render: (load: any) => {
+        const t = resolveTrip(load);
+        const loadingDate = t.loadingDate || load.loadingDate;
+        return (
+          <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap">
+            {loadingDate ? new Date(loadingDate).toLocaleDateString('es-AR') : 'A Confirmar'}
+          </span>
+        );
+      }
+    },
+    {
       header: 'Patente',
       render: (load: any) => {
         const { truck } = resolveResource(load);
