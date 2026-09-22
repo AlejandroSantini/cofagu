@@ -2,17 +2,17 @@ import { test, expect } from "@playwright/test";
 import { apiOk, fulfill, loginAs } from "./utils";
 
 /**
- * "Camiones" (/trucks) — el filtro "Filtrar por Tipo de Camión" (antes un
- * <Select> dentro de una tarjeta vacía) pasa a ser un componente nuevo,
- * `FilterPills`: chips clickeables, mismo criterio de filtrado.
+ * "Camiones" (/trucks) — el filtro "Filtrar por Tipo de Camión" es un
+ * <Select> pegado a la derecha del header de la tabla (junto al total),
+ * mismo criterio de filtrado que antes.
  */
 const TRUCKS = [
   { id: 1, chassisPlate: "AAA111", trailerPlate: "AAA112", type: "TOLVA", capacity: 30000, carrierId: 9, carrier: { id: 9, name: "Transporte A" }, cargoInsuranceStatus: "APPROVED", cargoInsurancePolicy: "1", cargoInsurancePhotoUrl: "x" },
   { id: 2, chassisPlate: "BBB111", trailerPlate: "BBB112", type: "BATEA", capacity: 28000, carrierId: 9, carrier: { id: 9, name: "Transporte A" }, cargoInsuranceStatus: "APPROVED", cargoInsurancePolicy: "1", cargoInsurancePhotoUrl: "x" },
 ];
 
-test.describe("Camiones — filtro por tipo (FilterPills)", () => {
-  test("clickear un chip filtra la tabla, sin necesidad de un <select>", async ({ page }) => {
+test.describe("Camiones — filtro por tipo", () => {
+  test("elegir un tipo en el selector filtra la tabla", async ({ page }) => {
     await loginAs(page, "ADMIN");
     await page.route("**/api/trucks*", (r) => fulfill(r, apiOk(TRUCKS)));
     await page.route("**/api/carriers", (r) => fulfill(r, apiOk([{ id: 9, name: "Transporte A" }])));
@@ -21,14 +21,21 @@ test.describe("Camiones — filtro por tipo (FilterPills)", () => {
 
     await expect(page.getByText("AAA111")).toBeVisible();
     await expect(page.getByText("BBB111")).toBeVisible();
+    await expect(page.getByText("Total: 2", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Batea", exact: true }).click();
+    const typeSelect = page.locator(
+      'span:text-is("Filtrar por Tipo de Camión")'
+    ).locator("xpath=following-sibling::div//select");
+
+    await typeSelect.selectOption("BATEA");
 
     await expect(page.getByText("BBB111")).toBeVisible();
     await expect(page.getByText("AAA111")).toHaveCount(0);
+    await expect(page.getByText("Total: 1", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Todos", exact: true }).click();
+    await typeSelect.selectOption("ALL");
     await expect(page.getByText("AAA111")).toBeVisible();
     await expect(page.getByText("BBB111")).toBeVisible();
+    await expect(page.getByText("Total: 2", { exact: true })).toBeVisible();
   });
 });

@@ -102,40 +102,46 @@ export const TechnicalCenterSearchPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-slate-200 dark:border-zinc-800 p-4 sm:p-6 mb-6 space-y-4">
-        <SearchInput
-          placeholder="Buscar por patente o transportista..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <FilterPills
-          label="Tipo"
-          options={[
-            { value: 'ALL', label: 'Todos' },
-            ...Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => ({ value, label })),
-          ]}
-          value={selectedTruckType}
-          onChange={setSelectedTruckType}
-        />
-      </div>
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-md border border-red-200 dark:border-red-800">
           {error}
         </div>
       )}
 
-      {!loading && hasSearched && filteredResults.length === 0 && !error && (
-        <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800">
-          <Truck size={48} className="mx-auto text-slate-300 dark:text-zinc-600 mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white">No se encontraron resultados</h3>
-          <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto">
-            {search ? `No hay camiones cargados hoy que coincidan con "${search}".` : "No hay camiones de este tipo."}
-          </p>
+      <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <SearchInput
+              containerClassName="w-full sm:w-64"
+              placeholder="Buscar por patente o transportista..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+              Total: {filteredResults.length}
+            </span>
+          </div>
+          <FilterPills
+            label="Tipo"
+            options={[
+              { value: 'ALL', label: 'Todos' },
+              ...Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+            ]}
+            value={selectedTruckType}
+            onChange={setSelectedTruckType}
+            className="border-none"
+          />
         </div>
-      )}
 
-      {(loading || filteredResults.length > 0) && (
+        {!loading && hasSearched && filteredResults.length === 0 && !error ? (
+          <div className="text-center py-12">
+            <Truck size={48} className="mx-auto text-slate-300 dark:text-zinc-600 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white">No se encontraron resultados</h3>
+            <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto">
+              {search ? `No hay camiones cargados hoy que coincidan con "${search}".` : "No hay camiones de este tipo."}
+            </p>
+          </div>
+        ) : (
         <Table
           columns={[
             {
@@ -211,7 +217,8 @@ export const TechnicalCenterSearchPage: React.FC = () => {
           data={filteredResults}
           isLoading={loading && filteredResults.length === 0}
         />
-      )}
+        )}
+      </div>
     </div>
   );
 };

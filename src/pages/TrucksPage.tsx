@@ -12,7 +12,6 @@ import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { FilterPills } from '../components/ui/FilterPills';
 import { Modal } from '../components/ui/Modal';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
@@ -659,20 +658,29 @@ export const TrucksPage: React.FC = () => {
           </form>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-zinc-900 p-4 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <FilterPills
-              label="Tipo de Camión"
-              options={[
-                { value: 'ALL', label: 'Todos' },
-                { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
-                { value: 'BATEA', label: 'Batea' },
-                { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
-                { value: 'SEMI', label: 'Semi' }
-              ]}
-              value={typeFilter}
-              onChange={setTypeFilter}
-            />
+        <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+              Filtrar por Tipo de Camión
+            </span>
+            <div className="flex items-center gap-3">
+              <div className="w-full sm:w-64">
+                <Select
+                  options={[
+                    { value: 'ALL', label: 'Todos los tipos' },
+                    { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
+                    { value: 'BATEA', label: 'Batea' },
+                    { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
+                    { value: 'SEMI', label: 'Semi' }
+                  ]}
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                />
+              </div>
+              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                Total: {filteredTrucks.length}
+              </span>
+            </div>
           </div>
           <Table
             columns={columns}

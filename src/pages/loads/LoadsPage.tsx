@@ -829,18 +829,23 @@ export const LoadsPage: React.FC = () => {
         </div>
       ) : isPlayero && !selectedLoad ? (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
-              Buscador de Camiones Autorizados a Combustible
-            </h3>
-            <SearchInput
-              placeholder="Buscar por Patente (Chasis/Acoplado), Chofer o Transportista..."
-              value={plateSearch}
-              onChange={(e) => setPlateSearch(e.target.value)}
-            />
-          </div>
-
           <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
+                Buscador de Camiones Autorizados a Combustible
+              </h3>
+              <div className="flex items-center gap-3">
+                <SearchInput
+                  containerClassName="w-full sm:w-64"
+                  placeholder="Buscar por Patente (Chasis/Acoplado), Chofer o Transportista..."
+                  value={plateSearch}
+                  onChange={(e) => setPlateSearch(e.target.value)}
+                />
+                <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                  Total: {assignedFuelLoads.length}
+                </span>
+              </div>
+            </div>
             <Table
               columns={[
                 {

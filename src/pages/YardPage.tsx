@@ -283,27 +283,6 @@ export const YardPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Smart Search Bar */}
-      <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <SearchInput
-            containerClassName="flex-1"
-            placeholder="Buscar por patente, nombre de chofer o empresa..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-          />
-          <Button
-            variant="primary"
-            icon={Search}
-            onClick={handleSearch}
-            className="w-full sm:w-auto h-12 px-6"
-          >
-            Buscar
-          </Button>
-        </div>
-      </div>
-
       {/* Error display */}
       {error && (
         <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-sm font-medium p-4 rounded-md">
@@ -311,8 +290,30 @@ export const YardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Loads Table */}
-      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs overflow-hidden">
+      {/* Búsqueda + tabla, mismo card */}
+      <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <SearchInput
+              containerClassName="w-full sm:w-64"
+              placeholder="Buscar por patente, nombre de chofer o empresa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+            <Button
+              variant="primary"
+              icon={Search}
+              onClick={handleSearch}
+              className="w-full sm:w-auto h-12 px-6"
+            >
+              Buscar
+            </Button>
+          </div>
+          <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+            Total: {loads.length}
+          </span>
+        </div>
         <Table
           columns={columns}
           data={loads}

@@ -804,23 +804,26 @@ export const GroupsPage: React.FC = () => {
 
           <ErrorMessage message={error} />
 
-          {/* Search Filter */}
-          <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
-            <SearchInput
-              placeholder="Buscar grupo por nombre o descripción..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                placeholder="Buscar grupo por nombre o descripción..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                Total: {groups.length}
+              </span>
+            </div>
+            <Table
+              columns={columns}
+              data={groups}
+              isLoading={loading}
+              emptyMessage="No se encontraron grupos de transportistas registrados."
+              onRowClick={(g) => handleOpenEdit(g)}
             />
           </div>
-
-          {/* Groups Table */}
-          <Table
-            columns={columns}
-            data={groups}
-            isLoading={loading}
-            emptyMessage="No se encontraron grupos de transportistas registrados."
-            onRowClick={(g) => handleOpenEdit(g)}
-          />
         </div>
       )}
     </div>

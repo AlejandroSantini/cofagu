@@ -13,16 +13,20 @@ interface FilterPillsProps {
   className?: string;
 }
 
-/** Filtro de una sola opción, como segmentos/chips clickeables. */
+/**
+ * Filtro de una sola opción, como tabs subrayadas con scroll horizontal —
+ * mismo patrón que las tabs de "Cargas y Viajes" (Disponibles/Asignados/…),
+ * en vez de chips en caja que se apilan feo en mobile.
+ */
 export const FilterPills: React.FC<FilterPillsProps> = ({ label, options, value, onChange, className = '' }) => {
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 ${className}`}>
+    <div className={className}>
       {label && (
-        <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0">
+        <span className="text-xs font-black uppercase tracking-wider text-slate-400 block mb-1.5">
           {label}
         </span>
       )}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex items-center gap-1 border-b border-slate-200 dark:border-zinc-800 overflow-x-auto no-scrollbar scroll-smooth">
         {options.map((opt) => {
           const active = opt.value === value;
           return (
@@ -30,13 +34,11 @@ export const FilterPills: React.FC<FilterPillsProps> = ({ label, options, value,
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`
-                px-3 py-1.5 rounded-sm text-xs font-black uppercase tracking-wider whitespace-nowrap
-                transition-all duration-200 cursor-pointer active:scale-[0.98]
-                ${active
-                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/10'
-                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}
-              `}
+              className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                active
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
+              }`}
             >
               {opt.label}
             </button>
