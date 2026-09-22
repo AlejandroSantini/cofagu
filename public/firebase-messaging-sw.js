@@ -24,9 +24,16 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   messaging.onBackgroundMessage(function(payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const notificationTitle = payload.notification?.title || payload.data?.title || 'Nueva Notificación';
+    // Si el payload trae "notification", FCM ya la muestra sola en segundo
+    // plano antes de llegar acá — si además llamamos a showNotification(),
+    // queda duplicada. Solo mostramos manualmente los mensajes "data-only".
+    if (payload.notification) {
+      return;
+    }
+
+    const notificationTitle = payload.data?.title || 'Nueva Notificación';
     const notificationOptions = {
-      body: payload.notification?.body || payload.data?.body,
+      body: payload.data?.body,
       icon: '/LOGO COFAGU-02.png',
       data: payload.data
     };

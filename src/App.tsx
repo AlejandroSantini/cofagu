@@ -13,6 +13,7 @@ import { useThemeStore } from './store/useThemeStore';
 import { RoleGate } from './components/RoleGate';
 import { useEffect } from 'react';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { PushOnboardingModal } from './components/PushOnboardingModal';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 
 import { ConfigurationPage } from './pages/ConfigurationPage';
@@ -36,7 +37,7 @@ function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   // Initialize push notifications when user is authenticated
-  usePushNotifications(!!token);
+  const push = usePushNotifications(!!token);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -53,6 +54,14 @@ function App() {
 
   return (
     <BrowserRouter>
+      <PushOnboardingModal
+        isAuthenticated={!!token}
+        permissionStatus={push.permissionStatus}
+        requestPermission={push.requestPermission}
+        loading={push.loading}
+        requiresStandaloneMode={push.requiresStandaloneMode}
+        notSupported={push.notSupported}
+      />
       <Routes>
         <Route 
           path="/login" 

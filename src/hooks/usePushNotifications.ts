@@ -3,6 +3,8 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { messaging, isFirebaseConfigured } from '../firebase';
 import { authService } from '../api/services';
 import { useToast } from './useToast';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { isIOSDevice, isStandaloneDisplay } from '../utils/device';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
@@ -21,11 +23,7 @@ function getServiceWorkerUrl(): string {
 
 // Detecta si estamos en iOS Safari en modo browser (NO como app instalada)
 function isIOSSafariBrowser(): boolean {
-  const ua = navigator.userAgent;
-  const isIOS = /iP(hone|ad|od)/.test(ua);
-  const isStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true ||
-    window.matchMedia('(display-mode: standalone)').matches;
-  return isIOS && !isStandalone;
+  return isIOSDevice() && !isStandaloneDisplay();
 }
 
 function isNotificationSupported(): boolean {
@@ -135,6 +133,9 @@ export function usePushNotifications(isAuthenticated: boolean) {
         const body = payload.notification?.body || payload.data?.body || '';
 
         showToast(`${title}: ${body}`, 'success');
+        // Actualiza el badge de la campanita al toque, sin esperar al polling
+        // de 1 minuto de AppLayout.
+        useNotificationStore.getState().incrementUnread();
       });
     } catch (err) {
       console.error('[FCM] Error setting up onMessage listener:', err);
