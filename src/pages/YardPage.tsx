@@ -6,6 +6,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { SearchInput } from '../components/ui/SearchInput';
 import { Modal } from '../components/ui/Modal';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
@@ -285,17 +286,13 @@ export const YardPage: React.FC = () => {
       {/* Smart Search Bar */}
       <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por patente, nombre de chofer o empresa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full h-12 pl-10 pr-4 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-            />
-          </div>
+          <SearchInput
+            containerClassName="flex-1"
+            placeholder="Buscar por patente, nombre de chofer o empresa..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
           <Button
             variant="primary"
             icon={Search}

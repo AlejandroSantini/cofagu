@@ -7,6 +7,7 @@ import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
+import { SearchInput } from '../../components/ui/SearchInput';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
@@ -832,12 +833,10 @@ export const LoadsPage: React.FC = () => {
             <h3 className="text-md font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
               Buscador de Camiones Autorizados a Combustible
             </h3>
-            <input
-              type="text"
+            <SearchInput
               placeholder="Buscar por Patente (Chasis/Acoplado), Chofer o Transportista..."
               value={plateSearch}
               onChange={(e) => setPlateSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md px-4 py-3 text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
             />
           </div>
 

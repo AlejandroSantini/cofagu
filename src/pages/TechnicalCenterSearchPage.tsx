@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Truck, Phone, Package } from 'lucide-react';
+import { MapPin, Truck, Phone, Package } from 'lucide-react';
 import { loadService } from '../api/services';
 import type { TechnicalCenterSearchResult } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Table } from '../components/ui/Table';
+import { SearchInput } from '../components/ui/SearchInput';
+import { FilterPills } from '../components/ui/FilterPills';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -100,31 +102,21 @@ export const TechnicalCenterSearchPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-slate-200 dark:border-zinc-800 p-4 sm:p-6 mb-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar por patente o transportista..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md pl-12 pr-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
-            />
-          </div>
-          <select
-            value={selectedTruckType}
-            onChange={(e) => setSelectedTruckType(e.target.value)}
-            className="bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-4 py-4 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none sm:min-w-[200px]"
-          >
-            <option value="ALL">Todos los tipos</option>
-            {Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-slate-200 dark:border-zinc-800 p-4 sm:p-6 mb-6 space-y-4">
+        <SearchInput
+          placeholder="Buscar por patente o transportista..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <FilterPills
+          label="Tipo"
+          options={[
+            { value: 'ALL', label: 'Todos' },
+            ...Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+          ]}
+          value={selectedTruckType}
+          onChange={setSelectedTruckType}
+        />
       </div>
 
       {error && (

@@ -28,13 +28,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   Eye,
-  Search,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 import { ImageUpload, SecureImage } from "../components/ui/ImageUpload";
 import { Modal } from "../components/ui/Modal";
-import { Input } from "../components/ui/Input";
+import { SearchInput } from "../components/ui/SearchInput";
 
 const CURRENT_TIME = Date.now();
 
@@ -476,14 +475,12 @@ export const CarrierDocumentsPage: React.FC = () => {
               Pólizas Presentadas
             </h3>
             <div className="flex items-center gap-3">
-              <div className="w-full sm:w-64">
-                <Input
-                  icon={Search}
-                  placeholder="Buscar transportista..."
-                  value={carrierSearch}
-                  onChange={(e) => setCarrierSearch(e.target.value)}
-                />
-              </div>
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                placeholder="Buscar transportista..."
+                value={carrierSearch}
+                onChange={(e) => setCarrierSearch(e.target.value)}
+              />
               <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
                 Total: {documents.length}
               </span>

@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { FilterPills } from '../components/ui/FilterPills';
 import { Modal } from '../components/ui/Modal';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
@@ -659,23 +660,19 @@ export const TrucksPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
-              Filtrar por Tipo de Camión:
-            </span>
-            <div className="w-64">
-              <Select
-                options={[
-                  { value: 'ALL', label: 'Todos los tipos' },
-                  { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
-                  { value: 'BATEA', label: 'Batea' },
-                  { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
-                  { value: 'SEMI', label: 'Semi' }
-                ]}
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              />
-            </div>
+          <div className="bg-white dark:bg-zinc-900 p-4 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <FilterPills
+              label="Tipo de Camión"
+              options={[
+                { value: 'ALL', label: 'Todos' },
+                { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
+                { value: 'BATEA', label: 'Batea' },
+                { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
+                { value: 'SEMI', label: 'Semi' }
+              ]}
+              value={typeFilter}
+              onChange={setTypeFilter}
+            />
           </div>
           <Table
             columns={columns}
