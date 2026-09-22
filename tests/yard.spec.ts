@@ -72,4 +72,26 @@ test.describe("Control de Playa", () => {
     await expect(page.getByRole("heading", { name: "Control de Playa" })).toBeVisible();
     await expect(page.getByText("No se encontraron camiones en la playa de camiones.")).toBeVisible();
   });
+
+  test("la búsqueda es automática (sin botón 'Buscar'), manda el término al backend", async ({ page }) => {
+    await loginAs(page, "PLAYERO");
+    const searches: (string | null)[] = [];
+    await page.route("**/api/loads/yard/loads*", (route) => {
+      const url = new URL(route.request().url());
+      const search = url.searchParams.get("search");
+      searches.push(search);
+      const matches = !search || "ab123cd".includes(search.toLowerCase());
+      return fulfill(route, apiOk(matches ? [YARD_LOAD] : []));
+    });
+
+    await page.goto("/yard");
+    await expect(page.getByText("AB123CD")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Buscar" })).toHaveCount(0);
+
+    await page.getByPlaceholder("Buscar por patente, nombre de chofer o empresa...").fill("ab123cd");
+
+    await expect.poll(() => searches).toContain("ab123cd");
+    // No debe parpadear a skeleton en el refetch sobre datos ya visibles.
+    await expect(page.getByText("AB123CD")).toBeVisible();
+  });
 });

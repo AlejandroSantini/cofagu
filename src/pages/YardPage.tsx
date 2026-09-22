@@ -12,7 +12,7 @@ import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
-  Search, XCircle, RefreshCw, Clock
+  XCircle, RefreshCw, Clock
 } from 'lucide-react';
 
 export const YardPage: React.FC = () => {
@@ -47,16 +47,25 @@ export const YardPage: React.FC = () => {
     fetchLoads(searchTerm);
   }, [fetchLoads]);
 
-  const handleSearch = () => {
-    setLoading(true);
-    fetchLoads(searchTerm);
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  // Búsqueda automática: debounce de 300ms antes de pegarle al backend,
+  // igual que el resto de los buscadores de la app (Grupos, Documentación,
+  // Combustible). Se salta la primera corrida, que ya la hace el efecto de
+  // arriba en el montaje.
+  const isFirstSearchRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
+      return;
     }
-  };
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) fetchLoads(searchTerm);
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, fetchLoads]);
 
   useAutoRefresh(() => fetchLoads(searchTerm));
 
@@ -305,23 +314,12 @@ export const YardPage: React.FC = () => {
       {/* Búsqueda + tabla, mismo card */}
       <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            <SearchInput
-              containerClassName="w-full sm:w-64"
-              placeholder="Buscar por patente, nombre de chofer o empresa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-            />
-            <Button
-              variant="primary"
-              icon={Search}
-              onClick={handleSearch}
-              className="w-full sm:w-auto h-12 px-6"
-            >
-              Buscar
-            </Button>
-          </div>
+          <SearchInput
+            containerClassName="w-full sm:w-64"
+            placeholder="Buscar por patente, nombre de chofer o empresa..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
           <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
             Total: {loads.length}
           </span>
