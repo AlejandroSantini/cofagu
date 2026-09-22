@@ -122,6 +122,7 @@ interface LoadDetailsProps {
   onReportContingency: (
     description: string,
     reportedBy: string,
+    loadId: number | string,
   ) => Promise<boolean>;
   onConfirmDeparture?: (appId: number, ctg: string, loadedWeight: number) => Promise<boolean>;
   onStartTrip?: (appId: number, ctg?: string) => Promise<boolean>;
@@ -309,6 +310,47 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     (a) => a.status !== "CANCELLED",
   );
 
+  // El id correcto para reportar una contingencia es el del sub-load/cupo
+  // (load.loads[].id) — NO el de `load.id` cuando `load` vino de
+  // GET /trips/:id (navegación normal: LoadsPage y Dashboard siempre
+  // navegan con ?type=trip). Confirmado contra el backend real: tripId y
+  // loadId son espacios de numeración distintos, así que usar `load.id` ahí
+  // adjunta la contingencia a un sub-load totalmente ajeno y sin relación
+  // con lo que se está viendo. `load.loads` solo existe en la forma "viaje"
+  // (ausente en la forma "sub-load" de GET /loads/:id).
+  const myCommittedSubload = isCarrier
+    ? load.loads?.find(
+        (l: any) =>
+          l.carrierId === effectiveCarrierId &&
+          (l.status === "IN_PROGRESS" || l.status === "ASSIGNED" || l.status === "DELAYED"),
+      )
+    : undefined;
+  const contingencyTargetLoadId: number | string | undefined = !load.loads
+    ? load.id
+    : isCarrier
+      ? myCommittedSubload?.id
+      : (load.loads.find((l: any) => l.status === "IN_PROGRESS")?.id ??
+        load.loads.find((l: any) => l.status === "ASSIGNED")?.id);
+
+  // El historial de contingencias vive en cada sub-load (`load.loads[].contingencies`),
+  // no en el viaje — `load.contingencies` solo viene poblado cuando `load` ya
+  // es un sub-load (type=load). Con varios camiones en el mismo viaje, se
+  // junta todo y se etiqueta con la patente para no confundir a cuál camión
+  // corresponde cada una.
+  const allContingencies = (
+    load.loads && load.loads.length > 0
+      ? load.loads.flatMap((l: any) =>
+          (l.contingencies || []).map((c: any) => ({
+            ...c,
+            _truckPlate: l.truck?.chassisPlate || l.truck?.plate,
+          })),
+        )
+      : load.contingencies || []
+  ).sort(
+    (a: any, b: any) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
   const hasApplied =
     !isLogistics &&
     myActiveApps.length > 0 &&
@@ -406,10 +448,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   };
 
   const handleLocalReportContingency = async () => {
+    if (!contingencyTargetLoadId) return;
     setLocalSubmitLoading(true);
     const success = await onReportContingency(
       contingencyDesc,
       contingencyReporter,
+      contingencyTargetLoadId,
     );
     setLocalSubmitLoading(false);
     if (success) {
@@ -1164,6 +1208,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             )}
 
             {(isCarrier || canUserWrite) &&
+              !!contingencyTargetLoadId &&
               (load.status === "IN_PROGRESS" ||
                 myTrips.some(
                   (t) =>
@@ -2051,19 +2096,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">
               Historial de Contingencias y Novedades
             </h3>
-            {!load.contingencies || load.contingencies.length === 0 ? (
+            {allContingencies.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
                 No se registraron incidentes durante este traslado.
               </p>
             ) : (
               <div className="relative pl-6 border-l-2 border-slate-100 dark:border-zinc-800 space-y-6">
-                {load.contingencies.map((c) => (
+                {allContingencies.map((c: any) => (
                   <div key={c.id} className="relative">
                     <div className="absolute -left-[31px] top-1.5 w-4 h-4 bg-amber-500 rounded-full border-4 border-white dark:border-zinc-900" />
                     <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-md border border-slate-100 dark:border-zinc-800">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">
                           Reportado por: {c.reportedBy}
+                          {c._truckPlate && ` · Camión ${c._truckPlate}`}
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono">
                           {new Date(c.createdAt).toLocaleString("es-AR")}

@@ -425,10 +425,10 @@ export const LoadsPage: React.FC = () => {
     }
   };
 
-  const handleReportContingency = async (description: string, reportedBy: string): Promise<boolean> => {
-    if (!selectedLoad || !description) return false;
+  const handleReportContingency = async (description: string, reportedBy: string, loadId: number | string): Promise<boolean> => {
+    if (!selectedLoad || !description || !loadId) return false;
     try {
-      const res = await loadService.reportContingency(selectedLoad.id, {
+      const res = await loadService.reportContingency(loadId, {
         description,
         reportedBy: reportedBy || user?.name || 'Chofer'
       });
