@@ -29,6 +29,8 @@ import {
   AlertTriangle,
   Eye,
   Search,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { ImageUpload, SecureImage } from "../components/ui/ImageUpload";
 import { Modal } from "../components/ui/Modal";
@@ -45,6 +47,7 @@ export const CarrierDocumentsPage: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewZoomed, setPreviewZoomed] = useState(false);
   const [carrierSearch, setCarrierSearch] = useState("");
 
   const { toast, showToast, hideToast } = useToast();
@@ -424,15 +427,44 @@ export const CarrierDocumentsPage: React.FC = () => {
 
       <Modal
         isOpen={!!previewUrl}
-        onClose={() => setPreviewUrl(null)}
+        onClose={() => {
+          setPreviewUrl(null);
+          setPreviewZoomed(false);
+        }}
         title="Ver Documento"
         cancelText="Cerrar"
         imageOnly
       >
-        <div className="flex justify-center items-center">
-          {previewUrl && (
-            <SecureImage src={previewUrl} className="max-w-[95vw] max-h-[90vh] w-auto h-auto rounded-md shadow-2xl object-contain" />
-          )}
+        <div className="flex flex-col items-center gap-2">
+          {/* El zoom nativo del navegador está deshabilitado en toda la app
+              (viewport user-scalable=no), así que hace falta este toggle a
+              mano para poder agrandar la foto y leer los datos de la
+              póliza — pedido explícito, la imagen tal cual llega del
+              transportista a veces no se lee bien. */}
+          <div
+            className={
+              previewZoomed
+                ? "max-w-[95vw] max-h-[80vh] overflow-auto rounded-md cursor-zoom-out"
+                : "flex justify-center items-center cursor-zoom-in"
+            }
+            onClick={() => setPreviewZoomed((z) => !z)}
+          >
+            {previewUrl && (
+              <SecureImage
+                src={previewUrl}
+                alt="Documento"
+                className={
+                  previewZoomed
+                    ? "max-w-none w-auto h-auto rounded-md shadow-2xl"
+                    : "max-w-[95vw] max-h-[80vh] w-auto h-auto rounded-md shadow-2xl object-contain"
+                }
+              />
+            )}
+          </div>
+          <span className="flex items-center gap-1.5 text-xs text-white/80 font-bold">
+            {previewZoomed ? <ZoomOut size={14} /> : <ZoomIn size={14} />}
+            {previewZoomed ? "Tocá la imagen para achicar" : "Tocá la imagen para agrandarla al máximo"}
+          </span>
         </div>
       </Modal>
 

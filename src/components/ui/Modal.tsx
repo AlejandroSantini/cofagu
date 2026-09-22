@@ -99,8 +99,9 @@ export const Modal: React.FC<ModalProps> = ({
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
       >
-        <button 
+        <button
           onClick={onClose}
+          aria-label="Cerrar"
           className={`absolute top-4 right-4 p-2 transition-colors z-[110] ${
             imageOnly 
               ? 'text-white hover:text-white bg-black/40 hover:bg-black/60 rounded-full' 

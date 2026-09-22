@@ -362,11 +362,26 @@ export const LoadsPage: React.FC = () => {
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.message || 'Error al enviar postulación';
-      showToast(errMsg, 'error');
-      if (err.response?.status === 400 && (errMsg.toLowerCase().includes('seguro') || errMsg.toLowerCase().includes('póliza'))) {
-        setTimeout(() => {
-          navigate('/trucks');
-        }, 3000);
+      const isInsuranceError =
+        err.response?.status === 400 &&
+        (errMsg.toLowerCase().includes('seguro') || errMsg.toLowerCase().includes('póliza'));
+      // El seguro de carga es responsabilidad del transportista, no de la
+      // logística que postula en su nombre (pedido explícito) — no tiene
+      // sentido mandar a Logística a /trucks a "arreglar" algo que no le
+      // corresponde. El backend todavía bloquea la postulación igual (falta
+      // el fix de backend); acá sólo evitamos la redirección confusa.
+      if (isInsuranceError && isLogistics) {
+        showToast(
+          'El camión seleccionado no tiene el seguro de carga aprobado. Eso lo gestiona el transportista con la cooperativa — avisale para que lo actualice.',
+          'error',
+        );
+      } else {
+        showToast(errMsg, 'error');
+        if (isInsuranceError) {
+          setTimeout(() => {
+            navigate('/trucks');
+          }, 3000);
+        }
       }
     }
     return false;
