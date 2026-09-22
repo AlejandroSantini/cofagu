@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { truckSchema, type TruckFormValues } from '../schemas/truck.schema';
+import { makeTruckSchema, type TruckFormValues } from '../schemas/truck.schema';
 import { truckService, carrierService } from '../api/services';
 import { type Truck, type Carrier } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
@@ -58,6 +58,7 @@ export const TrucksPage: React.FC = () => {
   const isAdmin = useAuthStore((state) => state.isAdmin());
   const user = useAuthStore((state) => state.user);
   const isCarrier = user?.role === 'CARRIER';
+  const isLogistics = useAuthStore((state) => state.isLogistics());
   const canWriteTrucks = useAuthStore((state) => state.isAdmin() || state.isOperator() || state.isLogistics() || state.user?.role === 'CARRIER');
 
   
@@ -82,7 +83,7 @@ export const TrucksPage: React.FC = () => {
     watch,
     formState: { errors, isValid }
   } = useForm<TruckFormValues>({
-    resolver: zodResolver(truckSchema),
+    resolver: zodResolver(makeTruckSchema(!isLogistics)),
     mode: 'onChange',
     defaultValues: {
       chassisPlate: '',
@@ -220,10 +221,12 @@ export const TrucksPage: React.FC = () => {
         plate: data.chassisPlate,
         type: data.type,
         capacity: Number(data.capacity),
-        cargoInsurancePolicy: data.cargoInsurancePolicy,
+        cargoInsurancePolicy: data.cargoInsurancePolicy || undefined,
         cargoInsuranceCompany: data.cargoInsuranceCompany || undefined,
-        cargoInsuranceExpiration: dateOnlyToISOString(data.cargoInsuranceExpiration),
-        cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl
+        cargoInsuranceExpiration: data.cargoInsuranceExpiration
+          ? dateOnlyToISOString(data.cargoInsuranceExpiration)
+          : undefined,
+        cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl || undefined
       };
 
       if (isCarrier) {
@@ -276,7 +279,10 @@ export const TrucksPage: React.FC = () => {
   };
 
   const columns = [
-    {
+    // "Habilitado" se calcula a partir del mismo estado de seguro de carga
+    // — para Logística tampoco importa (pedido explícito), se oculta igual
+    // que la columna de Seguro de Carga.
+    ...(!isLogistics ? [{
       header: 'Estado Habilitación',
       render: (t: Truck) => {
         const isSuspended = t.isSuspended || (t.suspendedUntil ? new Date(t.suspendedUntil) > new Date() : false);
@@ -323,7 +329,7 @@ export const TrucksPage: React.FC = () => {
           </div>
         );
       }
-    },
+    }] : []),
 
     {
       header: 'Patentes (Chasis / Acoplado)',
@@ -360,7 +366,10 @@ export const TrucksPage: React.FC = () => {
         )
       }
     ] : []),
-    {
+    // El seguro de carga es responsabilidad del transportista, no de la
+    // logística que gestiona el camión en su nombre (pedido explícito):
+    // Logística no ve esta columna ni el estado "Vencido"/"Pendiente".
+    ...(!isLogistics ? [{
       header: 'Seguro de Carga',
       render: (t: Truck) => {
         const expired = isInsuranceExpired(t.cargoInsuranceExpiration);
@@ -451,7 +460,7 @@ export const TrucksPage: React.FC = () => {
           </div>
         );
       }
-    },
+    }] : []),
     ...(canWriteTrucks ? [
       {
         header: 'Acciones',
@@ -594,44 +603,49 @@ export const TrucksPage: React.FC = () => {
               )}
             </div>
 
-            {/* Cargo Insurance Info Section (Required) */}
-            <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-6">
-              <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
-                <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-                Seguro Obligatorio de la Carga (Requerido) *
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                <Input
-                  label="Nro. de Póliza *"
-                  placeholder="Ej: CAR-123456"
-                  icon={FileText}
-                  {...register('cargoInsurancePolicy')}
-                  error={errors.cargoInsurancePolicy?.message}
-                />
-                <Input
-                  label="Aseguradora (Opcional)"
-                  placeholder="Ej: La Segunda"
-                  icon={Building2}
-                  {...register('cargoInsuranceCompany')}
-                  error={errors.cargoInsuranceCompany?.message}
-                />
-                <Input
-                  label="Fecha de vencimiento *"
-                  type="date"
-                  {...register('cargoInsuranceExpiration')}
-                  error={errors.cargoInsuranceExpiration?.message}
-                />
-              </div>
+            {/* Cargo Insurance Info Section (Required) — el seguro de carga es
+                responsabilidad del transportista, no de la logística que
+                carga el camión en su nombre (pedido explícito): Logística
+                ni ve ni tiene que completar esta sección. */}
+            {!isLogistics && (
+              <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-6">
+                <h3 className="text-md font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+                  Seguro Obligatorio de la Carga (Requerido) *
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                  <Input
+                    label="Nro. de Póliza *"
+                    placeholder="Ej: CAR-123456"
+                    icon={FileText}
+                    {...register('cargoInsurancePolicy')}
+                    error={errors.cargoInsurancePolicy?.message}
+                  />
+                  <Input
+                    label="Aseguradora (Opcional)"
+                    placeholder="Ej: La Segunda"
+                    icon={Building2}
+                    {...register('cargoInsuranceCompany')}
+                    error={errors.cargoInsuranceCompany?.message}
+                  />
+                  <Input
+                    label="Fecha de vencimiento *"
+                    type="date"
+                    {...register('cargoInsuranceExpiration')}
+                    error={errors.cargoInsuranceExpiration?.message}
+                  />
+                </div>
 
-              <div className="pt-2">
-                <ImageUpload
-                  label="Foto/Copia de la Póliza del Seguro de Carga *"
-                  value={watch('cargoInsurancePhotoUrl') || ''}
-                  onChange={(url) => setValue('cargoInsurancePhotoUrl', url, { shouldValidate: true })}
-                  error={errors.cargoInsurancePhotoUrl?.message}
-                />
+                <div className="pt-2">
+                  <ImageUpload
+                    label="Foto/Copia de la Póliza del Seguro de Carga *"
+                    value={watch('cargoInsurancePhotoUrl') || ''}
+                    onChange={(url) => setValue('cargoInsurancePhotoUrl', url, { shouldValidate: true })}
+                    error={errors.cargoInsurancePhotoUrl?.message}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
               <Button type="button" variant="secondary" onClick={handleBack}>
