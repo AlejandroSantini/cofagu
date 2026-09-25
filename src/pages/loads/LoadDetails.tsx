@@ -1340,12 +1340,20 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   load.applicationId) &&
                 rawAcceptedApps.length === 0
                   ? ({
+                      // Ojo: `load.id` solo es un id de CUPO/CARGA válido cuando
+                      // `load` ya vino como sub-load (type=load, sin `.loads`
+                      // anidado). Cuando `load` es el viaje (type=trip, la
+                      // navegación normal de la app), `load.id` es el ID DEL
+                      // VIAJE — usarlo acá manda el CTG/kilos a un cupo ajeno
+                      // (bug reportado 2026-09-24, confirmado contra el
+                      // backend real). Sin un id de postulación real, mejor
+                      // dejarlo undefined y que el botón que lo usa se oculte.
                       id:
                         typeof load.applicationId === "number"
                           ? load.applicationId
-                          : typeof load.id === "number"
-                            ? Number(load.id) || 1
-                            : 1,
+                          : !load.loads && typeof load.id === "number"
+                            ? Number(load.id)
+                            : undefined,
                       status: "ACCEPTED",
                       tripStatus:
                         load.status === "COMPLETED"
@@ -1755,6 +1763,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                       <div className="flex flex-col gap-2 mt-2">
                         {user?.role !== "ADMIN" &&
+                          typeof directAssignmentTrip.id === "number" &&
                           (isStaff ||
                             user?.role === "OPERATOR" ||
                             user?.role === "EMPLOYEE" ||

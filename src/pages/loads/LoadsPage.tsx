@@ -455,8 +455,8 @@ export const LoadsPage: React.FC = () => {
     if (!isLoad && selectedLoad.loads && selectedLoad.applications) {
       const app = selectedLoad.applications.find((a: any) => a.id === appId);
       if (app) {
-        const matchedLoad = selectedLoad.loads.find((l: any) => 
-          l.carrierId === app.carrierId && 
+        const matchedLoad = selectedLoad.loads.find((l: any) =>
+          l.carrierId === app.carrierId &&
           (l.truckId === app.truckId || l.truckId === app.truck?.id)
         );
         if (matchedLoad) {
@@ -465,6 +465,14 @@ export const LoadsPage: React.FC = () => {
           showToast('No se encontró la carga correspondiente para esta postulación.', 'error');
           return false;
         }
+      } else {
+        // `appId` no coincide con ninguna postulación real de este viaje:
+        // si seguimos, `targetId` queda en el `appId` recibido tal cual, que
+        // puede terminar siendo el id DEL VIAJE (mismo bug que en
+        // handleCompleteLoad) — postea el CTG/kg cargado a un cupo ajeno.
+        // Mejor frenar acá que corromper datos.
+        showToast('No se encontró la postulación para confirmar la salida.', 'error');
+        return false;
       }
     }
 
@@ -518,8 +526,8 @@ export const LoadsPage: React.FC = () => {
     if (appId && !isLoad) {
       const selectedApp = selectedLoad.applications?.find((a: any) => a.id === appId);
       if (selectedApp) {
-        const matchedLoad = selectedLoad.loads?.find((l: any) => 
-          l.carrierId === selectedApp.carrierId && 
+        const matchedLoad = selectedLoad.loads?.find((l: any) =>
+          l.carrierId === selectedApp.carrierId &&
           (l.truckId === selectedApp.truckId || l.truckId === selectedApp.truck?.id)
         );
         if (matchedLoad) {
@@ -529,6 +537,15 @@ export const LoadsPage: React.FC = () => {
           setSubmitLoading(false);
           return false;
         }
+      } else {
+        // `appId` no coincide con ninguna postulación real: si seguimos, `targetId`
+        // queda en `selectedLoad.id` — el id DEL VIAJE (así navega toda la app,
+        // ?type=trip), no el del cupo. Confirmado contra el backend real: eso
+        // termina posteando los kilos de descarga a un cupo ajeno y sin relación
+        // (bug reportado 2026-09-24). Mejor frenar acá que corromper datos.
+        showToast('No se encontró la postulación para completar este viaje.', 'error');
+        setSubmitLoading(false);
+        return false;
       }
     }
 
