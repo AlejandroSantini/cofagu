@@ -97,8 +97,17 @@ export const truckService = {
     carrierId?: number;
     available?: boolean;
     tripId?: number;
-    /** Filtra por nombre de transportista (server-side). Ver: docs/api/trucks.md */
+    /** Filtra por nombre de transportista/patente (server-side, ya confirmado contra el backend). */
     search?: string;
+    /** Filtra por tipo(s) de camión, coma-separado (ej: "TOLVA,SEMI_TOLVA"). Pendiente de backend. */
+    type?: string;
+    /** Capacidad mínima en kg (capacity >= minCapacity). Pendiente de backend. */
+    minCapacity?: number;
+    /** Capacidad máxima en kg (capacity <= maxCapacity). Pendiente de backend. */
+    maxCapacity?: number;
+    /** Paginación server-side. Pendiente de backend (hoy se ignora y devuelve todo). */
+    page?: number;
+    limit?: number;
   }) => api.get<ApiResponse<Truck[]>>("/trucks", { params }),
   getTruck: (id: number) => api.get<ApiResponse<Truck>>(`/trucks/${id}`),
   createTruck: (data: CreateTruckPayload) =>

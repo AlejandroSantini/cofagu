@@ -65,13 +65,35 @@ export const TrucksPage: React.FC = () => {
   
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [capacityMin, setCapacityMin] = useState('');
+  const [capacityMax, setCapacityMax] = useState('');
+  const [page, setPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [paginationInfo, setPaginationInfo] = useState<{ total: number; page: number; limit: number } | null>(null);
 
+  // Filtros client-side: hoy son los únicos que realmente filtran algo,
+  // porque el backend todavía ignora `type`/`minCapacity`/`maxCapacity` y
+  // devuelve siempre el listado completo (confirmado contra el backend
+  // real). Igual se mandan también como query params más abajo — el día
+  // que el backend los sume, este filtro pasa a ser un no-op (ya viene
+  // filtrado) en vez de tener que sacarlo.
   const filteredTrucks = trucks.filter((t) => {
-    if (typeFilter === 'ALL') return true;
-    if (typeFilter === 'TOLVA') return t.type === 'TOLVA' || t.type === 'SEMI_TOLVA';
-    if (typeFilter === 'BATEA') return t.type === 'BATEA';
-    return t.type === typeFilter;
+    if (typeFilter === 'TOLVA' && t.type !== 'TOLVA' && t.type !== 'SEMI_TOLVA') return false;
+    if (typeFilter === 'BATEA' && t.type !== 'BATEA') return false;
+    if (typeFilter !== 'ALL' && typeFilter !== 'TOLVA' && typeFilter !== 'BATEA' && t.type !== typeFilter) return false;
+    const capacity = Number(t.capacity);
+    if (capacityMin && !Number.isNaN(capacity) && capacity < Number(capacityMin)) return false;
+    if (capacityMax && !Number.isNaN(capacity) && capacity > Number(capacityMax)) return false;
+    return true;
   });
+
+  const TYPE_QUERY: Record<string, string | undefined> = {
+    ALL: undefined,
+    TOLVA: 'TOLVA,SEMI_TOLVA',
+    BATEA: 'BATEA',
+    CHASIS_Y_ACOPLADO: 'CHASIS_Y_ACOPLADO',
+    SEMI: 'SEMI',
+  };
 
 
 
@@ -100,22 +122,43 @@ export const TrucksPage: React.FC = () => {
     }
   });
 
-  // Con el ref el debounce de búsqueda no depende de que fetchData cambie
-  // de identidad entre renders — siempre lee el término actual.
-  const searchTermRef = React.useRef(searchTerm);
+  // Con el ref los debounces no dependen de que fetchData cambie de
+  // identidad entre renders — siempre leen el valor actual del filtro.
+  const filtersRef = React.useRef({ searchTerm, typeFilter, capacityMin, capacityMax });
   useEffect(() => {
-    searchTermRef.current = searchTerm;
-  }, [searchTerm]);
+    filtersRef.current = { searchTerm, typeFilter, capacityMin, capacityMax };
+  }, [searchTerm, typeFilter, capacityMin, capacityMax]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (targetPage: number) => {
     try {
-      const search = searchTermRef.current.trim();
+      const { searchTerm: search, typeFilter: tf, capacityMin: capMin, capacityMax: capMax } = filtersRef.current;
+      const params: Parameters<typeof truckService.getTrucks>[0] = { page: targetPage, limit: 20 };
+      if (search.trim()) params.search = search.trim();
+      const typeParam = TYPE_QUERY[tf];
+      if (typeParam) params.type = typeParam;
+      if (capMin) params.minCapacity = Number(capMin);
+      if (capMax) params.maxCapacity = Number(capMax);
+
       const [trkRes, crrRes] = await Promise.all([
-        truckService.getTrucks(search ? { search } : undefined),
+        truckService.getTrucks(params),
         isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
       ]);
 
-      if (trkRes.data.success) setTrucks(trkRes.data.data);
+      if (trkRes.data.success) {
+        setTrucks(trkRes.data.data);
+        // Hoy el backend no manda `pagination` (devuelve todo de una) — en
+        // cuanto lo sume, esto activa solo la paginación server-side de la
+        // tabla sin tocar nada más acá.
+        setPaginationInfo(
+          trkRes.data.pagination
+            ? {
+                total: trkRes.data.pagination.total,
+                page: trkRes.data.pagination.page ?? targetPage,
+                limit: trkRes.data.pagination.limit ?? 20,
+              }
+            : null,
+        );
+      }
       if (crrRes.data.success) setCarriers(crrRes.data.data as Carrier[]);
     } catch (err) {
       console.error(err);
@@ -126,14 +169,16 @@ export const TrucksPage: React.FC = () => {
   }, [isCarrier]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchData, page, refreshTrigger]);
 
-  useAutoRefresh(fetchData);
+  useAutoRefresh(() => fetchData(page));
 
-  // Búsqueda automática por transportista/patente: debounce de 300ms
-  // pegándole al backend (?search=), igual que el resto de la app. Se
-  // salta la primera corrida, que ya la hace el efecto de arriba.
+  // Búsqueda y capacidad: debounce de 300ms pegándole al backend, igual
+  // que el resto de la app. Tipo: inmediato (es un <Select>, no hace falta
+  // esperar). Los tres vuelven a la página 1 y fuerzan un refetch aunque
+  // ya estuvieran en la página 1 (por eso el `refreshTrigger`).
   const isFirstSearchRun = React.useRef(true);
   useEffect(() => {
     if (isFirstSearchRun.current) {
@@ -142,13 +187,25 @@ export const TrucksPage: React.FC = () => {
     }
     let ignore = false;
     const timer = setTimeout(() => {
-      if (!ignore) fetchData();
+      if (ignore) return;
+      setPage(1);
+      setRefreshTrigger((n) => n + 1);
     }, 300);
     return () => {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [searchTerm, fetchData]);
+  }, [searchTerm, capacityMin, capacityMax]);
+
+  const isFirstTypeRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstTypeRun.current) {
+      isFirstTypeRun.current = false;
+      return;
+    }
+    setPage(1);
+    setRefreshTrigger((n) => n + 1);
+  }, [typeFilter]);
 
   useEffect(() => {
     let active = true;
@@ -231,7 +288,7 @@ export const TrucksPage: React.FC = () => {
       if (res.data.success) {
         showToast(status === 'APPROVED' ? 'Seguro aprobado y camión habilitado.' : 'Seguro rechazado.', status === 'APPROVED' ? 'success' : 'error');
         setLoading(true);
-        fetchData();
+        fetchData(page);
       }
     } catch (err) {
       showToast(getErrorMessage(err, 'Error al actualizar estado del seguro.'), 'error');
@@ -279,7 +336,7 @@ export const TrucksPage: React.FC = () => {
           handleBack();
         }
         setLoading(true);
-        fetchData();
+        fetchData(page);
       }
     } catch (err) {
       setError(getErrorMessage(err, 'Error al guardar el camión.'));
@@ -297,7 +354,7 @@ export const TrucksPage: React.FC = () => {
         showToast('Camión eliminado con éxito');
         confirmDelete();
         setLoading(true);
-        fetchData();
+        fetchData(page);
       }
     } catch (err) {
       setError(getErrorMessage(err, 'Error al eliminar el camión.'));
@@ -688,37 +745,67 @@ export const TrucksPage: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              <SearchInput
-                containerClassName="w-full sm:w-64"
-                placeholder="Buscar por transportista o patente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="w-full sm:w-56">
-                <Select
-                  options={[
-                    { value: 'ALL', label: 'Todos los tipos' },
-                    { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
-                    { value: 'BATEA', label: 'Batea' },
-                    { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
-                    { value: 'SEMI', label: 'Semi' }
-                  ]}
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                <SearchInput
+                  containerClassName="w-full sm:w-64"
+                  placeholder="Buscar por transportista o patente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <div className="w-full sm:w-56">
+                  <Select
+                    options={[
+                      { value: 'ALL', label: 'Todos los tipos' },
+                      { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
+                      { value: 'BATEA', label: 'Batea' },
+                      { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
+                      { value: 'SEMI', label: 'Semi' }
+                    ]}
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                  />
+                </div>
+              </div>
+              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                Total: {paginationInfo?.total ?? filteredTrucks.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-32">
+                <Input
+                  type="number"
+                  min={0}
+                  icon={Scale}
+                  placeholder="Mín kg"
+                  value={capacityMin}
+                  onChange={(e) => setCapacityMin(e.target.value)}
+                />
+              </div>
+              <span className="text-xs text-slate-400 font-bold shrink-0">a</span>
+              <div className="w-32">
+                <Input
+                  type="number"
+                  min={0}
+                  icon={Scale}
+                  placeholder="Máx kg"
+                  value={capacityMax}
+                  onChange={(e) => setCapacityMax(e.target.value)}
                 />
               </div>
             </div>
-            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-              Total: {filteredTrucks.length}
-            </span>
           </div>
           <Table
             columns={columns}
             data={filteredTrucks}
             isLoading={loading}
             onRowClick={canWriteTrucks ? handleEdit : undefined}
+            pagination={
+              paginationInfo
+                ? { total: paginationInfo.total, page, onPageChange: (p) => setPage(p) }
+                : undefined
+            }
           />
         </div>
       )}
