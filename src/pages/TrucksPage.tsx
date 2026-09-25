@@ -745,56 +745,54 @@ export const TrucksPage: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                <SearchInput
-                  containerClassName="w-full sm:w-64"
-                  placeholder="Buscar por transportista o patente..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 flex-1">
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                placeholder="Buscar por transportista o patente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="w-full sm:w-56">
+                <Select
+                  options={[
+                    { value: 'ALL', label: 'Todos los tipos' },
+                    { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
+                    { value: 'BATEA', label: 'Batea' },
+                    { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
+                    { value: 'SEMI', label: 'Semi' }
+                  ]}
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
                 />
-                <div className="w-full sm:w-56">
-                  <Select
-                    options={[
-                      { value: 'ALL', label: 'Todos los tipos' },
-                      { value: 'TOLVA', label: 'Tolva / Semi Tolva' },
-                      { value: 'BATEA', label: 'Batea' },
-                      { value: 'CHASIS_Y_ACOPLADO', label: 'Chasis y Acoplado' },
-                      { value: 'SEMI', label: 'Semi' }
-                    ]}
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-32">
+                  <Input
+                    type="number"
+                    min={0}
+                    icon={Scale}
+                    placeholder="Mín kg"
+                    value={capacityMin}
+                    onChange={(e) => setCapacityMin(e.target.value)}
+                  />
+                </div>
+                <span className="text-xs text-slate-400 font-bold shrink-0">a</span>
+                <div className="w-32">
+                  <Input
+                    type="number"
+                    min={0}
+                    icon={Scale}
+                    placeholder="Máx kg"
+                    value={capacityMax}
+                    onChange={(e) => setCapacityMax(e.target.value)}
                   />
                 </div>
               </div>
-              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-                Total: {paginationInfo?.total ?? filteredTrucks.length}
-              </span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-32">
-                <Input
-                  type="number"
-                  min={0}
-                  icon={Scale}
-                  placeholder="Mín kg"
-                  value={capacityMin}
-                  onChange={(e) => setCapacityMin(e.target.value)}
-                />
-              </div>
-              <span className="text-xs text-slate-400 font-bold shrink-0">a</span>
-              <div className="w-32">
-                <Input
-                  type="number"
-                  min={0}
-                  icon={Scale}
-                  placeholder="Máx kg"
-                  value={capacityMax}
-                  onChange={(e) => setCapacityMax(e.target.value)}
-                />
-              </div>
-            </div>
+            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+              Total: {paginationInfo?.total ?? filteredTrucks.length}
+            </span>
           </div>
           <Table
             columns={columns}
