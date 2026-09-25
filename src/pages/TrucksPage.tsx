@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { SearchInput } from '../components/ui/SearchInput';
 import { Modal } from '../components/ui/Modal';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
@@ -63,6 +64,7 @@ export const TrucksPage: React.FC = () => {
 
   
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredTrucks = trucks.filter((t) => {
     if (typeFilter === 'ALL') return true;
@@ -98,10 +100,18 @@ export const TrucksPage: React.FC = () => {
     }
   });
 
-  const fetchData = async () => {
+  // Con el ref el debounce de búsqueda no depende de que fetchData cambie
+  // de identidad entre renders — siempre lee el término actual.
+  const searchTermRef = React.useRef(searchTerm);
+  useEffect(() => {
+    searchTermRef.current = searchTerm;
+  }, [searchTerm]);
+
+  const fetchData = useCallback(async () => {
     try {
+      const search = searchTermRef.current.trim();
       const [trkRes, crrRes] = await Promise.all([
-        truckService.getTrucks(),
+        truckService.getTrucks(search ? { search } : undefined),
         isCarrier ? Promise.resolve({ data: { success: true, data: [] } }) : carrierService.getCarriers()
       ]);
 
@@ -113,13 +123,32 @@ export const TrucksPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isCarrier]);
 
   useEffect(() => {
     fetchData();
-  }, [isCarrier]);
+  }, [fetchData]);
 
   useAutoRefresh(fetchData);
+
+  // Búsqueda automática por transportista/patente: debounce de 300ms
+  // pegándole al backend (?search=), igual que el resto de la app. Se
+  // salta la primera corrida, que ya la hace el efecto de arriba.
+  const isFirstSearchRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
+      return;
+    }
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) fetchData();
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, fetchData]);
 
   useEffect(() => {
     let active = true;
@@ -660,11 +689,14 @@ export const TrucksPage: React.FC = () => {
       ) : (
         <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
-              Filtrar por Tipo de Camión
-            </span>
-            <div className="flex items-center gap-3">
-              <div className="w-full sm:w-64">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                placeholder="Buscar por transportista o patente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="w-full sm:w-56">
                 <Select
                   options={[
                     { value: 'ALL', label: 'Todos los tipos' },
@@ -677,10 +709,10 @@ export const TrucksPage: React.FC = () => {
                   onChange={(e) => setTypeFilter(e.target.value)}
                 />
               </div>
-              <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-                Total: {filteredTrucks.length}
-              </span>
             </div>
+            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+              Total: {filteredTrucks.length}
+            </span>
           </div>
           <Table
             columns={columns}

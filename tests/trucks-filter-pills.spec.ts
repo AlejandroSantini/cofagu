@@ -23,9 +23,7 @@ test.describe("Camiones — filtro por tipo", () => {
     await expect(page.getByText("BBB111")).toBeVisible();
     await expect(page.getByText("Total: 2", { exact: true })).toBeVisible();
 
-    const typeSelect = page.locator(
-      'span:text-is("Filtrar por Tipo de Camión")'
-    ).locator("xpath=following-sibling::div//select");
+    const typeSelect = page.locator("select");
 
     await typeSelect.selectOption("BATEA");
 
