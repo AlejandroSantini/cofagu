@@ -1205,12 +1205,16 @@ export const LoadsPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Buscador por transportista/patente/chofer — todas las
-              pestañas salvo Disponibles (el backend no filtra ahí, solo en
-              /loads). Pedido explícito: encontrar rápido un transportista
-              para cargar CTG/kg sin scrollear la lista completa. */}
+          {/* Buscador + tabla en un mismo card, pegado sin espacio muerto
+              (mismo patrón que Camiones/Grupos/Documentación — ver
+              ui-style skill, "Buscadores y filtros pegados a la tabla").
+              El buscador va en todas las pestañas salvo Disponibles para
+              roles sin el endpoint dedicado (el backend no filtra ahí,
+              solo en /loads). Pedido explícito: encontrar rápido un
+              transportista para cargar CTG/kg sin scrollear la lista. */}
+          <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           {!isPlayero && !isCarrier && (isBalanceSearchRole || activeTab !== 'ACTIVE') && (
-            <div className="flex items-center gap-3">
+            <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center gap-3">
               <SearchInput
                 containerClassName="w-full sm:w-64"
                 placeholder="Buscar por transportista, patente o chofer..."
@@ -1394,6 +1398,7 @@ export const LoadsPage: React.FC = () => {
               myCarrierId={user?.carrierId}
             />
           )}
+          </div>
         </div>
       )}
     </div>

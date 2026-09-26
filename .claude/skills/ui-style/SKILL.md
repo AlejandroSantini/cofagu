@@ -130,6 +130,46 @@ Importar y componer estos. No duplicar su lógica.
 | `Toast` / `ErrorMessage` | Feedback | — |
 | `ImageUpload` | Subida de imágenes | — |
 
+## Buscadores y filtros: siempre pegados a su tabla
+
+Regla explícita del usuario (rechazó dos veces un buscador/filtro flotando
+en su propia tarjeta, separado de la tabla por espacio muerto — "horrible
+wacho" / "pedía estos filtros acá? [con espacio]... fijate los demás").
+**El buscador/filtro y la tabla que filtra viven en un único card**, sin
+separación: el header con el buscador lleva `border-b` y la tabla va
+inmediatamente después, dentro del mismo contenedor. Nunca un card aparte
+para el filtro con margen/gap hacia la tabla.
+
+```tsx
+<div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+  <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="flex flex-col sm:flex-row gap-3 flex-1">
+      <SearchInput containerClassName="w-full sm:w-64" placeholder="Buscar por..." value={search} onChange={...} />
+      {/* filtro adicional (Select, FilterPills, rango de números), en la misma fila */}
+    </div>
+    <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+      Total: {data.length}
+    </span>
+  </div>
+  <Table columns={columns} data={data} isLoading={loading} onRowClick={...} />
+</div>
+```
+
+- `Table` ya trae su propio `rounded-md border shadow-sm` — anidarla dentro
+  del card del buscador es intencional (mismo color/radio en ambos, el
+  "borde doble" en la unión no se nota) y es el patrón ya usado en
+  `CarrierDocumentsPage`, `TrucksPage`, `GroupsPage`, `YardPage`,
+  `LoadsPage` (Control de Combustible / buscador de Balanza).
+- El badge "Total: N" va dentro del mismo header, a la derecha del
+  buscador — no como elemento aparte.
+- `SearchInput` con ancho fijo (`w-full sm:w-64`), nunca `flex-1` estirado
+  a todo el ancho del card salvo que sea el único control del header.
+- Si hay un filtro de tipo/categoría además del buscador (`Select`,
+  `FilterPills`), va en la misma fila que el buscador, no en una fila
+  aparte debajo — salvo que sean muchos controles y no entren ni con
+  `flex-wrap` (recién ahí, una segunda fila dentro del mismo header,
+  todavía dentro del mismo card).
+
 ## Estados de carga (skeletons)
 
 Regla: **mientras se resuelve un fetch se muestra un skeleton con la forma del
@@ -206,3 +246,5 @@ instantáneas (`EntityRedirects`).
 7. ¿Los estados de carga son skeletons con la forma del contenido (no spinner
    centrado ni "Cargando...")? ¿El re-fetch sobre datos ya visibles NO parpadea
    a skeleton?
+8. Si hay un buscador/filtro sobre una tabla, ¿está pegado a ella en el mismo
+   card (sin espacio muerto ni card aparte)?
