@@ -108,7 +108,7 @@ export class ApiClient {
   }
 
   private async json(
-    method: 'get' | 'post' | 'patch' | 'delete',
+    method: 'get' | 'post' | 'patch' | 'put' | 'delete',
     path: string,
     data?: unknown,
   ) {
@@ -118,6 +118,14 @@ export class ApiClient {
       throw new Error(`${method.toUpperCase()} ${path} → HTTP ${res.status()}: ${text}`);
     }
     return text ? unwrap(JSON.parse(text)) : null;
+  }
+
+  getTruck(id: number | string): Promise<any> {
+    return this.json('get', `/trucks/${id}`);
+  }
+
+  updateTruck(id: number | string, data: Record<string, unknown>): Promise<any> {
+    return this.json('put', `/trucks/${id}`, data);
   }
 
   async listGroups(): Promise<any[]> {
@@ -178,6 +186,12 @@ export class ApiClient {
    */
   async postRaw(path: string, body: unknown): Promise<{ ok: boolean; status: number; body: any }> {
     const res = await this.ctx.post(url(path), { data: body });
+    const text = await res.text();
+    return { ok: res.ok(), status: res.status(), body: text ? JSON.parse(text) : null };
+  }
+
+  async putRaw(path: string, body: unknown): Promise<{ ok: boolean; status: number; body: any }> {
+    const res = await this.ctx.put(url(path), { data: body });
     const text = await res.text();
     return { ok: res.ok(), status: res.status(), body: text ? JSON.parse(text) : null };
   }

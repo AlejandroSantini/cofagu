@@ -11,6 +11,7 @@ import { type CarrierDocument, type Carrier } from "../types";
 import { getErrorMessage } from "../api/errorUtils";
 import { useAuthStore } from "../store/useAuthStore";
 import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
 import { Toast } from "../components/ui/Toast";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Button } from "../components/ui/Button";
@@ -30,6 +31,8 @@ import {
   Eye,
   ZoomIn,
   ZoomOut,
+  ShieldOff,
+  ShieldCheck,
 } from "lucide-react";
 import { ImageUpload, SecureImage } from "../components/ui/ImageUpload";
 import { Modal } from "../components/ui/Modal";
@@ -48,6 +51,17 @@ export const CarrierDocumentsPage: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewZoomed, setPreviewZoomed] = useState(false);
   const [carrierSearch, setCarrierSearch] = useState("");
+
+  // Deshabilitar/rehabilitar un camión ya auditado — antes, una vez
+  // aprobado, no había forma de volver atrás (pedido explícito de ADMIN).
+  const {
+    isOpen: isToggleOpen,
+    data: toggleTarget,
+    ask: askToggle,
+    confirm: closeToggleModal,
+    cancel: cancelToggle,
+  } = useConfirm<{ id: number; nextStatus: "APPROVED" | "REJECTED"; carrierName: string }>();
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -167,6 +181,32 @@ export const CarrierDocumentsPage: React.FC = () => {
     } catch (err) {
       console.error(err);
       showToast("Error al actualizar el estado de la póliza.", "error");
+    }
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!toggleTarget) return;
+    setToggleLoading(true);
+    try {
+      const res = await truckService.updateTruck(toggleTarget.id, {
+        cargoInsuranceStatus: toggleTarget.nextStatus,
+        insuranceStatus: toggleTarget.nextStatus,
+      } as any);
+      if (res.data.success) {
+        showToast(
+          toggleTarget.nextStatus === "REJECTED"
+            ? "Camión deshabilitado: ya no puede postularse hasta volver a habilitarlo."
+            : "Camión habilitado nuevamente.",
+          "success",
+        );
+        closeToggleModal();
+        loadData(carrierSearch);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(getErrorMessage(err, "Error al actualizar el estado del camión."), "error");
+    } finally {
+      setToggleLoading(false);
     }
   };
 
@@ -315,35 +355,79 @@ export const CarrierDocumentsPage: React.FC = () => {
       render: (doc: CarrierDocument) => {
         const isDocExpired =
           new Date(doc.expirationDate).getTime() <= CURRENT_TIME;
-        if (doc.status !== "PENDING" || isDocExpired)
+        if (isDocExpired)
           return (
-            <span className="text-xs text-slate-400 italic">
-              Auditado / Vencido
-            </span>
+            <span className="text-xs text-slate-400 italic">Vencido</span>
           );
+        if (doc.status === "PENDING") {
+          return (
+            <div
+              className="flex justify-end gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Check}
+                className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 font-bold"
+                onClick={() => handleAudit(doc.id, "APPROVED")}
+              >
+                Aprobar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={X}
+                className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 border-rose-200 dark:border-rose-900 font-bold"
+                onClick={() => handleAudit(doc.id, "REJECTED")}
+              >
+                Rechazar
+              </Button>
+            </div>
+          );
+        }
+        // Auditado (APPROVED o REJECTED): antes no había forma de volver
+        // atrás una vez habilitado — ahora se puede deshabilitar/rehabilitar
+        // (confirmado contra el backend real: PUT /trucks/:id lo acepta sin
+        // problema aunque ya esté auditado, el candado era solo del front).
         return (
           <div
-            className="flex justify-end gap-2"
+            className="flex justify-end"
             onClick={(e) => e.stopPropagation()}
           >
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Check}
-              className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 font-bold"
-              onClick={() => handleAudit(doc.id, "APPROVED")}
-            >
-              Aprobar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              icon={X}
-              className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 border-rose-200 dark:border-rose-900 font-bold"
-              onClick={() => handleAudit(doc.id, "REJECTED")}
-            >
-              Rechazar
-            </Button>
+            {doc.status === "APPROVED" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ShieldOff}
+                className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 border-rose-200 dark:border-rose-900 font-bold"
+                onClick={() =>
+                  askToggle({
+                    id: doc.id,
+                    nextStatus: "REJECTED",
+                    carrierName: getCarrierName(doc),
+                  })
+                }
+              >
+                Deshabilitar
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ShieldCheck}
+                className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 font-bold"
+                onClick={() =>
+                  askToggle({
+                    id: doc.id,
+                    nextStatus: "APPROVED",
+                    carrierName: getCarrierName(doc),
+                  })
+                }
+              >
+                Habilitar
+              </Button>
+            )}
           </div>
         );
       },
@@ -466,6 +550,27 @@ export const CarrierDocumentsPage: React.FC = () => {
           </span>
         </div>
       </Modal>
+
+      <Modal
+        isOpen={isToggleOpen}
+        onClose={cancelToggle}
+        onConfirm={handleConfirmToggle}
+        title={
+          toggleTarget?.nextStatus === "REJECTED"
+            ? "Deshabilitar Camión"
+            : "Habilitar Camión"
+        }
+        description={
+          toggleTarget?.nextStatus === "REJECTED"
+            ? `${toggleTarget?.carrierName} no va a poder postularse con este camión hasta que lo vuelvas a habilitar. ¿Confirmás?`
+            : `${toggleTarget?.carrierName} vuelve a poder postularse con este camión. ¿Confirmás?`
+        }
+        type={toggleTarget?.nextStatus === "REJECTED" ? "danger" : "success"}
+        confirmText={
+          toggleTarget?.nextStatus === "REJECTED" ? "Deshabilitar" : "Habilitar"
+        }
+        isLoading={toggleLoading}
+      />
 
       {isAdmin ? (
         // ================= ADMIN AUDIT VIEW =================
