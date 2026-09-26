@@ -134,7 +134,13 @@ export const LoadsPage: React.FC = () => {
         // (IN_PROGRESS/COMPLETED) — el combustible se carga antes que el
         // cereal, así que un camión que ya salió no debe seguir en la cola.
         const loadParams: { status?: string; search?: string } = { status: isPlayero ? 'ASSIGNED' : activeTab };
-        if (isPlayero && debouncedPlateSearch.trim()) {
+        // Buscador por transportista/patente/chofer: server-side (?search=),
+        // confirmado contra el backend real que ya lo soporta en /loads
+        // (no en /trips — por eso queda afuera de "Disponibles"). Pedido
+        // explícito para Balanza (EMPLOYEE) y ahora también ADMIN/staff:
+        // encontrar rápido un transportista para cargar CTG/kg sin
+        // scrollear "Asignados"/"En Curso"/"Completadas".
+        if ((isPlayero || activeTab !== 'ACTIVE') && debouncedPlateSearch.trim()) {
           loadParams.search = debouncedPlateSearch.trim();
         }
         const res = isPlayero
@@ -1165,7 +1171,25 @@ export const LoadsPage: React.FC = () => {
             ))}
           </div>
 
-
+          {/* Buscador por transportista/patente/chofer — todas las
+              pestañas salvo Disponibles (el backend no filtra ahí, solo en
+              /loads). Pedido explícito: encontrar rápido un transportista
+              para cargar CTG/kg sin scrollear la lista completa. */}
+          {!isPlayero && !isCarrier && activeTab !== 'ACTIVE' && (
+            <div className="flex items-center gap-3">
+              <SearchInput
+                containerClassName="w-full sm:w-64"
+                placeholder="Buscar por transportista, patente o chofer..."
+                value={plateSearch}
+                onChange={(e) => setPlateSearch(e.target.value)}
+              />
+              {activeTab !== 'CANCELLED' && (
+                <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                  Total: {loads.length}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Tab Content Render */}
           {activeTab === 'CANCELLED' && !isPlayero ? (
