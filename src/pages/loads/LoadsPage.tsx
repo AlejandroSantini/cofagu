@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
-import { type Load, type Driver, type Truck, type Application } from '../../types';
+import { type Load, type Driver, type Truck, type Application, type ScaleLoadSearchResult } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
 import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
@@ -11,6 +11,7 @@ import { SearchInput } from '../../components/ui/SearchInput';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
+import { Badge } from '../../components/ui/Badge';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -95,6 +96,39 @@ export const LoadsPage: React.FC = () => {
     const timer = setTimeout(() => setDebouncedPlateSearch(plateSearch), 300);
     return () => clearTimeout(timer);
   }, [plateSearch]);
+
+  // Buscador unificado de Balanza (ADMIN/EMPLOYEE): un solo ?search= que
+  // junta ASSIGNED + IN_PROGRESS + COMPLETED (no hace falta cambiar de
+  // pestaña para ver si un transportista está en viaje o ya descargó).
+  // Pedido explícito por WhatsApp, implementado por backend 2026-09-26.
+  const isBalanceSearchRole = user?.role === 'ADMIN' || isEmployee;
+  const [scaleSearchResults, setScaleSearchResults] = useState<ScaleLoadSearchResult[] | null>(null);
+  const [scaleSearchLoading, setScaleSearchLoading] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!isBalanceSearchRole || !debouncedPlateSearch.trim()) {
+      setScaleSearchResults(null);
+      return;
+    }
+    setScaleSearchLoading(true);
+    loadService.searchScaleLoads(debouncedPlateSearch.trim())
+      .then((res) => {
+        if (active && res.data && res.data.success !== false) {
+          setScaleSearchResults(res.data.data);
+        }
+      })
+      .catch((err) => {
+        // Endpoint nuevo (GET /loads/scale/loads/search) — si todavía no
+        // está desplegado o falla, no rompemos la pantalla: se cae de
+        // nuevo a la búsqueda de siempre, acotada a la pestaña actual.
+        console.warn('GET /loads/scale/loads/search no disponible:', err);
+        if (active) setScaleSearchResults(null);
+      })
+      .finally(() => {
+        if (active) setScaleSearchLoading(false);
+      });
+    return () => { active = false; };
+  }, [isBalanceSearchRole, debouncedPlateSearch]);
 
   useEffect(() => {
     let active = true;
@@ -1175,7 +1209,7 @@ export const LoadsPage: React.FC = () => {
               pestañas salvo Disponibles (el backend no filtra ahí, solo en
               /loads). Pedido explícito: encontrar rápido un transportista
               para cargar CTG/kg sin scrollear la lista completa. */}
-          {!isPlayero && !isCarrier && activeTab !== 'ACTIVE' && (
+          {!isPlayero && !isCarrier && (isBalanceSearchRole || activeTab !== 'ACTIVE') && (
             <div className="flex items-center gap-3">
               <SearchInput
                 containerClassName="w-full sm:w-64"
@@ -1183,16 +1217,103 @@ export const LoadsPage: React.FC = () => {
                 value={plateSearch}
                 onChange={(e) => setPlateSearch(e.target.value)}
               />
-              {activeTab !== 'CANCELLED' && (
+              {isBalanceSearchRole && debouncedPlateSearch.trim() ? (
+                scaleSearchResults !== null && (
+                  <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                    Total: {scaleSearchResults.length}
+                  </span>
+                )
+              ) : activeTab !== 'CANCELLED' && activeTab !== 'ACTIVE' ? (
                 <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
                   Total: {loads.length}
                 </span>
-              )}
+              ) : null}
             </div>
           )}
 
           {/* Tab Content Render */}
-          {activeTab === 'CANCELLED' && !isPlayero ? (
+          {isBalanceSearchRole && debouncedPlateSearch.trim() && scaleSearchResults !== null ? (
+            <Table
+              columns={[
+                {
+                  header: 'Patente',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white uppercase">
+                      {r.plate || 'S/P'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Transportista',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200">
+                      {r.carrierName || 'N/D'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Chofer',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs sm:text-sm text-slate-700 dark:text-zinc-300">
+                      {r.driverName || 'N/D'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Ruta',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap">
+                      <span>{r.origin || 'N/D'}</span>
+                      <span className="text-emerald-500 font-black shrink-0">→</span>
+                      <span>{r.destination || 'N/D'}</span>
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Cereal',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300">
+                      {r.cereal || 'N/D'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Estado',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <Badge
+                      variant={
+                        r.status === 'COMPLETED' ? 'success' : r.status === 'IN_PROGRESS' ? 'primary' : 'info'
+                      }
+                    >
+                      {r.status === 'COMPLETED' ? 'DESCARGÓ' : r.status === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
+                    </Badge>
+                  ),
+                },
+                {
+                  header: 'CTG',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                      {r.ctg || 'S/D'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Cargado / Descargado (kg)',
+                  render: (r: ScaleLoadSearchResult) => (
+                    <span className="text-xs font-mono text-slate-700 dark:text-zinc-300">
+                      {r.loadedWeight != null ? r.loadedWeight.toLocaleString('es-AR') : 'S/D'}
+                      {' / '}
+                      {r.unloadedWeight != null ? r.unloadedWeight.toLocaleString('es-AR') : 'S/D'}
+                    </span>
+                  ),
+                },
+              ]}
+              data={scaleSearchResults}
+              isLoading={scaleSearchLoading}
+              emptyMessage="No se encontraron viajes para esa búsqueda."
+              onRowClick={(r) => navigate(`/loads/${r.id}?type=load`)}
+            />
+          ) : activeTab === 'CANCELLED' && !isPlayero ? (
             cancelledApps === null && !loading ? (
               <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm p-8 text-center text-sm text-slate-500 dark:text-zinc-400 italic">
                 Esta pestaña todavía no está disponible: falta que backend implemente

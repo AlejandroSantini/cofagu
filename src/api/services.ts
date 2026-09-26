@@ -18,6 +18,7 @@ import {
   type Notification,
   type GroupMemberType,
   type TechnicalCenterSearchResult,
+  type ScaleLoadSearchResult,
 } from "../types";
 
 // --- AUTH & USERS ---
@@ -124,6 +125,11 @@ export const loadService = {
     api.get<ApiResponse<Load[]>>("/loads", { params }),
   searchTechnicalCenterLoads: (search?: string) =>
     api.get<ApiResponse<TechnicalCenterSearchResult[]>>("/loads/technical-center/loads/search", { params: { search } }),
+  /** Balanza (EMPLOYEE) y ADMIN: busca por transportista/patente/chofer entre
+   * ASSIGNED, IN_PROGRESS y COMPLETED a la vez, con status/ctg/pesos por
+   * registro — no hace falta cambiar de pestaña para ver la situación. */
+  searchScaleLoads: (search: string) =>
+    api.get<ApiResponse<ScaleLoadSearchResult[]>>("/loads/scale/loads/search", { params: { search } }),
   getTrips: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>("/trips", { params }),
   getTrip: (id: number | string) => api.get<ApiResponse<Load>>(`/trips/${id}`),

@@ -124,6 +124,20 @@ export interface Contingency {
   createdAt: string;
 }
 
+export interface ScaleLoadSearchResult {
+  id: number;
+  plate: string;
+  carrierName: string;
+  driverName: string;
+  cereal: string;
+  origin: string;
+  destination: string;
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED';
+  ctg: string | null;
+  loadedWeight: number | null;
+  unloadedWeight: number | null;
+}
+
 export interface TechnicalCenterSearchResult {
   id: number;
   plate: string;
