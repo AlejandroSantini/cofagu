@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { loadService, driverService, truckService } from '../../api/services';
-import { type Load, type Driver, type Truck } from '../../types';
+import { type Load, type Driver, type Truck, type Application } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
 import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
@@ -43,6 +43,13 @@ export const LoadsPage: React.FC = () => {
 
 
   const [loads, setLoads] = useState<Load[]>([]);
+  // "Canceladas": postulaciones canceladas por el transportista ANTES de
+  // ser aceptadas nunca llegan a tener un registro de carga (Load) — por
+  // eso /loads?status=CANCELLED siempre viene vacío (confirmado contra el
+  // backend real). Se resuelven aparte con getCancelledApplications();
+  // mientras esa ruta no exista en el backend (hoy 404), esto queda en
+  // null y la pestaña muestra el mensaje de "no disponible todavía".
+  const [cancelledApps, setCancelledApps] = useState<Application[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -91,6 +98,27 @@ export const LoadsPage: React.FC = () => {
       // una búsqueda mientras se escribe), no volver a mostrar el skeleton.
       if (!(isPlayero && loads.length > 0)) setLoading(true);
       setError('');
+
+      if (activeTab === 'CANCELLED' && !isPlayero) {
+        try {
+          const res = await loadService.getCancelledApplications();
+          if (active && res.data && res.data.success !== false) {
+            setCancelledApps(res.data.data);
+            setLoads([]);
+          }
+        } catch (err) {
+          // Pendiente de backend (ver prompt de "GET /loads/applications/
+          // cancelled" — hoy 404). No es un error real de la app: se
+          // muestra el mensaje de "todavía no disponible" en vez de un
+          // toast de error.
+          console.warn('GET /loads/applications/cancelled no disponible todavía:', err);
+          if (active) setCancelledApps(null);
+        } finally {
+          if (active) setLoading(false);
+        }
+        return;
+      }
+
       try {
         // Combustible: se arma con /loads?status=ASSIGNED (un registro por
         // camión ya asignado), NO con /trips?status=ACTIVE. Un viaje
@@ -112,11 +140,10 @@ export const LoadsPage: React.FC = () => {
         if (active && res.data && res.data.success !== false) {
           const rawData: Load[] = Array.isArray(res.data) ? res.data : res.data.data;
           // El backend a veces devuelve viajes/cargas CANCELLED o REJECTED
-          // mezclados aunque se filtre por otro status. Nunca deben quedar
-          // "flotando" en una pestaña que no sea la de Cancelados.
-          const filtered = activeTab === 'CANCELLED'
-            ? rawData
-            : rawData.filter((l) => (l.status as string) !== 'CANCELLED' && (l.status as string) !== 'REJECTED');
+          // mezclados aunque se filtre por otro status. La pestaña de
+          // Canceladas se resuelve aparte (más arriba, con
+          // getCancelledApplications) — acá nunca deben quedar "flotando".
+          const filtered = rawData.filter((l) => (l.status as string) !== 'CANCELLED' && (l.status as string) !== 'REJECTED');
           setLoads(filtered);
         }
       } catch (err) {
@@ -1096,16 +1123,87 @@ export const LoadsPage: React.FC = () => {
 
 
           {/* Tab Content Render */}
-          <LoadsTable 
-            loads={loads} 
-            isLoading={loading} 
-            onRowClick={handleRowClick}
-            statusFilter={activeTab}
-            isCarrier={isCarrier}
-            isAdmin={user?.role === 'ADMIN'}
-            isEmployee={isEmployee}
-            myCarrierId={user?.carrierId}
-          />
+          {activeTab === 'CANCELLED' && !isPlayero ? (
+            cancelledApps === null && !loading ? (
+              <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm p-8 text-center text-sm text-slate-500 dark:text-zinc-400 italic">
+                Esta pestaña todavía no está disponible: falta que backend implemente
+                el listado de postulaciones canceladas (GET /loads/applications/cancelled).
+              </div>
+            ) : (
+              <Table
+                columns={[
+                  {
+                    header: 'Fecha',
+                    render: (a: Application) => (
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                        {a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('es-AR') : 'N/D'}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Transportista',
+                    render: (a: Application) => (
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200">
+                        {a.carrier?.name || 'N/D'}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Chofer / Camión',
+                    render: (a: Application) => (
+                      <div className="flex flex-col text-xs sm:text-sm">
+                        <span className="font-bold text-slate-800 dark:text-zinc-200">{a.driver?.name || 'N/D'}</span>
+                        <span className="text-slate-500 font-mono uppercase text-xs">
+                          {a.truck?.chassisPlate || a.truck?.plate || 'S/P'}
+                        </span>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Ruta',
+                    render: (a: Application) => (
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap">
+                        <span>{a.trip?.origin || 'N/D'}</span>
+                        <span className="text-emerald-500 font-black shrink-0">→</span>
+                        <span>{a.trip?.destination || 'N/D'}</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Cereal',
+                    render: (a: Application) => (
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300">
+                        {a.trip?.cereal || 'N/D'}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Motivo',
+                    render: (a: Application) => (
+                      <span className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 italic">
+                        {a.cancellationReason || 'Sin especificar'}
+                      </span>
+                    ),
+                  },
+                ]}
+                data={cancelledApps ?? []}
+                isLoading={loading}
+                emptyMessage="No hay postulaciones canceladas."
+                onRowClick={(a) => a.tripId && navigate(`/loads/${a.tripId}?type=trip`)}
+              />
+            )
+          ) : (
+            <LoadsTable
+              loads={loads}
+              isLoading={loading}
+              onRowClick={handleRowClick}
+              statusFilter={activeTab}
+              isCarrier={isCarrier}
+              isAdmin={user?.role === 'ADMIN'}
+              isEmployee={isEmployee}
+              myCarrierId={user?.carrierId}
+            />
+          )}
         </div>
       )}
     </div>

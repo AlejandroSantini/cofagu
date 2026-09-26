@@ -103,6 +103,17 @@ export interface Application {
     name: string;
     email: string;
   } | null;
+  // Pendiente de backend: GET /loads/applications/cancelled (ver prompt).
+  tripId?: number;
+  cancellationReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  trip?: {
+    origin?: string;
+    destination?: string;
+    cereal?: string;
+    date?: string;
+  };
 }
 
 
