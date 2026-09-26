@@ -166,7 +166,18 @@ export const CarriersPage: React.FC = () => {
 
 
       if (res.data.success) {
-        showToast(editingId ? 'Transportista actualizado con éxito' : 'Transportista creado con éxito');
+        // Si el CUIT ya existía (dado de alta por otra logística), el
+        // backend ahora lo vincula en vez de devolver 409 — no hay forma
+        // confiable de distinguir "recién creado" de "vinculado a uno ya
+        // existente" desde la respuesta, así que para LOGISTICS usamos una
+        // frase que es correcta en los dos casos.
+        showToast(
+          editingId
+            ? 'Transportista actualizado con éxito'
+            : isLogistics
+              ? 'Transportista vinculado a tu logística con éxito'
+              : 'Transportista creado con éxito',
+        );
         const createdCarrier = res.data.data;
         handleBack();
         setLoading(true);

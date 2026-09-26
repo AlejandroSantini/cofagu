@@ -68,11 +68,11 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             <ErrorMessage message={error} />
 
-            <Input 
-              label="Correo Electrónico"
-              type="email"
+            <Input
+              label="Correo Electrónico o Teléfono"
+              type="text"
               icon={Mail}
-              placeholder="usuario@cofagu.com"
+              placeholder="usuario@cofagu.com o tu teléfono"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
