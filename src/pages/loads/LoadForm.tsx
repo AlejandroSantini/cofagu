@@ -5,7 +5,7 @@ import { loadSchema, type LoadFormValues } from "../../schemas/load.schema";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { MapPin, Calendar, DollarSign, Save, Truck } from "lucide-react";
+import { MapPin, Calendar, DollarSign, Save, Truck, Users } from "lucide-react";
 import { groupService } from "../../api/services";
 import { type CarrierGroup } from "../../types";
 
@@ -13,6 +13,23 @@ interface LoadFormProps {
   onSubmit: (data: LoadFormValues) => void;
   onCancel: () => void;
   isLoading: boolean;
+}
+
+interface GroupCarrier {
+  id: number;
+  name: string;
+}
+
+/** Normaliza los miembros de un grupo (formato mixto `members` o legacy
+ * `carriers`) a solo los transportistas — la exclusión es por transportista,
+ * no por logística. */
+function extractGroupCarriers(group: CarrierGroup): GroupCarrier[] {
+  if (group.members) {
+    return group.members
+      .filter((m) => m.member_type === "carrier")
+      .map((m) => ({ id: m.id, name: m.name }));
+  }
+  return (group.carriers || []).map((c) => ({ id: c.carrierId, name: c.carrier.name }));
 }
 
 export const LoadForm: React.FC<LoadFormProps> = ({
@@ -25,6 +42,44 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     Record<number, { checked: boolean; rate: string }>
   >({});
   const [groupErrors, setGroupErrors] = React.useState<Record<number, string>>({});
+
+  // Exclusión de transportistas puntual para este viaje (no afecta al
+  // grupo original). Se cachean los miembros de cada grupo apenas se
+  // tilda, y se arma un listado combinado (deduplicado) de todos los
+  // grupos actualmente tildados.
+  const [groupCarriers, setGroupCarriers] = React.useState<Record<number, GroupCarrier[]>>({});
+  const [loadingGroupCarriers, setLoadingGroupCarriers] = React.useState<Record<number, boolean>>({});
+  const [excludedCarrierIds, setExcludedCarrierIds] = React.useState<Record<number, true>>({});
+
+  const ensureGroupCarriersLoaded = React.useCallback((groupId: number) => {
+    setGroupCarriers((prev) => {
+      if (prev[groupId]) return prev;
+      setLoadingGroupCarriers((l) => ({ ...l, [groupId]: true }));
+      groupService
+        .getGroup(groupId)
+        .then((res) => {
+          if (res.data.success && res.data.data) {
+            setGroupCarriers((cur) => ({ ...cur, [groupId]: extractGroupCarriers(res.data.data) }));
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingGroupCarriers((l) => ({ ...l, [groupId]: false })));
+      return prev;
+    });
+  }, []);
+
+  const combinedCarriers = React.useMemo(() => {
+    const byId = new Map<number, GroupCarrier>();
+    Object.entries(selectedGroups).forEach(([groupId, state]) => {
+      if (!state.checked) return;
+      (groupCarriers[Number(groupId)] || []).forEach((c) => byId.set(c.id, c));
+    });
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedGroups, groupCarriers]);
+
+  const anyCheckedGroupStillLoading = Object.entries(selectedGroups).some(
+    ([groupId, state]) => state.checked && loadingGroupCarriers[Number(groupId)],
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -48,12 +103,14 @@ export const LoadForm: React.FC<LoadFormProps> = ({
             }
           });
           setSelectedGroups(initialSelections);
+          Object.keys(initialSelections).forEach((groupId) => ensureGroupCarriersLoaded(Number(groupId)));
         }
       })
       .catch(() => {});
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo en el montaje
   }, []);
 
   const {
@@ -91,9 +148,17 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     if (hasError) return;
     if (targetGroupsPayload.length === 0) return; // Should not happen if general is required
 
+    // Solo transportistas que siguen apareciendo en el listado combinado
+    // (de los grupos actualmente tildados) — evita arrastrar exclusiones
+    // "fantasma" de un grupo que se destildó después.
+    const excludedCarriers = combinedCarriers
+      .filter((c) => excludedCarrierIds[c.id])
+      .map((c) => c.id);
+
     onSubmit({
       ...data,
       targetGroups: targetGroupsPayload,
+      excludedCarriers,
     });
   };
 
@@ -234,6 +299,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
                                 checked: e.target.checked,
                               },
                             }));
+                            if (e.target.checked) ensureGroupCarriersLoaded(group.id);
                           }}
                           className={`rounded h-4 w-4 shrink-0 ${
                             isCheckboxDisabled
@@ -300,6 +366,76 @@ export const LoadForm: React.FC<LoadFormProps> = ({
             </div>
           )}
         </div>
+
+        {/* Exclusión de transportistas puntual: por defecto todos los
+            transportistas de los grupos tildados reciben el viaje; acá se
+            puede destildar a los que no correspondan solo para esta
+            publicación (no afecta al grupo). */}
+        {(combinedCarriers.length > 0 || anyCheckedGroupStillLoading) && (
+          <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-4">
+            <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-md border border-slate-200/70 dark:border-zinc-800 flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md shrink-0">
+                <Users size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                  Transportistas Incluidos en este Viaje
+                </h4>
+                <p className="text-xs text-slate-400 dark:text-zinc-500">
+                  Destildá a los que no quieras que reciban esta publicación puntual — el grupo original no se modifica.
+                </p>
+              </div>
+            </div>
+
+            {anyCheckedGroupStillLoading && combinedCarriers.length === 0 ? (
+              <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-md p-4 sm:p-5 border border-slate-100 dark:border-zinc-800 space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2">
+                    <Skeleton radius="sm" className="h-4 w-4 shrink-0" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-md p-4 sm:p-5 border border-slate-100 dark:border-zinc-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {combinedCarriers.map((carrier) => {
+                    const excluded = !!excludedCarrierIds[carrier.id];
+                    return (
+                      <label
+                        key={carrier.id}
+                        className="flex items-center gap-3 select-none cursor-pointer p-2 rounded-sm hover:bg-slate-100/60 dark:hover:bg-zinc-800/40"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!excluded}
+                          onChange={(e) => {
+                            setExcludedCarrierIds((prev) => {
+                              const next = { ...prev };
+                              if (e.target.checked) delete next[carrier.id];
+                              else next[carrier.id] = true;
+                              return next;
+                            });
+                          }}
+                          className="rounded h-4 w-4 shrink-0 text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                        />
+                        <span
+                          className={`text-sm font-medium truncate ${
+                            excluded
+                              ? "text-slate-400 dark:text-zinc-500 line-through"
+                              : "text-slate-700 dark:text-zinc-300"
+                          }`}
+                        >
+                          {carrier.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
           <Button type="button" variant="secondary" onClick={onCancel} className="w-full sm:w-auto">

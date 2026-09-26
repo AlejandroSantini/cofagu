@@ -13,7 +13,8 @@ export const loadSchema = z.object({
   targetGroups: z.array(z.object({
     groupId: z.number(),
     rate: z.number()
-  })).optional()
+  })).optional(),
+  excludedCarriers: z.array(z.number()).optional()
 });
 
 export type LoadFormValues = z.infer<typeof loadSchema>;

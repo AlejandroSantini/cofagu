@@ -250,6 +250,8 @@ export interface CreateLoadPayload {
   quotaDate: string;
   cereal: string;
   targetGroups?: { groupId: number; rate: number }[];
+  /** IDs de transportistas de los grupos destinatarios excluidos de este viaje puntual. */
+  excludedCarriers?: number[];
   ctg?: string;
   loadedWeight?: number;
   unloadedWeight?: number;
