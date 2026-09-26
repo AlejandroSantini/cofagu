@@ -74,7 +74,12 @@ export const LoadsPage: React.FC = () => {
     ask: askCloseCupos,
     confirm: confirmCloseCupos,
     cancel: cancelCloseCupos,
-  } = useConfirm<{ id: number | string; newMaxTrucks: number }>();
+  } = useConfirm<{ id: number | string; minTrucks: number; currentMaxTrucks: number }>();
+  // Cuántos cupos totales dejar (editable) — por defecto arranca en el
+  // mínimo (cierra todos los restantes, comportamiento de antes), pero se
+  // puede subir hasta currentMaxTrucks para sacar solo algunos y dejar el
+  // resto todavía disponible (pedido explícito de ADMIN).
+  const [closeCuposInput, setCloseCuposInput] = useState('');
 
   const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -338,14 +343,24 @@ export const LoadsPage: React.FC = () => {
 
   const handleCloseRemainingCupos = async () => {
     if (!closeCuposData) return;
+    const newMaxTrucks = Number(closeCuposInput);
+    if (
+      !Number.isInteger(newMaxTrucks) ||
+      newMaxTrucks < closeCuposData.minTrucks ||
+      newMaxTrucks > closeCuposData.currentMaxTrucks
+    ) {
+      return;
+    }
     setSubmitLoading(true);
     try {
       const res = await loadService.updateTrip(closeCuposData.id, {
-        maxTrucks: closeCuposData.newMaxTrucks,
+        maxTrucks: newMaxTrucks,
       });
       if (res.data && res.data.success !== false) {
         showToast(
-          'Se cerraron los cupos restantes. Los camiones ya asignados no se vieron afectados.',
+          newMaxTrucks === closeCuposData.minTrucks
+            ? 'Se cerraron los cupos restantes. Los camiones ya asignados no se vieron afectados.'
+            : `Cupos actualizados a ${newMaxTrucks}. Los camiones ya asignados no se vieron afectados.`,
           'success',
         );
         confirmCloseCupos();
@@ -353,7 +368,7 @@ export const LoadsPage: React.FC = () => {
         triggerRefresh();
       }
     } catch (err) {
-      showToast(getErrorMessage(err, 'Error al cerrar los cupos restantes.'), 'error');
+      showToast(getErrorMessage(err, 'Error al actualizar los cupos.'), 'error');
     } finally {
       setSubmitLoading(false);
     }
@@ -770,12 +785,39 @@ export const LoadsPage: React.FC = () => {
         isOpen={isCloseCuposOpen}
         onClose={cancelCloseCupos}
         onConfirm={handleCloseRemainingCupos}
-        title="Cerrar Cupos Restantes"
-        description="Esto deja de aceptar nuevos postulantes para este viaje. Los camiones ya asignados, en curso o completados NO se ven afectados."
+        title="Reducir / Cerrar Cupos"
+        description="Bajá el total de cupos de este viaje. Los camiones ya asignados, en curso o completados NO se ven afectados — solo se dejan de ofrecer los cupos que saques."
         type="danger"
-        confirmText="Cerrar Cupos"
+        confirmText={
+          closeCuposData && Number(closeCuposInput) === closeCuposData.minTrucks
+            ? 'Cerrar Todos los Restantes'
+            : 'Actualizar Cupos'
+        }
+        isConfirmDisabled={
+          !closeCuposData ||
+          !Number.isInteger(Number(closeCuposInput)) ||
+          Number(closeCuposInput) < closeCuposData.minTrucks ||
+          Number(closeCuposInput) > closeCuposData.currentMaxTrucks
+        }
         isLoading={submitLoading}
-      />
+      >
+        {closeCuposData && (
+          <div className="space-y-2">
+            <Input
+              label={`Cantidad total de cupos (mín. ${closeCuposData.minTrucks}, máx. ${closeCuposData.currentMaxTrucks})`}
+              type="number"
+              min={closeCuposData.minTrucks}
+              max={closeCuposData.currentMaxTrucks}
+              value={closeCuposInput}
+              onChange={(e) => setCloseCuposInput(e.target.value)}
+              autoFocus
+            />
+            <p className="text-xs text-slate-500 dark:text-zinc-400">
+              Actualmente publicados: {closeCuposData.currentMaxTrucks}. Ya asignados/comprometidos: {closeCuposData.minTrucks}.
+            </p>
+          </div>
+        )}
+      </Modal>
 
       {!(id && !selectedLoad && !loadError) && (
         <div className="flex flex-col gap-6 mb-8">
@@ -1004,7 +1046,10 @@ export const LoadsPage: React.FC = () => {
           load={selectedLoad}
           user={user}
           onCancelLoad={askDelete}
-          onCloseRemainingCupos={(id, newMaxTrucks) => askCloseCupos({ id, newMaxTrucks })}
+          onCloseRemainingCupos={(id, minTrucks, currentMaxTrucks) => {
+            askCloseCupos({ id, minTrucks, currentMaxTrucks });
+            setCloseCuposInput(String(minTrucks));
+          }}
           onApply={handleApply}
           onStatusChange={handleStatusChange}
           onReportContingency={handleReportContingency}

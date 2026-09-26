@@ -112,7 +112,7 @@ interface LoadDetailsProps {
   load: Load;
   user: UserType | null;
   onCancelLoad: (id: number | string) => void;
-  onCloseRemainingCupos: (id: number | string, newMaxTrucks: number) => void;
+  onCloseRemainingCupos: (id: number | string, minTrucks: number, currentMaxTrucks: number) => void;
   onApply: (
     notes: string,
     driverId: number,
@@ -1153,7 +1153,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   disabled={hasCommittedSubloads}
                   title={
                     hasCommittedSubloads
-                      ? "Ya hay camiones asignados, en curso o completados — cancelá esa postulación puntual desde su tarjeta, o usá \"Cerrar Cupos Restantes\" para dejar de aceptar nuevos."
+                      ? "Ya hay camiones asignados, en curso o completados — cancelá esa postulación puntual desde su tarjeta, o usá \"Reducir / Cerrar Cupos\" para bajar el total sin tocarlos."
                       : undefined
                   }
                   onClick={() => onCancelLoad(load.id)}
@@ -1171,9 +1171,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   variant="outline"
                   icon={Lock}
                   className="w-full sm:w-auto"
-                  onClick={() => onCloseRemainingCupos(load.id, acceptedCount)}
+                  onClick={() => onCloseRemainingCupos(load.id, acceptedCount, load.maxTrucks || 0)}
                 >
-                  Cerrar Cupos Restantes
+                  Reducir / Cerrar Cupos
                 </Button>
               )}
             {isAdmin &&

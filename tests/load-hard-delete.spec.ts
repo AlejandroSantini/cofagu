@@ -162,7 +162,7 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
     await expect.poll(() => deleteLoadCalled).toBe(false);
   });
 
-  test("'Cerrar Cupos Restantes' actualiza maxTrucks al número ya asignado, sin tocar el camión en curso", async ({
+  test("'Reducir / Cerrar Cupos' por defecto cierra todos los restantes, sin tocar el camión en curso", async ({
     page,
   }) => {
     // Pedido explícito: cuando "Cancelar Viaje Completo" queda bloqueado
@@ -189,13 +189,74 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
 
     await page.goto("/loads/6?type=trip");
 
-    await page.getByRole("button", { name: "Cerrar Cupos Restantes" }).click();
-    await expect(
-      page.getByText("Esto deja de aceptar nuevos postulantes para este viaje."),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Cerrar Cupos", exact: true }).click();
+    await page.getByRole("button", { name: "Reducir / Cerrar Cupos" }).click();
+    await expect(page.getByText(/Bajá el total de cupos de este viaje/)).toBeVisible();
+    // Por defecto el input ya viene en el mínimo (1 = ya asignado): un solo
+    // click cierra todos los restantes, comportamiento de antes.
+    await page.getByRole("button", { name: "Cerrar Todos los Restantes" }).click();
 
     await expect.poll(() => putBody).toEqual({ maxTrucks: 1 });
     await expect(page.getByText("Se cerraron los cupos restantes.")).toBeVisible();
+  });
+
+  test("'Reducir / Cerrar Cupos' permite bajar solo una parte, dejando el resto disponible", async ({
+    page,
+  }) => {
+    // Pedido explícito: publicar 15 cupos y poder bajar a, por ejemplo, 10 —
+    // no solo "cerrar todos los restantes" o "cancelar todo el viaje".
+    await loginAs(page, "ADMIN");
+    await mockGet(page, "**/api/trips/6", {
+      ...baseTrip,
+      id: 6,
+      status: "ACTIVE",
+      maxTrucks: 15,
+      loads: [{ id: 600, status: "IN_PROGRESS", carrierId: 10, truckId: 5 }],
+      applications: [
+        { id: 700, status: "ACCEPTED", carrierId: 10, truckId: 5, tripStatus: "IN_PROGRESS" },
+      ],
+    });
+    let putBody: unknown = null;
+    await page.route("**/api/trips/6", (route) => {
+      if (route.request().method() !== "PUT") return route.fallback();
+      putBody = JSON.parse(route.request().postData() || "{}");
+      return fulfill(route, apiOk({ id: 6, maxTrucks: 10 }));
+    });
+
+    await page.goto("/loads/6?type=trip");
+
+    await page.getByRole("button", { name: "Reducir / Cerrar Cupos" }).click();
+    const input = page.locator("label", { hasText: "Cantidad total de cupos" })
+      .locator("xpath=following-sibling::div//input");
+    await input.fill("10");
+
+    await page.getByRole("button", { name: "Actualizar Cupos" }).click();
+
+    await expect.poll(() => putBody).toEqual({ maxTrucks: 10 });
+    await expect(page.getByText("Cupos actualizados a 10.")).toBeVisible();
+  });
+
+  test("'Reducir / Cerrar Cupos' no deja bajar por debajo de lo ya asignado", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await mockGet(page, "**/api/trips/6", {
+      ...baseTrip,
+      id: 6,
+      status: "ACTIVE",
+      maxTrucks: 15,
+      loads: [{ id: 600, status: "IN_PROGRESS", carrierId: 10, truckId: 5 }],
+      applications: [
+        { id: 700, status: "ACCEPTED", carrierId: 10, truckId: 5, tripStatus: "IN_PROGRESS" },
+      ],
+    });
+
+    await page.goto("/loads/6?type=trip");
+    await page.getByRole("button", { name: "Reducir / Cerrar Cupos" }).click();
+    const input = page.locator("label", { hasText: "Cantidad total de cupos" })
+      .locator("xpath=following-sibling::div//input");
+
+    await input.fill("0");
+    await expect(page.getByRole("button", { name: "Actualizar Cupos" })).toBeDisabled();
+
+    await input.fill("20");
+    await expect(page.getByRole("button", { name: "Actualizar Cupos" })).toBeDisabled();
   });
 });
