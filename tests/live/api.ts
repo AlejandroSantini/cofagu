@@ -163,6 +163,25 @@ export class ApiClient {
     return this.json('post', `/loads/${loadId}/confirm-departure`, body);
   }
 
+  postCompletionData(loadId: number | string, body: { unloadedWeight: number; kg_discharge?: number }) {
+    return this.json('post', `/loads/${loadId}/completion-data`, body);
+  }
+
+  rejectLoad(loadId: number | string, reason: string) {
+    return this.json('post', `/loads/${loadId}/reject`, { reason });
+  }
+
+  /**
+   * Como `json()` es privado, esta versión no lanza en 4xx/5xx — devuelve
+   * `{ ok, status, body }` para poder verificar que un endpoint responde
+   * el error esperado (en vez de solo confirmar que "algo" no tiró excepción).
+   */
+  async postRaw(path: string, body: unknown): Promise<{ ok: boolean; status: number; body: any }> {
+    const res = await this.ctx.post(url(path), { data: body });
+    const text = await res.text();
+    return { ok: res.ok(), status: res.status(), body: text ? JSON.parse(text) : null };
+  }
+
   startTrip(appId: number, ctg?: string) {
     return this.json('post', `/loads/applications/${appId}/start-trip`, ctg ? { ctg } : {});
   }
