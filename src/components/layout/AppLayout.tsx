@@ -111,21 +111,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <div className="h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row overflow-hidden transition-colors duration-300">
       {/* MOBILE TOP HEADER */}
       <header
-        className="lg:hidden bg-zinc-100 dark:bg-zinc-950 text-slate-800 dark:text-white flex items-center h-16 sticky top-0 z-[60] shadow-sm border-b border-zinc-200 dark:border-zinc-900"
-        style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+        className="lg:hidden bg-zinc-100 dark:bg-zinc-950 text-slate-800 dark:text-white sticky top-0 z-[60] shadow-sm border-b border-zinc-200 dark:border-zinc-900"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-md transition-colors text-slate-600 dark:text-slate-200"
+        <div
+          className="flex items-center h-16"
+          style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
         >
-          <Menu size={24} />
-        </button>
-        <div className="ml-4 h-16 flex items-center overflow-hidden">
-          <img
-            src="/LOGO COFAGU-04.png"
-            alt="COFAGU"
-            className="h-36 w-auto object-contain -ml-2"
-          />
+          <button
+            onClick={() => setIsOpen(true)}
+            className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-md transition-colors text-slate-600 dark:text-slate-200"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="ml-4 h-16 flex items-center overflow-hidden">
+            <img
+              src="/LOGO COFAGU-04.png"
+              alt="COFAGU"
+              className="h-36 w-auto object-contain -ml-2"
+            />
+          </div>
         </div>
       </header>
 
@@ -143,6 +148,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         fixed inset-y-0 left-0 z-[80] w-64 bg-zinc-800 dark:bg-zinc-900 text-zinc-100 flex flex-col transform transition-all duration-300 ease-out lg:relative lg:translate-x-0 border-r border-zinc-700/50 dark:border-zinc-800/50
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)' }}
       >
         {/* Sidebar Header */}
         <div className="h-16 px-4 border-b border-zinc-700/50 dark:border-zinc-800/50 flex items-center justify-center relative overflow-hidden shrink-0">
