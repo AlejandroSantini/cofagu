@@ -57,16 +57,10 @@ export const ResetPasswordPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 md:p-8 transition-colors duration-500 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-24 -left-24 w-72 h-72 bg-emerald-500/10 dark:bg-emerald-600/5 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-yellow-500/10 dark:bg-yellow-600/5 rounded-full blur-3xl"></div>
-      </div>
-
       <div className="w-full max-w-sm relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="text-center mb-10">
           <img
-            src={isDarkMode ? "/LOGO COFAGU-05.png" : "/LOGO COFAGU-06.png"}
+            src={isDarkMode ? "/LOGO COFAGU-05.webp" : "/LOGO COFAGU-06.webp"}
             alt="COFAGU"
             className="h-40 mx-auto mb-4 object-contain"
           />

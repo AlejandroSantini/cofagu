@@ -126,7 +126,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </button>
           <div className="ml-4 h-16 flex items-center overflow-hidden">
             <img
-              src="/LOGO COFAGU-04.png"
+              src="/LOGO COFAGU-04.webp"
               alt="COFAGU"
               className="h-36 w-auto object-contain -ml-2"
             />
@@ -154,7 +154,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="h-16 px-4 border-b border-zinc-700/50 dark:border-zinc-800/50 flex items-center justify-center relative overflow-hidden shrink-0">
           <div className="flex items-center justify-center">
             <img
-              src="/LOGO COFAGU-04.png"
+              src="/LOGO COFAGU-04.webp"
               alt="COFAGU"
               className="h-48 w-auto object-contain"
             />
@@ -244,7 +244,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 rel="noopener noreferrer"
               >
                 <img
-                  src="/Logo_HyS_horizontal_white.png"
+                  src="/Logo_HyS_horizontal_white.webp"
                   alt="H&S"
                   className="h-12 mx-auto"
                 />
