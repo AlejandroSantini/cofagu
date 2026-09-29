@@ -136,6 +136,27 @@ export class ApiClient {
     return this.json('get', `/carriers/${id}`);
   }
 
+  async getCarriers(params?: { search?: string }): Promise<any[]> {
+    const qs = params?.search ? `?search=${encodeURIComponent(params.search)}` : '';
+    return (await this.json('get', `/carriers${qs}`)) ?? [];
+  }
+
+  createCarrier(data: Record<string, unknown>): Promise<any> {
+    return this.json('post', '/carriers', data);
+  }
+
+  deleteCarrier(id: number | string): Promise<any> {
+    return this.json('delete', `/carriers/${id}`);
+  }
+
+  createUserRaw(data: Record<string, unknown>): Promise<any> {
+    return this.json('post', '/users', data);
+  }
+
+  deleteUserRaw(id: number | string): Promise<any> {
+    return this.json('delete', `/users/${id}`);
+  }
+
   async availableDrivers(carrierId: number, tripId?: number): Promise<any[]> {
     const qs = new URLSearchParams({ carrierId: String(carrierId), available: 'true' });
     if (tripId) qs.set('tripId', String(tripId));
