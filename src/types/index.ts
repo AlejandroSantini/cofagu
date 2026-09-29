@@ -321,6 +321,7 @@ export interface CarrierGroup {
   createdAt?: string;
   _count?: {
     carriers: number;
+    logisticsUsers?: number;
     members?: number;
     loads: number;
   };

@@ -29,6 +29,27 @@ test.describe("Grupos de Transportistas", () => {
     await expect(page.locator("span").filter({ hasText: /^Logística$/ })).toBeVisible();
   });
 
+  test("el listado cuenta las logísticas del grupo, no solo los transportistas", async ({ page }) => {
+    // Bug real reportado por WhatsApp: un grupo armado solo con logísticas
+    // mostraba "0 integrantes" en el listado. El backend manda
+    // _count.carriers y _count.logisticsUsers por separado (no un total
+    // único) — el listado solo miraba `carriers`.
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/groups", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          { id: 6, name: "solo a logistica", description: "", _count: { carriers: 0, logisticsUsers: 5, loads: 20 } },
+        ]),
+      ),
+    );
+
+    await page.goto("/groups");
+
+    await expect(page.getByText("5 integrantes")).toBeVisible();
+    await expect(page.getByText("0 integrantes")).toHaveCount(0);
+  });
+
   test("un grupo sin integrantes muestra el estado vacío", async ({ page }) => {
     await loginAs(page, "ADMIN");
     await page.route("**/api/groups", (r) => fulfill(r, apiOk([{ id: 2, name: "Grupo Vacío", description: "", members: [] }])));

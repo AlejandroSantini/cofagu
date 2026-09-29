@@ -375,9 +375,16 @@ export const GroupsPage: React.FC = () => {
     {
       header: "Integrantes",
       render: (g: CarrierGroup) => {
+        // El backend devuelve `_count.carriers` y `_count.logisticsUsers`
+        // por separado (no un total) — un grupo con solo logísticas
+        // mostraba "0 integrantes" porque solo se miraba `carriers`.
+        // Confirmado contra el backend real: "solo a logistica" tiene 5
+        // logísticas y listaba 0.
         const count =
           g._count?.members ??
-          g._count?.carriers ??
+          (g._count && (g._count.carriers != null || g._count.logisticsUsers != null)
+            ? (g._count.carriers ?? 0) + (g._count.logisticsUsers ?? 0)
+            : undefined) ??
           g.members?.length ??
           g.carriers?.length ??
           0;
