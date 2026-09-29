@@ -1273,8 +1273,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       Ajustado en Cta. Cte.
                     </span>
                   ) : (
-                    <span className="text-xs font-bold text-rose-700 bg-rose-100 dark:bg-rose-950/40 px-2.5 py-1 rounded-sm">
-                      Pendiente de Ajuste (Transportista Bloqueado)
+                    <span className="text-xs font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/40 px-2.5 py-1 rounded-sm">
+                      Pendiente de Ajuste
                     </span>
                   )}
                 </div>
@@ -1282,7 +1282,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   El peso descargado (
                   {Number(load.unloadedWeight).toLocaleString("es-AR")} kg) es
                   menor al cargado en origen (
-                  {Number(load.loadedWeight).toLocaleString("es-AR")} kg).
+                  {Number(load.loadedWeight).toLocaleString("es-AR")} kg). Esto
+                  no bloquea al transportista — la diferencia se cobra/ajusta
+                  en su cuenta corriente.
                 </p>
 
                 {canUserWrite && !load.differenceAdjusted && (
@@ -1297,7 +1299,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         } as any);
                         if (ok)
                           alert(
-                            "Diferencia de kilos marcada como ajustada en cuenta corriente. Se desmarcó el bloqueo de postulación.",
+                            "Diferencia de kilos marcada como ajustada en cuenta corriente.",
                           );
                       }
                     }}
