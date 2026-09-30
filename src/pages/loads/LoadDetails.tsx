@@ -914,29 +914,35 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             {!(
               user?.role === "OPERATOR" ||
               user?.role === "PLAYERO" ||
+              user?.role === "GAS_STATION"
+            ) && (
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase">
+                    Tarifa
+                  </span>
+                  <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
+                    {(() => {
+                      const resolved = load.resolvedRate ?? load.rate;
+                      return resolved != null && !isNaN(Number(resolved))
+                        ? `$${Number(resolved).toLocaleString("es-AR")}`
+                        : "S/I";
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {!(
+              user?.role === "OPERATOR" ||
+              user?.role === "PLAYERO" ||
               user?.role === "EMPLOYEE" ||
               user?.role === "GAS_STATION"
             ) && (
               <>
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
-                    <DollarSign size={20} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 block uppercase">
-                      Tarifa
-                    </span>
-                    <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {(() => {
-                        const resolved = load.resolvedRate ?? load.rate;
-                        return resolved != null && !isNaN(Number(resolved))
-                          ? `$${Number(resolved).toLocaleString("es-AR")}`
-                          : "S/I";
-                      })()}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-emerald-500/10 rounded-md text-emerald-600">
                     <TruckIcon size={20} />
