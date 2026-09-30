@@ -108,6 +108,16 @@ const SecureImagePreview: React.FC<{
   );
 };
 
+/**
+ * Tarifa sin ambigüedad: solo cuando el viaje está dirigido a UN único grupo
+ * podemos afirmar que esa es la tarifa que le corresponde a cualquier
+ * transportista aceptado — con más de un grupo (tarifas distintas) no hay
+ * una tarifa única que mostrar sin que el backend resuelva cuál aplica.
+ */
+function singleTargetGroupRate(groups?: { rate: number }[]): number | undefined {
+  return groups && groups.length === 1 ? groups[0].rate : undefined;
+}
+
 interface LoadDetailsProps {
   load: Load;
   user: UserType | null;
@@ -926,7 +936,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </span>
                   <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
                     {(() => {
-                      const resolved = load.resolvedRate ?? load.rate;
+                      const resolved =
+                        load.resolvedRate ??
+                        load.rate ??
+                        singleTargetGroupRate(load.targetGroups);
                       return resolved != null && !isNaN(Number(resolved))
                         ? `$${Number(resolved).toLocaleString("es-AR")}`
                         : "S/I";
@@ -1545,7 +1558,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   matchedLoad?.resolvedRate ??
                                   matchedLoad?.rate ??
                                   (app as any).resolvedRate ??
-                                  (app as any).rate;
+                                  (app as any).rate ??
+                                  singleTargetGroupRate(load.targetGroups);
                                 if (perTruckRate == null || isNaN(Number(perTruckRate))) return null;
                                 return (
                                   <div>
@@ -1748,6 +1762,25 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               "N/D"}
                           </span>
                         </div>
+                        {(() => {
+                          const rate =
+                            (directAssignmentTrip as any).resolvedRate ??
+                            (directAssignmentTrip as any).rate ??
+                            load.resolvedRate ??
+                            load.rate ??
+                            singleTargetGroupRate(load.targetGroups);
+                          if (rate == null || isNaN(Number(rate))) return null;
+                          return (
+                            <div>
+                              <span className="text-slate-400 font-bold block uppercase">
+                                Tarifa
+                              </span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                ${Number(rate).toLocaleString("es-AR")}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {directAssignmentTrip.ctg && (

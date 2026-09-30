@@ -32,8 +32,8 @@ test.describe("Tarifa acordada visible para el balancero", () => {
 
     await page.goto("/loads/400?type=load");
 
-    await expect(page.getByText("Tarifa", { exact: true })).toBeVisible();
-    await expect(page.getByText("$27.000")).toBeVisible();
+    await expect(page.getByText("Tarifa", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("$27.000").first()).toBeVisible();
   });
 
   test("OPERATOR sigue sin ver la tarifa", async ({ page }) => {
@@ -43,5 +43,37 @@ test.describe("Tarifa acordada visible para el balancero", () => {
     await page.goto("/loads/400?type=load");
 
     await expect(page.getByText("Tarifa", { exact: true })).toHaveCount(0);
+  });
+
+  /**
+   * Reporte real (WhatsApp, 2026-09-30, captura de pantalla): un viaje
+   * recién ASIGNADO (sin CTG todavía) navegado como viaje (sin `?type=load`)
+   * no trae `rate`/`resolvedRate` a nivel raíz — sólo viene en
+   * `targetGroups[].rate`. Con un solo grupo destinatario no hay ambigüedad
+   * posible, así que se puede resolver igual.
+   */
+  const TRIP_SINGLE_GROUP = {
+    id: 233,
+    status: "ASSIGNED",
+    origin: "Coop urdinarrain",
+    destination: "Mol cañuelas ( Pilar )",
+    cereal: "Trigo",
+    rate: null,
+    resolvedRate: null,
+    targetGroups: [{ groupId: 23, rate: 27000 }],
+    carrier: { name: "Bel Marcos Julian" },
+    truck: { chassisPlate: "NTX774" },
+    driver: { name: "Lizarza Mirko" },
+    applications: [],
+  };
+
+  test("EMPLOYEE ve la tarifa de un viaje recién asignado, resuelta desde el único grupo destinatario", async ({ page }) => {
+    await loginAs(page, "EMPLOYEE");
+    await page.route("**/api/trips/233", (r) => fulfill(r, apiOk(TRIP_SINGLE_GROUP)));
+    await page.route("**/api/loads/233", (r) => fulfill(r, apiOk(TRIP_SINGLE_GROUP)));
+
+    await page.goto("/loads/233");
+
+    await expect(page.getByText("$27.000")).toHaveCount(2); // detalle de ruta + tarjeta asignada
   });
 });
