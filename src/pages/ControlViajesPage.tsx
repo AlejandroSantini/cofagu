@@ -10,9 +10,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { KgDifferenceWarning } from '../components/loads/KgDifferenceWarning';
-import {
-  FileText, Download
-} from 'lucide-react';
+import { Download } from 'lucide-react';
 
 export const ControlViajesPage: React.FC = () => {
   const [ctgInput, setCtgInput] = useState('');
@@ -130,11 +128,7 @@ export const ControlViajesPage: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-6">
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
 
-      <PageHeader
-        title="Control de Viajes"
-        description="Busca un viaje por su número de CTG (Carta de Porte) para consultar datos y descargar comprobantes."
-        icon={FileText}
-      />
+      <PageHeader title="Control de Viajes" />
 
       {/* Búsqueda + tabla, mismo card */}
       <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
