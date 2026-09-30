@@ -1,57 +1,68 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { loadService, invoiceService } from '../api/services';
 import { type Load } from '../types';
 import { getErrorMessage } from '../api/errorUtils';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Table } from '../components/ui/Table';
+import { SearchInput } from '../components/ui/SearchInput';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
+import { KgDifferenceWarning } from '../components/loads/KgDifferenceWarning';
 import {
-  Search, FileText, Download, Building, Scale, DollarSign, AlertTriangle, Package
+  FileText, Download
 } from 'lucide-react';
-import { Skeleton } from '../components/ui/Skeleton';
 
 export const ControlViajesPage: React.FC = () => {
   const [ctgInput, setCtgInput] = useState('');
   const [load, setLoad] = useState<Load | null>(null);
   const [searching, setSearching] = useState(false);
-  const [notFound, setNotFound] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
-  const handleSearch = async () => {
+  // Búsqueda automática por CTG: mismo patrón de debounce que el resto de
+  // la app (Grupos, Documentación, Playa, Combustible) — sin botón
+  // "Buscar" aparte.
+  const isFirstRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
     const trimmed = ctgInput.trim();
-    if (!trimmed) return;
-
-    setSearching(true);
-    setNotFound(false);
-    setLoad(null);
-    setHasSearched(true);
-
-    try {
-      const res = await loadService.getLoadByCTG(trimmed);
-      if (res.data.success && res.data.data) {
-        setLoad(res.data.data);
-      } else {
-        setNotFound(true);
-      }
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        setNotFound(true);
-      } else {
-        showToast(getErrorMessage(err, 'Error al buscar el viaje.'), 'error');
-      }
-    } finally {
-      setSearching(false);
+    if (!trimmed) {
+      setLoad(null);
+      setHasSearched(false);
+      return;
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      setHasSearched(true);
+      try {
+        const res = await loadService.getLoadByCTG(trimmed);
+        if (!ignore) {
+          setLoad(res.data.success && res.data.data ? res.data.data : null);
+        }
+      } catch (err: any) {
+        if (!ignore) {
+          if (err.response?.status === 404) {
+            setLoad(null);
+          } else {
+            showToast(getErrorMessage(err, 'Error al buscar el viaje.'), 'error');
+          }
+        }
+      } finally {
+        if (!ignore) setSearching(false);
+      }
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctgInput]);
 
   const handleDownloadInvoice = async () => {
     if (!load?.invoiceId) return;
@@ -97,21 +108,25 @@ export const ControlViajesPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(value);
-  };
 
-  const formatWeight = (value: number) => {
-    return new Intl.NumberFormat('es-AR').format(value) + ' kg';
-  };
+  const formatWeight = (value: number) =>
+    new Intl.NumberFormat('es-AR').format(value) + ' kg';
+
+  const rows = load ? [load] : [];
+  const hasKgDifference =
+    load?.loadedWeight != null &&
+    load?.unloadedWeight != null &&
+    Number(load.loadedWeight) > Number(load.unloadedWeight);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6">
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
 
       {/* Header */}
@@ -127,208 +142,125 @@ export const ControlViajesPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Hero Search */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm">
-        <label className="block text-xs font-black text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
-          Buscar por CTG
-        </label>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Ingresá el número de CTG..."
-              value={ctgInput}
-              onChange={(e) => setCtgInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-zinc-800/60 border-2 border-slate-200 dark:border-zinc-700 rounded-md text-lg text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-              autoFocus
-            />
-          </div>
-          <Button
-            variant="primary"
-            icon={Search}
-            onClick={handleSearch}
-            isLoading={searching}
-            disabled={!ctgInput.trim() || searching}
-            className="w-full sm:w-auto px-8 py-4 text-base"
-          >
-            Buscar
-          </Button>
+      {/* Búsqueda + tabla, mismo card */}
+      <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-zinc-800">
+          <SearchInput
+            containerClassName="w-full sm:w-80"
+            placeholder="Buscar por CTG..."
+            value={ctgInput}
+            onChange={(e) => setCtgInput(e.target.value)}
+            autoFocus
+          />
         </div>
+        <Table
+          columns={[
+            {
+              header: 'CTG',
+              render: (l: Load) => (
+                <span className="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                  {l.ctg}
+                </span>
+              ),
+            },
+            {
+              header: 'Estado',
+              render: (l: Load) => (
+                <Badge variant={getStatusVariant(l.status)} size="sm">
+                  {getStatusLabel(l.status)}
+                </Badge>
+              ),
+            },
+            {
+              header: 'Transportista',
+              render: (l: Load) => (
+                <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200">
+                  {l.carrier?.name || 'No asignado'}
+                </span>
+              ),
+            },
+            {
+              header: 'Ruta',
+              render: (l: Load) => (
+                <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 whitespace-nowrap">
+                  {l.origin || '?'} → {l.destination || '?'}
+                </span>
+              ),
+            },
+            {
+              header: 'Kg Origen',
+              render: (l: Load) => (
+                <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 whitespace-nowrap">
+                  {l.loadedWeight != null ? formatWeight(l.loadedWeight) : 'S/I'}
+                </span>
+              ),
+            },
+            {
+              header: 'Kg Descarga',
+              render: (l: Load) => (
+                <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 whitespace-nowrap">
+                  {l.unloadedWeight != null ? formatWeight(l.unloadedWeight) : 'Pendiente'}
+                </span>
+              ),
+            },
+            {
+              header: 'Diferencia',
+              render: (l: Load) => {
+                if (l.loadedWeight == null || l.unloadedWeight == null) {
+                  return <span className="text-xs text-slate-400">—</span>;
+                }
+                const diff = Number(l.loadedWeight) - Number(l.unloadedWeight);
+                if (diff <= 0) {
+                  return <span className="text-xs text-slate-400">—</span>;
+                }
+                return (
+                  <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                    {formatWeight(diff)}
+                  </span>
+                );
+              },
+            },
+            {
+              header: 'Tarifa',
+              render: (l: Load) => (
+                <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 whitespace-nowrap">
+                  {l.resolvedRate ?? l.rate
+                    ? formatCurrency((l.resolvedRate ?? l.rate) as number)
+                    : 'No definida'}
+                </span>
+              ),
+            },
+          ]}
+          data={rows}
+          isLoading={searching}
+          emptyMessage={
+            !hasSearched
+              ? 'Ingresá un CTG para buscar'
+              : 'No se encontró ningún viaje con ese CTG'
+          }
+        />
       </div>
 
-      {/* Searching Skeleton */}
-      {searching && (
-        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center gap-3">
-            <Skeleton radius="md" className="h-10 w-10 shrink-0" />
-            <div className="space-y-2">
-              <Skeleton className="h-2.5 w-20" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800"
-              >
-                <Skeleton radius="md" className="h-10 w-10 shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-2.5 w-16" />
-                  <Skeleton className="h-3.5 w-24" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {load && hasKgDifference && (
+        <KgDifferenceWarning
+          loadedWeight={Number(load.loadedWeight)}
+          unloadedWeight={Number(load.unloadedWeight)}
+          adjusted={load.differenceAdjusted}
+        />
       )}
 
-      {/* Not Found Alert */}
-      {!searching && notFound && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-lg p-6 flex items-start gap-4">
-          <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-md shrink-0">
-            <AlertTriangle size={24} className="text-amber-600 dark:text-amber-400" />
-          </div>
-          <div>
-            <h3 className="text-base font-black text-amber-800 dark:text-amber-300">
-              Viaje no encontrado
-            </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-              No se encontró ningún viaje asociado al CTG <strong className="font-mono">"{ctgInput}"</strong>. 
-              Verificá que el número sea correcto e intentá nuevamente.
-            </p>
-          </div>
-        </div>
+      {load?.invoiceId && (
+        <Button
+          variant="primary"
+          icon={Download}
+          onClick={handleDownloadInvoice}
+          isLoading={downloading}
+          className="w-full justify-center py-3"
+        >
+          Descargar Comprobante
+        </Button>
       )}
 
-      {/* Empty State (before first search) */}
-      {!searching && !hasSearched && (
-        <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-          <div className="w-20 h-20 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-            <Package size={40} className="text-slate-300 dark:text-zinc-600" />
-          </div>
-          <div>
-            <p className="text-lg font-bold text-slate-400 dark:text-zinc-500">
-              Ingresá un CTG para buscar
-            </p>
-            <p className="text-sm text-slate-300 dark:text-zinc-600 mt-1">
-              Los resultados aparecerán aquí
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Result Card */}
-      {!searching && load && (
-        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-sm overflow-hidden">
-          {/* Card Header */}
-          <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <FileText size={20} />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
-                  Viaje CTG
-                </span>
-                <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
-                  {load.ctg || ctgInput}
-                </span>
-              </div>
-            </div>
-            <Badge variant={getStatusVariant(load.status)} size="sm">
-              {getStatusLabel(load.status)}
-            </Badge>
-          </div>
-
-          {/* Card Body */}
-          <div className="p-5 space-y-5">
-            {/* Data Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Transportista */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md shrink-0">
-                  <Building size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-                    Transportista
-                  </span>
-                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate block">
-                    {load.carrier?.name || 'No asignado'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Kilogramos Descargados */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md shrink-0">
-                  <Scale size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-                    Kg Descargados
-                  </span>
-                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 block">
-                    {load.unloadedWeight ? formatWeight(load.unloadedWeight) : 'Pendiente'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tarifa */}
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
-                <div className="p-2.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-md shrink-0">
-                  <DollarSign size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-                    Tarifa
-                  </span>
-                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 block">
-                    {load.resolvedRate ?? load.rate
-                      ? formatCurrency((load.resolvedRate ?? load.rate) as number)
-                      : 'No definida'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Ruta */}
-              {(load.origin || load.destination) && (
-                <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-100 dark:border-zinc-800">
-                  <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-md shrink-0">
-                    <Package size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-                      Ruta
-                    </span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate block">
-                      {load.origin || '?'} → {load.destination || '?'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Download Invoice Button */}
-            {load.invoiceId && (
-              <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
-                <Button
-                  variant="primary"
-                  icon={Download}
-                  onClick={handleDownloadInvoice}
-                  isLoading={downloading}
-                  className="w-full justify-center py-3"
-                >
-                  Descargar Comprobante
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

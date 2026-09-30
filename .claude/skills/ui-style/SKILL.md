@@ -159,7 +159,8 @@ para el filtro con margen/gap hacia la tabla.
   del card del buscador es intencional (mismo color/radio en ambos, el
   "borde doble" en la unión no se nota) y es el patrón ya usado en
   `CarrierDocumentsPage`, `TrucksPage`, `GroupsPage`, `YardPage`,
-  `LoadsPage` (Control de Combustible / buscador de Balanza).
+  `LoadsPage` (Control de Combustible / buscador de Balanza),
+  `ControlViajesPage` (buscador de CTG).
 - El badge "Total: N" va dentro del mismo header, a la derecha del
   buscador — no como elemento aparte.
 - `SearchInput` con ancho fijo (`w-full sm:w-64`), nunca `flex-1` estirado
@@ -169,6 +170,13 @@ para el filtro con margen/gap hacia la tabla.
   aparte debajo — salvo que sean muchos controles y no entren ni con
   `flex-wrap` (recién ahí, una segunda fila dentro del mismo header,
   todavía dentro del mismo card).
+- Vale también para un buscador de **identificador exacto** (CTG, patente
+  puntual) que como mucho devuelve una fila: sigue siendo `SearchInput` +
+  `Table` en el mismo card, sin botón "Buscar" aparte — la tabla resuelve
+  sola los estados de "escribí algo" / "sin resultados" / "una fila" vía
+  `emptyMessage` e `isLoading`. No volver al patrón viejo de
+  input+botón+card de resultado aparte (`ControlViajesPage`, antes de
+  2026-09-30).
 
 ## Estados de carga (skeletons)
 

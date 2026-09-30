@@ -10,6 +10,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Select } from "../../components/ui/Select";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { KgDifferenceWarning } from "../../components/loads/KgDifferenceWarning";
 
 import {
   Trash2,
@@ -1269,49 +1270,14 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
           </div>
 
           {/* Missing kilos warning & admin adjustment button */}
-          {load.unloadedWeight != null &&
-            load.loadedWeight != null &&
-            Number(load.unloadedWeight) < Number(load.loadedWeight) && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-5 rounded-md border border-amber-200 dark:border-amber-900/40 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
-                    <AlertTriangle
-                      size={18}
-                      className="text-amber-600 dark:text-amber-400"
-                    />
-                    <span>
-                      Diferencia de Kilos Faltantes Detectada en Destino:{" "}
-                      {(
-                        Number(load.loadedWeight) - Number(load.unloadedWeight)
-                      ).toLocaleString("es-AR")}{" "}
-                      kg
-                    </span>
-                  </div>
-                  {load.differenceAdjusted ? (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/40 px-2.5 py-1 rounded-sm">
-                      Ajustado en Cta. Cte.
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/40 px-2.5 py-1 rounded-sm">
-                      Pendiente de Ajuste
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  El peso descargado (
-                  {Number(load.unloadedWeight).toLocaleString("es-AR")} kg) es
-                  menor al cargado en origen (
-                  {Number(load.loadedWeight).toLocaleString("es-AR")} kg). Esto
-                  no bloquea al transportista — la diferencia se cobra/ajusta
-                  en su cuenta corriente.
-                </p>
-
-                {canUserWrite && !load.differenceAdjusted && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-bold"
-                    onClick={async () => {
+          {load.unloadedWeight != null && load.loadedWeight != null && (
+            <KgDifferenceWarning
+              loadedWeight={Number(load.loadedWeight)}
+              unloadedWeight={Number(load.unloadedWeight)}
+              adjusted={load.differenceAdjusted}
+              onMarkAdjusted={
+                canUserWrite
+                  ? async () => {
                       if (onUpdateLoad) {
                         const ok = await onUpdateLoad(load.id, {
                           differenceAdjusted: true,
@@ -1321,13 +1287,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                             "Diferencia de kilos marcada como ajustada en cuenta corriente.",
                           );
                       }
-                    }}
-                  >
-                    Marcar como Ajustado / Facturado en Cuenta Corriente
-                  </Button>
-                )}
-              </div>
-            )}
+                    }
+                  : undefined
+              }
+            />
+          )}
         </div>
 
         {!isLogistics && isStaff ? (
