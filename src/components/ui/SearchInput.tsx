@@ -17,9 +17,9 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           ref={ref}
           type="text"
           className={`
-            w-full h-12 pl-10 pr-4 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-md
-            text-sm text-slate-800 dark:text-zinc-200 placeholder:text-slate-400
-            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all
+            w-full h-12 pl-10 pr-4 bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-md
+            text-sm text-slate-900 dark:text-white placeholder:text-slate-400
+            focus:outline-none focus:border-emerald-500 transition-all
             ${className}
           `}
           {...props}

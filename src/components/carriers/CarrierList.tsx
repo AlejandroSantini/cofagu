@@ -15,7 +15,7 @@ interface CarrierListProps {
 const CarrierList: React.FC<CarrierListProps> = ({ carriers, loading, onRowClick, canWrite, onDeleteConfirm }) => {
   const columns = [
     { header: 'Nombre / Razón Social', render: (c: Carrier) => <span className="font-bold text-slate-900 dark:text-white">{c.name}</span> },
-    { header: 'CUIT', render: (c: Carrier) => <span className="font-mono text-sm text-slate-600 dark:text-zinc-400">{c.cuit}</span> },
+    { header: 'CUIT', render: (c: Carrier) => <span className="font-mono text-sm text-slate-600 dark:text-zinc-400 whitespace-nowrap">{c.cuit}</span> },
     { header: 'Email de Contacto', render: (c: Carrier) => (
       <span className="text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
         <Mail size={14} className="opacity-60" />{c.contactEmail}

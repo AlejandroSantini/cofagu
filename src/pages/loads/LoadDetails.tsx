@@ -1727,6 +1727,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           </span>
                         </div>
                         {(() => {
+                          if (
+                            user?.role === "OPERATOR" ||
+                            user?.role === "PLAYERO" ||
+                            user?.role === "GAS_STATION"
+                          )
+                            return null;
                           const rate =
                             (directAssignmentTrip as any).resolvedRate ??
                             (directAssignmentTrip as any).rate ??
