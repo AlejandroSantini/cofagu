@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { Table } from '../components/ui/Table';
 import { SearchInput } from '../components/ui/SearchInput';
 import { Select } from '../components/ui/Select';
+import { PageHeader } from '../components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -94,13 +95,12 @@ export const TechnicalCenterSearchPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Buscador de Camiones</h1>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Centro Agrotécnico - Búsqueda por patente, tipo o transportista</p>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Buscador de Camiones"
+        description="Centro Agrotécnico - Búsqueda por patente, tipo o transportista."
+        icon={Truck}
+      />
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-md border border-red-200 dark:border-red-800">

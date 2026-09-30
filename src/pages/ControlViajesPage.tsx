@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { SearchInput } from '../components/ui/SearchInput';
+import { PageHeader } from '../components/ui/PageHeader';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 import { KgDifferenceWarning } from '../components/loads/KgDifferenceWarning';
@@ -129,18 +130,11 @@ export const ControlViajesPage: React.FC = () => {
     <div className="max-w-5xl mx-auto space-y-6">
       <Toast message={toast.message} isVisible={toast.isVisible} onClose={hideToast} type={toast.type} />
 
-      {/* Header */}
-      <div className="text-center space-y-2 pt-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-2">
-          <FileText size={32} />
-        </div>
-        <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
-          Control de Viajes
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-zinc-400 max-w-md mx-auto">
-          Busca un viaje por su número de CTG (Carta de Porte) para consultar datos y descargar comprobantes.
-        </p>
-      </div>
+      <PageHeader
+        title="Control de Viajes"
+        description="Busca un viaje por su número de CTG (Carta de Porte) para consultar datos y descargar comprobantes."
+        icon={FileText}
+      />
 
       {/* Búsqueda + tabla, mismo card */}
       <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">

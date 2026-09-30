@@ -11,11 +11,12 @@ interface PageHeaderProps {
   showBack?: boolean;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ 
-  title, 
-  icon: Icon, 
+export const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  description,
+  icon: Icon,
   iconColor = "bg-emerald-600",
-  showBack = false 
+  showBack = false
 }) => {
   const navigate = useNavigate();
 
@@ -43,6 +44,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
             {title}
           </h1>
+          {description && (
+            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              {description}
+            </p>
+          )}
         </div>
       </div>
     </div>
