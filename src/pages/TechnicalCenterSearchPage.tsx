@@ -5,7 +5,7 @@ import type { TechnicalCenterSearchResult } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Table } from '../components/ui/Table';
 import { SearchInput } from '../components/ui/SearchInput';
-import { FilterPills } from '../components/ui/FilterPills';
+import { Select } from '../components/ui/Select';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -109,28 +109,28 @@ export const TechnicalCenterSearchPage: React.FC = () => {
       )}
 
       <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 flex-1">
             <SearchInput
               containerClassName="w-full sm:w-64"
               placeholder="Buscar por patente o transportista..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-              Total: {filteredResults.length}
-            </span>
+            <div className="w-full sm:w-56">
+              <Select
+                options={[
+                  { value: 'ALL', label: 'Todos los tipos' },
+                  ...Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+                ]}
+                value={selectedTruckType}
+                onChange={(e) => setSelectedTruckType(e.target.value)}
+              />
+            </div>
           </div>
-          <FilterPills
-            label="Tipo"
-            options={[
-              { value: 'ALL', label: 'Todos' },
-              ...Object.entries(TRUCK_TYPE_LABELS).map(([value, label]) => ({ value, label })),
-            ]}
-            value={selectedTruckType}
-            onChange={setSelectedTruckType}
-            className="border-none"
-          />
+          <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+            Total: {filteredResults.length}
+          </span>
         </div>
 
         {!loading && hasSearched && filteredResults.length === 0 && !error ? (
