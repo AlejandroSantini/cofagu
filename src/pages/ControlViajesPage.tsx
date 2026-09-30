@@ -287,7 +287,9 @@ export const ControlViajesPage: React.FC = () => {
                     Tarifa
                   </span>
                   <span className="text-sm font-bold text-slate-800 dark:text-zinc-200 block">
-                    {load.rate ? formatCurrency(load.rate) : 'No definida'}
+                    {load.resolvedRate ?? load.rate
+                      ? formatCurrency((load.resolvedRate ?? load.rate) as number)
+                      : 'No definida'}
                   </span>
                 </div>
               </div>
