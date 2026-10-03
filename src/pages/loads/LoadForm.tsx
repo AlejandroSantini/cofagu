@@ -6,7 +6,7 @@ import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { MapPin, Calendar, DollarSign, Save, Truck, Users } from "lucide-react";
-import { groupService } from "../../api/services";
+import { carrierService, groupService } from "../../api/services";
 import { type CarrierGroup } from "../../types";
 
 interface LoadFormProps {
@@ -18,18 +18,22 @@ interface LoadFormProps {
 interface GroupCarrier {
   id: number;
   name: string;
+  /** 'logistics': excluirla destilda, puntualmente en este viaje, a TODOS
+   * los transportistas que maneja esa logística (se resuelve recién al
+   * armar el payload — acá solo es un id de usuario, no de transportista). */
+  type: "carrier" | "logistics";
 }
 
 /** Normaliza los miembros de un grupo (formato mixto `members` o legacy
- * `carriers`) a solo los transportistas — la exclusión es por transportista,
- * no por logística. */
+ * `carriers`) a transportistas Y logísticas directas del grupo — ambos se
+ * pueden destildar puntualmente para este viaje. */
 function extractGroupCarriers(group: CarrierGroup): GroupCarrier[] {
   if (group.members) {
     return group.members
-      .filter((m) => m.member_type === "carrier")
-      .map((m) => ({ id: m.id, name: m.name }));
+      .filter((m) => m.member_type === "carrier" || m.member_type === "logistics")
+      .map((m) => ({ id: m.id, name: m.name, type: m.member_type }));
   }
-  return (group.carriers || []).map((c) => ({ id: c.carrierId, name: c.carrier.name }));
+  return (group.carriers || []).map((c) => ({ id: c.carrierId, name: c.carrier.name, type: "carrier" as const }));
 }
 
 export const LoadForm: React.FC<LoadFormProps> = ({
@@ -50,6 +54,14 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   const [groupCarriers, setGroupCarriers] = React.useState<Record<number, GroupCarrier[]>>({});
   const [loadingGroupCarriers, setLoadingGroupCarriers] = React.useState<Record<number, boolean>>({});
   const [excludedCarrierIds, setExcludedCarrierIds] = React.useState<Record<number, true>>({});
+  const [excludedLogisticsIds, setExcludedLogisticsIds] = React.useState<Record<number, true>>({});
+
+  // Transportistas manejados por cada logística (managedById), para poder
+  // resolver "destildar esta logística" a sus transportistas puntuales.
+  // Se trae una sola vez, perezoso: recién cuando aparece alguna logística
+  // en el listado combinado.
+  const [managedCarriersByLogistics, setManagedCarriersByLogistics] = React.useState<Record<number, number[]> | null>(null);
+  const [loadingManagedCarriers, setLoadingManagedCarriers] = React.useState(false);
 
   const ensureGroupCarriersLoaded = React.useCallback((groupId: number) => {
     setGroupCarriers((prev) => {
@@ -69,13 +81,37 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   }, []);
 
   const combinedCarriers = React.useMemo(() => {
-    const byId = new Map<number, GroupCarrier>();
+    // Clave compuesta: el id de una logística (user) y el id de un
+    // transportista son secuencias distintas, pueden coincidir numéricamente.
+    const byKey = new Map<string, GroupCarrier>();
     Object.entries(selectedGroups).forEach(([groupId, state]) => {
       if (!state.checked) return;
-      (groupCarriers[Number(groupId)] || []).forEach((c) => byId.set(c.id, c));
+      (groupCarriers[Number(groupId)] || []).forEach((c) => byKey.set(`${c.type}:${c.id}`, c));
     });
-    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedGroups, groupCarriers]);
+
+  // Trae los transportistas de TODAS las logísticas en un solo pedido
+  // (ADMIN/OPERATOR ven el padrón completo) apenas aparece la primera
+  // logística en el listado combinado — para poder resolver su exclusión.
+  React.useEffect(() => {
+    const hasLogistics = combinedCarriers.some((c) => c.type === "logistics");
+    if (!hasLogistics || managedCarriersByLogistics !== null || loadingManagedCarriers) return;
+    setLoadingManagedCarriers(true);
+    carrierService
+      .getCarriers()
+      .then((res) => {
+        if (!res.data.success || !res.data.data) return;
+        const map: Record<number, number[]> = {};
+        res.data.data.forEach((carrier) => {
+          if (carrier.managedById == null) return;
+          (map[carrier.managedById] ||= []).push(carrier.id);
+        });
+        setManagedCarriersByLogistics(map);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingManagedCarriers(false));
+  }, [combinedCarriers, managedCarriersByLogistics, loadingManagedCarriers]);
 
   const anyCheckedGroupStillLoading = Object.entries(selectedGroups).some(
     ([groupId, state]) => state.checked && loadingGroupCarriers[Number(groupId)],
@@ -148,12 +184,19 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     if (hasError) return;
     if (targetGroupsPayload.length === 0) return; // Should not happen if general is required
 
-    // Solo transportistas que siguen apareciendo en el listado combinado
-    // (de los grupos actualmente tildados) — evita arrastrar exclusiones
-    // "fantasma" de un grupo que se destildó después.
-    const excludedCarriers = combinedCarriers
-      .filter((c) => excludedCarrierIds[c.id])
-      .map((c) => c.id);
+    // Solo transportistas/logísticas que siguen apareciendo en el listado
+    // combinado (de los grupos actualmente tildados) — evita arrastrar
+    // exclusiones "fantasma" de un grupo que se destildó después.
+    // Una logística excluida se resuelve a los ids de carrier de TODOS los
+    // transportistas que maneja (el payload del backend es por carrierId).
+    const excludedCarriers = [
+      ...combinedCarriers
+        .filter((c) => c.type === "carrier" && excludedCarrierIds[c.id])
+        .map((c) => c.id),
+      ...combinedCarriers
+        .filter((c) => c.type === "logistics" && excludedLogisticsIds[c.id])
+        .flatMap((c) => managedCarriersByLogistics?.[c.id] || []),
+    ];
 
     onSubmit({
       ...data,
@@ -379,10 +422,10 @@ export const LoadForm: React.FC<LoadFormProps> = ({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200">
-                  Transportistas Incluidos en este Viaje
+                  Transportistas y Logísticas Incluidas en este Viaje
                 </h4>
                 <p className="text-xs text-slate-400 dark:text-zinc-500">
-                  Destildá a los que no quieras que reciban esta publicación puntual — el grupo original no se modifica.
+                  Destildá a quien no quieras que reciba esta publicación puntual — el grupo original no se modifica. Destildar una logística excluye a todos los transportistas que maneja.
                 </p>
               </div>
             </div>
@@ -400,17 +443,24 @@ export const LoadForm: React.FC<LoadFormProps> = ({
               <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-md p-4 sm:p-5 border border-slate-100 dark:border-zinc-800">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {combinedCarriers.map((carrier) => {
-                    const excluded = !!excludedCarrierIds[carrier.id];
+                    const isLogistics = carrier.type === "logistics";
+                    const excluded = isLogistics
+                      ? !!excludedLogisticsIds[carrier.id]
+                      : !!excludedCarrierIds[carrier.id];
+                    const pendingManagedCarriers = isLogistics && managedCarriersByLogistics === null;
                     return (
                       <label
-                        key={carrier.id}
-                        className="flex items-center gap-3 select-none cursor-pointer p-2 rounded-sm hover:bg-slate-100/60 dark:hover:bg-zinc-800/40"
+                        key={`${carrier.type}:${carrier.id}`}
+                        title={pendingManagedCarriers ? "Cargando sus transportistas…" : undefined}
+                        className={`flex items-center gap-3 select-none p-2 rounded-sm hover:bg-slate-100/60 dark:hover:bg-zinc-800/40 ${pendingManagedCarriers ? "cursor-wait opacity-60" : "cursor-pointer"}`}
                       >
                         <input
                           type="checkbox"
                           checked={!excluded}
+                          disabled={pendingManagedCarriers}
                           onChange={(e) => {
-                            setExcludedCarrierIds((prev) => {
+                            const setFn = isLogistics ? setExcludedLogisticsIds : setExcludedCarrierIds;
+                            setFn((prev) => {
                               const next = { ...prev };
                               if (e.target.checked) delete next[carrier.id];
                               else next[carrier.id] = true;
@@ -428,6 +478,11 @@ export const LoadForm: React.FC<LoadFormProps> = ({
                         >
                           {carrier.name}
                         </span>
+                        {isLogistics && (
+                          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-sm">
+                            Logística
+                          </span>
+                        )}
                       </label>
                     );
                   })}

@@ -21,6 +21,8 @@ export interface Carrier {
   drivers?: Driver[];
   trucks?: Truck[];
   users?: User[];
+  /** Id del usuario LOGISTICS que lo maneja como cliente propio, o null si no está gestionado por ninguna. */
+  managedById?: number | null;
 }
 
 export interface Driver {

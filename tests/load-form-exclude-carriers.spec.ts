@@ -7,6 +7,13 @@ import { apiOk, fulfill, loginAs } from "./utils";
  * mostrarlos todos marcados por defecto; destildar alguno lo manda en
  * `excludedCarriers` (array de IDs) en el payload de creación del viaje —
  * no afecta al grupo original, solo a esta publicación puntual.
+ *
+ * Reporte real (WhatsApp, 2026-10-03): un grupo también puede tener
+ * logísticas como miembros directos (no solo transportistas) — el admin
+ * quería poder destildar una logística para que no le llegue el
+ * ofrecimiento, y no aparecía en el listado. Ahora las logísticas también
+ * se listan (con badge), y destildar una resuelve a los IDs de todos los
+ * transportistas que esa logística maneja (`managedById`).
  */
 const GROUP = { id: 1, name: "General", isGeneral: true };
 const GROUP_WITH_MEMBERS = {
@@ -37,28 +44,31 @@ async function publishBasics(page: import("@playwright/test").Page) {
 }
 
 test.describe("Publicar Carga — exclusión de transportistas por grupo", () => {
-  test("muestra a todos los transportistas del grupo tildado, marcados por defecto (sin logísticas)", async ({ page }) => {
+  test("muestra a todos los transportistas Y logísticas del grupo tildado, marcados por defecto", async ({ page }) => {
     await loginAs(page, "ADMIN");
     await page.route("**/api/groups", (r) => fulfill(r, apiOk([GROUP])));
     await page.route("**/api/groups/1", (r) => fulfill(r, apiOk(GROUP_WITH_MEMBERS)));
     await page.route("**/api/trips*", (r) => fulfill(r, apiOk([])));
+    await page.route("**/api/carriers", (r) => fulfill(r, apiOk([])));
 
     await page.goto("/loads");
     await page.getByRole("button", { name: "Publicar Carga" }).click();
 
-    await expect(page.getByText("Transportistas Incluidos en este Viaje")).toBeVisible();
+    await expect(page.getByText("Transportistas y Logísticas Incluidas en este Viaje")).toBeVisible();
     const alfa = page.locator("label", { hasText: "Transporte Alfa" }).locator('input[type="checkbox"]');
     const beta = page.locator("label", { hasText: "Transporte Beta" }).locator('input[type="checkbox"]');
+    const gamma = page.locator("label", { hasText: "Logística Gamma" }).locator('input[type="checkbox"]');
     await expect(alfa).toBeChecked();
     await expect(beta).toBeChecked();
-    // Los miembros de tipo "logistics" no son transportistas a excluir.
-    await expect(page.getByText("Logística Gamma")).toHaveCount(0);
+    await expect(gamma).toBeChecked();
+    await expect(page.locator("label", { hasText: "Logística Gamma" }).getByText("Logística", { exact: true })).toBeVisible();
   });
 
   test("destildar un transportista lo manda en excludedCarriers al publicar", async ({ page }) => {
     await loginAs(page, "ADMIN");
     await page.route("**/api/groups", (r) => fulfill(r, apiOk([GROUP])));
     await page.route("**/api/groups/1", (r) => fulfill(r, apiOk(GROUP_WITH_MEMBERS)));
+    await page.route("**/api/carriers", (r) => fulfill(r, apiOk([])));
 
     let postedBody: { excludedCarriers?: number[]; targetGroups?: unknown } | null = null;
     await page.route("**/api/trips*", (route) => {
@@ -71,7 +81,7 @@ test.describe("Publicar Carga — exclusión de transportistas por grupo", () =>
 
     await page.goto("/loads");
     await page.getByRole("button", { name: "Publicar Carga" }).click();
-    await expect(page.getByText("Transportistas Incluidos en este Viaje")).toBeVisible();
+    await expect(page.getByText("Transportistas y Logísticas Incluidas en este Viaje")).toBeVisible();
 
     await page.locator("label", { hasText: "Transporte Beta" }).locator('input[type="checkbox"]').uncheck();
 
@@ -86,6 +96,7 @@ test.describe("Publicar Carga — exclusión de transportistas por grupo", () =>
     await loginAs(page, "ADMIN");
     await page.route("**/api/groups", (r) => fulfill(r, apiOk([GROUP])));
     await page.route("**/api/groups/1", (r) => fulfill(r, apiOk(GROUP_WITH_MEMBERS)));
+    await page.route("**/api/carriers", (r) => fulfill(r, apiOk([])));
 
     let postedBody: { excludedCarriers?: number[] } | null = null;
     await page.route("**/api/trips*", (route) => {
@@ -98,12 +109,54 @@ test.describe("Publicar Carga — exclusión de transportistas por grupo", () =>
 
     await page.goto("/loads");
     await page.getByRole("button", { name: "Publicar Carga" }).click();
-    await expect(page.getByText("Transportistas Incluidos en este Viaje")).toBeVisible();
+    await expect(page.getByText("Transportistas y Logísticas Incluidas en este Viaje")).toBeVisible();
 
     await publishBasics(page);
     await page.getByRole("button", { name: "Publicar", exact: true }).click();
 
     await expect.poll(() => postedBody).not.toBeNull();
     expect(postedBody!.excludedCarriers).toEqual([]);
+  });
+
+  test("destildar una logística excluye a TODOS los transportistas que maneja", async ({ page }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/groups", (r) => fulfill(r, apiOk([GROUP])));
+    await page.route("**/api/groups/1", (r) => fulfill(r, apiOk(GROUP_WITH_MEMBERS)));
+    // Logística Gamma (id 30) maneja los transportistas 40 y 41; el resto no tiene logística.
+    await page.route("**/api/carriers", (r) =>
+      fulfill(
+        r,
+        apiOk([
+          { id: 10, name: "Transporte Alfa", managedById: null },
+          { id: 20, name: "Transporte Beta", managedById: null },
+          { id: 40, name: "Cliente de Gamma 1", managedById: 30 },
+          { id: 41, name: "Cliente de Gamma 2", managedById: 30 },
+        ]),
+      ),
+    );
+
+    let postedBody: { excludedCarriers?: number[] } | null = null;
+    await page.route("**/api/trips*", (route) => {
+      if (route.request().method() === "POST") {
+        postedBody = JSON.parse(route.request().postData() || "{}");
+        return fulfill(route, apiOk({ id: 1 }));
+      }
+      return fulfill(route, apiOk([]));
+    });
+
+    await page.goto("/loads");
+    await page.getByRole("button", { name: "Publicar Carga" }).click();
+    await expect(page.getByText("Transportistas y Logísticas Incluidas en este Viaje")).toBeVisible();
+
+    const gamma = page.locator("label", { hasText: "Logística Gamma" }).locator('input[type="checkbox"]');
+    await expect(gamma).toBeEnabled();
+    await gamma.uncheck();
+
+    await publishBasics(page);
+    await page.getByRole("button", { name: "Publicar", exact: true }).click();
+
+    await expect.poll(() => postedBody).not.toBeNull();
+    expect(postedBody!.excludedCarriers).toEqual(expect.arrayContaining([40, 41]));
+    expect(postedBody!.excludedCarriers).toHaveLength(2);
   });
 });
