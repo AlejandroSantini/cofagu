@@ -199,6 +199,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [contingencyReporter, setContingencyReporter] = useState("");
   // Carrier and Application selection states
   const [managedCarriers, setManagedCarriers] = useState<any[]>([]);
+  // El `truck` embebido en applications[] (GET /trips/:id) solo trae
+  // {id, plate} — sin `type`, `chassisPlate`/`trailerPlate` (confirmado
+  // contra el backend real 2026-10-07). Se completa puntualmente pidiendo
+  // el camión entero, solo para los que faltan y una sola vez por id.
+  const [fullTrucksById, setFullTrucksById] = useState<Record<number, Truck>>({});
   // Cascade state for logistics postulation
   const [cascadeDrivers, setCascadeDrivers] = useState<Driver[]>([]);
   const [cascadeTrucks, setCascadeTrucks] = useState<Truck[]>([]);
@@ -328,6 +333,44 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const myActiveApps = myTrips.filter(
     (a) => a.status !== "CANCELLED",
   );
+
+  // Completa el tipo de camión cuando el backend no lo mandó embebido (ver
+  // comentario en `fullTrucksById` más arriba) — solo pide los que faltan.
+  useEffect(() => {
+    const missingIds = Array.from(
+      new Set(
+        myTrips
+          .filter((a) => a.truckId && !a.truck?.type && !fullTrucksById[a.truckId!])
+          .map((a) => a.truckId as number),
+      ),
+    );
+    if (missingIds.length === 0) return;
+    let active = true;
+    import("../../api/services").then(({ truckService }) => {
+      if (!active) return;
+      Promise.all(
+        missingIds.map((id) =>
+          truckService
+            .getTruck(id)
+            .then((res) => (res.data.success ? res.data.data : null))
+            .catch(() => null),
+        ),
+      ).then((results) => {
+        if (!active) return;
+        setFullTrucksById((prev) => {
+          const next = { ...prev };
+          results.forEach((t) => {
+            if (t) next[t.id] = t;
+          });
+          return next;
+        });
+      });
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- myTrips se recalcula cada render; alcanza con reaccionar a los ids
+  }, [myTrips.map((a) => a.truckId).join(",")]);
 
   // El id correcto para reportar una contingencia es el del sub-load/cupo
   // (load.loads[].id) — NO el de `load.id` cuando `load` vino de
@@ -1979,14 +2022,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           carrierDrivers.find((d) => d.id === trip.driverId)
                             ?.name ||
                           "Chofer Asignado";
+                        const fullTruck = trip.truckId ? fullTrucksById[trip.truckId] : undefined;
                         const truckPlate =
                           trip.truck?.chassisPlate ||
                           trip.truck?.plate ||
+                          fullTruck?.chassisPlate ||
+                          fullTruck?.plate ||
                           carrierTrucks.find((t) => t.id === trip.truckId)
                             ?.plate ||
                           "S/P";
                         const truckType =
                           trip.truck?.type ||
+                          fullTruck?.type ||
                           carrierTrucks.find((t) => t.id === trip.truckId)
                             ?.type ||
                           "N/D";
