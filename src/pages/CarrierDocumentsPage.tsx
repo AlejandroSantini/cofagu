@@ -86,8 +86,15 @@ export const CarrierDocumentsPage: React.FC = () => {
   // escala. Ver docs/api/trucks.md.
   const loadData = async (search?: string) => {
     try {
+      // GET /trucks pagina en 20 por defecto cuando no se manda `limit`
+      // (cambio de comportamiento del backend, confirmado contra el
+      // backend real 2026-10-07: antes devolvía todo). Esta pantalla
+      // necesita ver TODOS los camiones con póliza para no perder pólizas
+      // pendientes de revisión — sin este `limit` alto, admin dejaba de
+      // ver cualquier póliza pendiente que no cayera en los primeros 20
+      // camiones (confirmado: 0 de 19 pendientes visibles).
       const trucksRes = await truckService.getTrucks(
-        isAdmin && search ? { search } : undefined,
+        isAdmin && search ? { search } : { limit: 1000 },
       );
       if (trucksRes.data.success) {
         // Only map trucks that actually have a policy photo or insurance policy data uploaded

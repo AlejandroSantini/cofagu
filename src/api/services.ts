@@ -106,7 +106,13 @@ export const truckService = {
     minCapacity?: number;
     /** Capacidad máxima en kg (capacity <= maxCapacity). Pendiente de backend. */
     maxCapacity?: number;
-    /** Paginación server-side. Pendiente de backend (hoy se ignora y devuelve todo). */
+    /**
+     * Paginación server-side — `page` ya lo respeta el backend (confirmado
+     * 2026-10-07). OJO: si no se manda `limit`, el backend corta en 20 por
+     * defecto (cambió de comportamiento — antes devolvía todo sin filtro).
+     * Cualquier pantalla que necesite "todos los camiones" (no una página
+     * puntual) tiene que mandar un `limit` explícito y alto.
+     */
     page?: number;
     limit?: number;
   }) => api.get<ApiResponse<Truck[]>>("/trucks", { params }),

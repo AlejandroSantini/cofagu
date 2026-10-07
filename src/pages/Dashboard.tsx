@@ -40,7 +40,11 @@ export const Dashboard: React.FC = () => {
     // If user is a CARRIER, fetch their trucks to check insurance status
     if (user?.role === 'CARRIER') {
       try {
-        const trkRes = await truckService.getTrucks();
+        // GET /trucks pagina en 20 por defecto sin `limit` — un
+        // transportista con más de 20 camiones (hay casos reales) quedaba
+        // con el estado de seguro mal calculado, mirando solo una parte
+        // de su flota. Ver nota igual en CarrierDocumentsPage.tsx.
+        const trkRes = await truckService.getTrucks({ limit: 1000 });
         if (trkRes.data.success) {
           const trucks = trkRes.data.data;
           if (trucks.length === 0) {

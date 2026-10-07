@@ -271,7 +271,12 @@ export const LoadsPage: React.FC = () => {
       const params = {
         ...(selectedCarrierId ? { carrierId: selectedCarrierId } : {}),
         ...(tripId ? { tripId } : {}),
-        available: true // Siempre pedir solo los disponibles al postular
+        available: true, // Siempre pedir solo los disponibles al postular
+        // GET /trucks pagina en 20 por defecto sin `limit` — un
+        // transportista con más de 20 camiones no veía todos los
+        // disponibles para elegir al postularse. Ver nota en
+        // CarrierDocumentsPage.tsx.
+        limit: 1000,
       };
       const [drvRes, trkRes] = await Promise.all([
         driverService.getDrivers(params),
