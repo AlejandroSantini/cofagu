@@ -96,6 +96,29 @@ tests de cobertura de una feature nueva salvo que se pida explícitamente.
 `useAutoRefresh` controlan el polling de fondo de las listas. Cambiar ese valor
 único ajusta el intervalo en toda la app.
 
+### Buscadores y filtros: la búsqueda la hace el backend
+**Las listas vienen paginadas y la búsqueda es siempre server-side.** Un
+buscador manda el término al backend (`?search=`, con debounce de ~300ms) y
+muestra lo que devuelve. **Nunca** filtrar en el cliente una lista paginada:
+solo se estaría filtrando la página actual, así que lo que el usuario busca
+puede estar en otra página y el buscador parece roto.
+
+- Si el endpoint todavía no soporta `?search=`, eso es trabajo de backend —
+  pedirlo (ver la nota de "Tests E2E" sobre cómo reportarlo), no resolverlo
+  con un filtro local.
+- La paginación también es server-side: `Table` acepta
+  `pagination={{ total, page, onPageChange }}` cuando la respuesta trae
+  `pagination`.
+- **Única excepción:** sub-listas acotadas que vienen embebidas y completas
+  dentro de la respuesta de un detalle, sin paginar — ahí no hay nada que
+  pedirle al backend y el filtro en memoria es correcto. Hoy el único caso es
+  "Mis Camiones en este Viaje" (`LoadDetails`), que sale de
+  `applications` dentro de `GET /trips/:id`. Si se agrega otro caso así,
+  dejar el comentario explicando por qué no es server-side.
+
+La parte visual (buscador pegado a su tabla, ancho, badge "Total: N") está en
+la skill `ui-style`.
+
 ### Estructura de carpetas
 ```
 src/

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   type Load,
+  type Application,
   type Driver,
   type Truck,
   type User as UserType,
@@ -9,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Select } from "../../components/ui/Select";
 import { Input } from "../../components/ui/Input";
+import { SearchInput } from "../../components/ui/SearchInput";
 import { Modal } from "../../components/ui/Modal";
 import { KgDifferenceWarning } from "../../components/loads/KgDifferenceWarning";
 
@@ -244,6 +246,12 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const [showCancelAppModal, setShowCancelAppModal] = useState(false);
   const [cancelAppId, setCancelAppId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Buscador de "Mis Camiones en este Viaje". Es filtro en memoria (no
+  // server-side como el resto de la app): las postulaciones vienen
+  // embebidas y completas en GET /trips/:id, sin paginar — no hay
+  // endpoint que busque dentro de un viaje. Ver CLAUDE.md, "Buscadores".
+  const [myTrucksSearch, setMyTrucksSearch] = useState("");
 
   const acceptedCount =
     load.applications?.filter((a) => a.status === "ACCEPTED").length ||
@@ -1820,6 +1828,38 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               (app) => app.status === "PENDING",
             );
 
+            // Mismos datos que se muestran en la tarjeta de cada camión —
+            // así el buscador matchea exactamente lo que el usuario ve.
+            const truckSearchHaystack = (trip: Application) => {
+              const matched = load.loads?.find(
+                (l: any) =>
+                  l.carrierId === trip.carrierId &&
+                  (l.truckId === trip.truckId || l.truckId === trip.truck?.id),
+              );
+              return [
+                trip.driver?.name ||
+                  carrierDrivers.find((d) => d.id === trip.driverId)?.name,
+                trip.truck?.chassisPlate ||
+                  trip.truck?.plate ||
+                  carrierTrucks.find((t) => t.id === trip.truckId)?.plate,
+                trip.truck?.trailerPlate,
+                trip.carrier?.name,
+                matched?.ctg || trip.ctg,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+            };
+
+            const term = myTrucksSearch.trim().toLowerCase();
+            const visibleAcceptedTrips = term
+              ? myAcceptedTrips.filter((t) => truckSearchHaystack(t).includes(term))
+              : myAcceptedTrips;
+            // Solo cuando realmente se juntan muchos camiones — con 2 o 3
+            // un buscador es ruido (pedido real: logística con la lista
+            // larga no encontraba el camión para cargarle los kg).
+            const showTruckSearch = myAcceptedTrips.length > 5;
+
             return (
               <div className="space-y-6">
                 {/* If no applications at all */}
@@ -1881,11 +1921,26 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                 {/* Accepted trips: one card per truck */}
                 {myAcceptedTrips.length > 0 && (
                   <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white border-b border-slate-100 dark:border-zinc-800 pb-2">
-                      Mis Camiones en este Viaje ({myAcceptedTrips.length})
-                    </h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-3">
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                        Mis Camiones en este Viaje ({myAcceptedTrips.length})
+                      </h3>
+                      {showTruckSearch && (
+                        <SearchInput
+                          containerClassName="w-full sm:w-64"
+                          placeholder="Buscar por patente, chofer o CTG..."
+                          value={myTrucksSearch}
+                          onChange={(e) => setMyTrucksSearch(e.target.value)}
+                        />
+                      )}
+                    </div>
+                    {showTruckSearch && visibleAcceptedTrips.length === 0 && (
+                      <p className="text-sm text-slate-500 dark:text-zinc-400 text-center py-6">
+                        Ningún camión coincide con "{myTrucksSearch.trim()}".
+                      </p>
+                    )}
                     <div className="space-y-4">
-                      {myAcceptedTrips.map((trip) => {
+                      {visibleAcceptedTrips.map((trip) => {
                         const matchedLoad = load.loads?.find((l: any) => 
                           l.carrierId === trip.carrierId && 
                           (l.truckId === trip.truckId || l.truckId === trip.truck?.id)
