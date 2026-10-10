@@ -108,6 +108,49 @@ test.describe("Cargas y Viajes — buscador de transportista (endpoint dedicado 
     await expect(page.getByPlaceholder("Buscar por transportista, patente o chofer...")).toBeVisible();
   });
 
+  /**
+   * Reporte real (WhatsApp, 2026-10-10): sin escribir nada en el buscador,
+   * la pestaña "Asignados" solo mostraba 1 registro con columnas de viaje
+   * genéricas (Fecha/Ruta/Cereal/Tarifa) en vez de la info por camión que
+   * necesita balanza (Patente/Chofer/Estado/CTG) — esa vista rica solo
+   * aparecía si escribías algo. Ahora es la vista default, filtrada
+   * client-side por la pestaña activa.
+   */
+  test("EMPLOYEE: sin escribir nada, la pestaña ya muestra la tabla rica (Patente/Chofer/CTG), filtrada por estado", async ({ page }) => {
+    await loginAs(page, "EMPLOYEE");
+    let searchParam: string | null | undefined;
+    await page.route("**/api/loads/scale/loads/search*", (route) => {
+      const url = new URL(route.request().url());
+      searchParam = url.searchParams.get("search");
+      return fulfill(
+        route,
+        apiOk([
+          { ...SEARCH_RESULT, id: 301, carrierName: "Asignado SA", status: "ASSIGNED", ctg: null },
+          { ...SEARCH_RESULT, id: 302, carrierName: "En Viaje SA", status: "IN_PROGRESS" },
+          { ...SEARCH_RESULT, id: 303, carrierName: "Completado SA", status: "COMPLETED" },
+        ]),
+      );
+    });
+
+    await page.goto("/loads");
+
+    // Pestaña default de EMPLOYEE es "Asignados" — debe filtrar solo ASSIGNED.
+    await expect(page.getByText("Asignado SA")).toBeVisible();
+    await expect(page.getByText("En Viaje SA")).toHaveCount(0);
+    await expect(page.getByText("Completado SA")).toHaveCount(0);
+    await expect(page.getByText("Total: 1", { exact: true })).toBeVisible();
+    // No se manda search vacío roto — el endpoint soporta sin término.
+    await expect.poll(() => searchParam).toBe("");
+
+    await page.getByRole("button", { name: "En Curso" }).click();
+    await expect(page.getByText("En Viaje SA")).toBeVisible();
+    await expect(page.getByText("Asignado SA")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Completadas" }).click();
+    await expect(page.getByText("Completado SA")).toBeVisible();
+    await expect(page.getByText("En Viaje SA")).toHaveCount(0);
+  });
+
   test("CARRIER no ve el buscador (es vista propia, no necesita buscar entre transportistas)", async ({ page }) => {
     await loginAs(page, "CARRIER");
     await page.route("**/api/trips*", (r) => fulfill(r, apiOk([])));

@@ -101,20 +101,37 @@ export const LoadsPage: React.FC = () => {
   // junta ASSIGNED + IN_PROGRESS + COMPLETED (no hace falta cambiar de
   // pestaña para ver si un transportista está en viaje o ya descargó).
   // Pedido explícito por WhatsApp, implementado por backend 2026-09-26.
+  //
+  // Además es la vista DEFAULT de las pestañas Asignados/En Curso/
+  // Completadas para estos roles (no solo al escribir algo en el
+  // buscador) — confirmado contra el backend real que el endpoint
+  // funciona igual sin `search` (devuelve todo). Antes, sin buscar nada,
+  // esas pestañas caían en `LoadsTable` (columnas de viaje genéricas:
+  // Fecha/Ruta/Cereal/Tarifa, sin Patente/Chofer/CTG/Estado) — balanza
+  // reportó que "solo le muestra los datos al filtrar" (WhatsApp,
+  // 2026-10-10). Se filtra client-side por `activeTab` cuando no hay
+  // término de búsqueda; al buscar, se muestran los resultados de
+  // cualquier estado (comportamiento ya existente, sin cambios).
   const isBalanceSearchRole = user?.role === 'ADMIN' || isEmployee;
   const [scaleSearchResults, setScaleSearchResults] = useState<ScaleLoadSearchResult[] | null>(null);
   const [scaleSearchLoading, setScaleSearchLoading] = useState(false);
   useEffect(() => {
     let active = true;
-    if (!isBalanceSearchRole || !debouncedPlateSearch.trim()) {
+    if (!isBalanceSearchRole) {
       setScaleSearchResults(null);
       return;
     }
     setScaleSearchLoading(true);
     loadService.searchScaleLoads(debouncedPlateSearch.trim())
       .then((res) => {
-        if (active && res.data && res.data.success !== false) {
+        // Validar que sea array: al pedirse siempre (no solo al buscar),
+        // puede pisar un mock de otro endpoint con patrón amplio
+        // ("**/api/loads*") pensado para otra cosa — ignorarlo en vez de
+        // romper el render es más seguro que confiar ciegamente en la forma.
+        if (active && res.data && res.data.success !== false && Array.isArray(res.data.data)) {
           setScaleSearchResults(res.data.data);
+        } else if (active) {
+          setScaleSearchResults(null);
         }
       })
       .catch((err) => {
@@ -128,7 +145,21 @@ export const LoadsPage: React.FC = () => {
         if (active) setScaleSearchLoading(false);
       });
     return () => { active = false; };
-  }, [isBalanceSearchRole, debouncedPlateSearch]);
+  }, [isBalanceSearchRole, debouncedPlateSearch, refreshTrigger]);
+
+  // Sin término de búsqueda, respeta la pestaña activa (mismo criterio que
+  // tenía `loads` antes); buscando, muestra cualquier estado (cross-tab).
+  const scaleTabResults = React.useMemo(() => {
+    if (scaleSearchResults === null) return null;
+    if (debouncedPlateSearch.trim()) return scaleSearchResults;
+    return scaleSearchResults.filter((r) => r.status === activeTab);
+  }, [scaleSearchResults, debouncedPlateSearch, activeTab]);
+  // ASSIGNED/IN_PROGRESS/COMPLETED son los únicos estados que trae este
+  // endpoint — "Disponibles" (ACTIVE, viajes sin camión asignado todavía)
+  // sigue resolviéndose con el `loads`/`getTrips` de siempre más abajo.
+  const isScaleTab = activeTab === 'ASSIGNED' || activeTab === 'IN_PROGRESS' || activeTab === 'COMPLETED';
+  const showScaleTable =
+    isBalanceSearchRole && scaleTabResults !== null && (isScaleTab || !!debouncedPlateSearch.trim());
 
   useEffect(() => {
     let active = true;
@@ -1226,12 +1257,10 @@ export const LoadsPage: React.FC = () => {
                 value={plateSearch}
                 onChange={(e) => setPlateSearch(e.target.value)}
               />
-              {isBalanceSearchRole && debouncedPlateSearch.trim() ? (
-                scaleSearchResults !== null && (
-                  <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-                    Total: {scaleSearchResults.length}
-                  </span>
-                )
+              {showScaleTable ? (
+                <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+                  Total: {scaleTabResults!.length}
+                </span>
               ) : activeTab !== 'CANCELLED' && activeTab !== 'ACTIVE' ? (
                 <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
                   Total: {loads.length}
@@ -1241,7 +1270,7 @@ export const LoadsPage: React.FC = () => {
           )}
 
           {/* Tab Content Render */}
-          {isBalanceSearchRole && debouncedPlateSearch.trim() && scaleSearchResults !== null ? (
+          {showScaleTable ? (
             <Table
               columns={[
                 {
@@ -1317,9 +1346,13 @@ export const LoadsPage: React.FC = () => {
                   ),
                 },
               ]}
-              data={scaleSearchResults}
-              isLoading={scaleSearchLoading}
-              emptyMessage="No se encontraron viajes para esa búsqueda."
+              data={scaleTabResults!}
+              isLoading={scaleSearchLoading && scaleTabResults!.length === 0}
+              emptyMessage={
+                debouncedPlateSearch.trim()
+                  ? 'No se encontraron viajes para esa búsqueda.'
+                  : 'No hay viajes en este estado.'
+              }
               onRowClick={(r) => navigate(`/loads/${r.id}?type=load`)}
             />
           ) : activeTab === 'CANCELLED' && !isPlayero ? (
