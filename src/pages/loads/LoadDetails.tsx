@@ -1840,7 +1840,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               className="w-full text-xs font-bold"
                               onClick={() => {
                                 setActiveAppId(directAssignmentTrip.id);
-                                setPlantCtg(directAssignmentTrip.ctg);
+                                // El backend manda `ctg: null` (no
+                                // `undefined`) cuando todavía no se cargó —
+                                // sin el `|| ""` acá, `plantCtg` queda en
+                                // `null` y el `.trim()` de más abajo
+                                // revienta la app entera al abrir el modal
+                                // (sin Error Boundary, queda en blanco).
+                                // Confirmado contra el backend real
+                                // 2026-10-10.
+                                setPlantCtg(directAssignmentTrip.ctg || "");
                                 setPlantLoadedWeight(
                                   directAssignmentTrip.loadedWeight
                                     ? String(directAssignmentTrip.loadedWeight)
