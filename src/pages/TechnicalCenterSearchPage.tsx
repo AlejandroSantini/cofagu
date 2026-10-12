@@ -166,9 +166,22 @@ export const TechnicalCenterSearchPage: React.FC = () => {
             {
               header: 'Transportista',
               render: (item: TechnicalCenterSearchResult) => (
-                <div className="flex items-center gap-2">
-                  <Package size={14} className="text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-800 dark:text-zinc-200">{item.carrierName || 'N/D'}</span>
+                <div className="flex items-center justify-between gap-3 min-w-[160px]">
+                  <div className="flex items-center gap-2">
+                    <Package size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-sm font-semibold text-slate-800 dark:text-zinc-200 line-clamp-2">
+                      {item.carrierName || 'N/D'}
+                    </span>
+                  </div>
+                  {item.carrierPhone && (
+                    <a
+                      href={`tel:${item.carrierPhone}`}
+                      className="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-sm text-xs font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors"
+                    >
+                      <Phone size={14} className="fill-current shrink-0" />
+                      Llamar
+                    </a>
+                  )}
                 </div>
               )
             },

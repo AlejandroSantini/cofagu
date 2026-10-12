@@ -145,6 +145,8 @@ export interface TechnicalCenterSearchResult {
   plate: string;
   truckType: string;
   carrierName: string;
+  /** Pendiente de backend (ver prompt): hoy no viene en la respuesta. */
+  carrierPhone?: string | null;
   driverName: string;
   driverPhone: string;
   destination: string;
