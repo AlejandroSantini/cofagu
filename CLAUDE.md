@@ -109,12 +109,20 @@ puede estar en otra página y el buscador parece roto.
 - La paginación también es server-side: `Table` acepta
   `pagination={{ total, page, onPageChange }}` cuando la respuesta trae
   `pagination`.
-- **Única excepción:** sub-listas acotadas que vienen embebidas y completas
-  dentro de la respuesta de un detalle, sin paginar — ahí no hay nada que
-  pedirle al backend y el filtro en memoria es correcto. Hoy el único caso es
-  "Mis Camiones en este Viaje" (`LoadDetails`), que sale de
-  `applications` dentro de `GET /trips/:id`. Si se agrega otro caso así,
-  dejar el comentario explicando por qué no es server-side.
+- **Única excepción:** un endpoint que hoy devuelve la lista COMPLETA sin
+  paginar (confirmado probando `page`/`limit` explícitos contra el backend
+  real, no solo mirando la respuesta sin parámetros — un endpoint puede
+  tener pinta de "trae todo" y en realidad cortar en silencio, como pasó
+  con `/trucks`). Ahí no hay páginas escondidas donde buscar, así que
+  filtrar en memoria es correcto y no hace falta nada del backend. Casos
+  hoy: "Mis Camiones en este Viaje" (`LoadDetails`, sale de `applications`
+  dentro de `GET /trips/:id`) y "Empresas Transportistas"
+  (`CarriersPage`, `GET /carriers` — confirmado que ignora `page`/`limit`
+  por completo, siempre devuelve todo). Si se agrega otro caso así, dejar
+  el comentario explicando por qué no es server-side, igual que estos dos.
+  **Esta excepción vence el día que el endpoint empiece a paginar de
+  verdad** — si eso pasa, el filtro local hay que migrarlo a `?search=`
+  server-side de inmediato (volver a esta regla), no dejarlo como está.
 
 La parte visual (buscador pegado a su tabla, ancho, badge "Total: N") está en
 la skill `ui-style`.
