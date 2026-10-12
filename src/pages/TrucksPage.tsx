@@ -50,6 +50,18 @@ export const TrucksPage: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Datos de seguro del camión TAL COMO estaban al entrar a editar — para
+  // detectar si realmente cambiaron y, si cambiaron, forzar PENDING sin
+  // importar quién edite (antes solo pasaba si editaba el propio
+  // transportista; si ADMIN/OPERATOR actualizaban la fecha de vencimiento
+  // — ej. al renovar la póliza — quedaba "habilitado" solo, sin que nadie
+  // volviera a autorizarlo. Pedido explícito, 2026-10-13).
+  const [originalInsurance, setOriginalInsurance] = useState<{
+    cargoInsurancePolicy: string;
+    cargoInsuranceCompany: string;
+    cargoInsuranceExpiration: string;
+    cargoInsurancePhotoUrl: string;
+  } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState<string>('');
 
@@ -214,6 +226,7 @@ export const TrucksPage: React.FC = () => {
         if (active) {
           setShowForm(false);
           setEditingId(null);
+          setOriginalInsurance(null);
           reset({
             chassisPlate: '',
             trailerPlate: '',
@@ -238,10 +251,19 @@ export const TrucksPage: React.FC = () => {
           setValue('type', truck.type as any);
           setValue('capacity', String(truck.capacity));
           setValue('carrierId', truck.carrierId ? String(truck.carrierId) : '');
+          const cargoInsuranceExpirationStr = truck.cargoInsuranceExpiration
+            ? new Date(truck.cargoInsuranceExpiration).toISOString().split('T')[0]
+            : '';
           setValue('cargoInsurancePolicy', truck.cargoInsurancePolicy || '');
           setValue('cargoInsuranceCompany', truck.cargoInsuranceCompany || '');
-          setValue('cargoInsuranceExpiration', truck.cargoInsuranceExpiration ? new Date(truck.cargoInsuranceExpiration).toISOString().split('T')[0] : '');
+          setValue('cargoInsuranceExpiration', cargoInsuranceExpirationStr);
           setValue('cargoInsurancePhotoUrl', truck.cargoInsurancePhotoUrl || '');
+          setOriginalInsurance({
+            cargoInsurancePolicy: truck.cargoInsurancePolicy || '',
+            cargoInsuranceCompany: truck.cargoInsuranceCompany || '',
+            cargoInsuranceExpiration: cargoInsuranceExpirationStr,
+            cargoInsurancePhotoUrl: truck.cargoInsurancePhotoUrl || '',
+          });
           setShowForm(true);
         }
       } catch (err) {
@@ -315,10 +337,30 @@ export const TrucksPage: React.FC = () => {
         cargoInsurancePhotoUrl: data.cargoInsurancePhotoUrl || undefined
       };
 
-      if (isCarrier) {
-        payload.cargoInsuranceStatus = 'PENDING';
-      } else {
+      if (!isCarrier) {
         payload.carrierId = Number(data.carrierId);
+      }
+
+      // Si cambió cualquier dato del seguro de carga (policy, aseguradora,
+      // vencimiento o foto) respecto a lo que había al entrar a editar,
+      // vuelve a PENDING — sin importar quién lo edite. Antes esto solo
+      // pasaba cuando editaba el propio transportista; si ADMIN/OPERATOR
+      // actualizaban la fecha de vencimiento (ej. al renovar la póliza),
+      // el camión quedaba "habilitado" solo, sin que nadie lo
+      // autorizara de nuevo.
+      const cargoInsuranceChanged =
+        isCarrier ||
+        (originalInsurance != null &&
+          (
+            (data.cargoInsurancePolicy || '') !== originalInsurance.cargoInsurancePolicy ||
+            (data.cargoInsuranceCompany || '') !== originalInsurance.cargoInsuranceCompany ||
+            (data.cargoInsuranceExpiration || '') !== originalInsurance.cargoInsuranceExpiration ||
+            (data.cargoInsurancePhotoUrl || '') !== originalInsurance.cargoInsurancePhotoUrl
+          ));
+
+      if (cargoInsuranceChanged) {
+        payload.cargoInsuranceStatus = 'PENDING';
+        payload.insuranceStatus = 'PENDING';
       }
 
       const res = editingId
@@ -328,7 +370,9 @@ export const TrucksPage: React.FC = () => {
       if (res.data.success) {
         const successMsg = isCarrier
           ? 'Los datos del seguro se enviaron a revisión de la administración y el camión quedará temporalmente inhabilitado.'
-          : (editingId ? 'Camión actualizado con éxito' : 'Camión creado con éxito');
+          : cargoInsuranceChanged
+            ? 'Camión actualizado. Como cambiaron los datos del seguro, queda pendiente de que lo autorices de nuevo.'
+            : (editingId ? 'Camión actualizado con éxito' : 'Camión creado con éxito');
         showToast(successMsg, 'success');
         if (id) {
           navigate('/trucks');
