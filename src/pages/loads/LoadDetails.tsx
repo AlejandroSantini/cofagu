@@ -1418,6 +1418,16 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     } as any)
                   : null;
 
+              // Mismo chequeo que `isAppliedByLogistics` más abajo, pero
+              // acá no hay `app` (no vino `applications` — es la forma
+              // "sub-load individual" de GET /loads/:id, la que usa el
+              // buscador de balanza). `load.logisticsId`/`load.logistics`
+              // sí vienen en esa respuesta. Bug real (WhatsApp,
+              // 2026-10-13): por este camino la insignia "Postulado por
+              // Logística" nunca se calculaba, aunque el dato estaba.
+              const isDirectAssignmentByLogistics = load.logisticsId != null;
+              const directAssignmentLogisticsName = load.logistics?.name || "";
+
               const hasAnythingToShow =
                 appsToShow.length > 0 || (isBalancero && directAssignmentTrip);
 
@@ -1745,11 +1755,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   {directAssignmentTrip && appsToShow.length === 0 && (
                     <div className="p-4 bg-slate-50 dark:bg-zinc-800/40 rounded-md border border-slate-200 dark:border-zinc-700/60 space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-zinc-700 pb-2">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">
-                          {directAssignmentTrip.carrier?.name ||
-                            load.carrier?.name ||
-                            "Transportista"}
-                        </span>
+                        <div>
+                          <span className="font-bold text-sm text-slate-900 dark:text-white block">
+                            {directAssignmentTrip.carrier?.name ||
+                              load.carrier?.name ||
+                              "Transportista"}
+                          </span>
+                          {isDirectAssignmentByLogistics && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-sm text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                              <Layers size={10} className="shrink-0" />
+                              Postulado por Logística: {directAssignmentLogisticsName || "-"}
+                            </span>
+                          )}
+                        </div>
                         <Badge
                           variant={
                             directAssignmentTrip.tripStatus === "COMPLETED"

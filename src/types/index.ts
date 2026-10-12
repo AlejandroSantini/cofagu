@@ -194,6 +194,16 @@ export interface Load {
   invoiceId?: number | null;
   fuelAuthorized?: boolean;
   differenceAdjusted?: boolean;
+  // Presentes cuando `load` viene de GET /loads/:id (sub-load individual,
+  // navegación vía buscador de balanza) — la postulación "padre" no está
+  // disponible ahí (`applications` no viene), así que esto es lo único que
+  // permite saber si lo postuló una logística en nombre del transportista.
+  logisticsId?: number | null;
+  logistics?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
 }
 
 export interface ApiResponse<T> {
