@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { SearchInput } from '../components/ui/SearchInput';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { useToast } from '../hooks/useToast';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
@@ -30,6 +31,12 @@ export const CarriersPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
+  // GET /carriers trae siempre la lista completa sin paginar (confirmado
+  // contra el backend real) y su `?search=` no filtra nada server-side —
+  // el filtro va client-side acá, sobre el dataset ya completo en memoria
+  // (no hay riesgo de "solo filtra la página actual" porque no hay páginas
+  // escondidas: ya tenemos todo). Ver CLAUDE.md, "Buscadores y filtros".
+  const [searchTerm, setSearchTerm] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -129,6 +136,16 @@ export const CarriersPage: React.FC = () => {
   const handleRowClick = async (carrier: Carrier) => {
     navigate(`/carriers/${carrier.id}`);
   };
+
+  const filteredCarriers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return carriers;
+    return carriers.filter((c) =>
+      [c.name, c.cuit, c.contactEmail, c.contactPhone]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(term)),
+    );
+  }, [carriers, searchTerm]);
 
 
   const handleEdit = (carrier: Carrier) => {
@@ -358,13 +375,26 @@ export const CarriersPage: React.FC = () => {
         />
 
       ) : (
-        <CarrierList
-          carriers={carriers}
-          loading={loading}
-          onRowClick={handleRowClick}
-          canWrite={canWrite}
-          onDeleteConfirm={askDelete}
-        />
+        <div className="bg-white dark:bg-zinc-900 rounded-md border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center gap-3">
+            <SearchInput
+              containerClassName="w-full sm:w-64"
+              placeholder="Buscar por nombre, CUIT, email o teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
+              Total: {filteredCarriers.length}
+            </span>
+          </div>
+          <CarrierList
+            carriers={filteredCarriers}
+            loading={loading}
+            onRowClick={handleRowClick}
+            canWrite={canWrite}
+            onDeleteConfirm={askDelete}
+          />
+        </div>
       )}
     </div>
   );
