@@ -61,7 +61,13 @@ export const authService = {
 
 // --- CARRIERS ---
 export const carrierService = {
-  getCarriers: () => api.get<ApiResponse<Carrier[]>>("/carriers"),
+  getCarriers: (params?: {
+    /** Server-side cuando el backend lo soporte. Hoy lo ignora (confirmado contra el backend real). */
+    search?: string;
+    /** Paginación server-side. Hoy el backend ignora page/limit y devuelve todo siempre. */
+    page?: number;
+    limit?: number;
+  }) => api.get<ApiResponse<Carrier[]>>("/carriers", { params }),
   getCarrier: (id: number) => api.get<ApiResponse<Carrier>>(`/carriers/${id}`),
   createCarrier: (data: CreateCarrierPayload) =>
     api.post<ApiResponse<Carrier>>("/carriers", data),

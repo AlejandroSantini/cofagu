@@ -31,12 +31,34 @@ export const CarriersPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [loading, setLoading] = useState(true);
-  // GET /carriers trae siempre la lista completa sin paginar (confirmado
-  // contra el backend real) y su `?search=` no filtra nada server-side —
-  // el filtro va client-side acá, sobre el dataset ya completo en memoria
-  // (no hay riesgo de "solo filtra la página actual" porque no hay páginas
-  // escondidas: ya tenemos todo). Ver CLAUDE.md, "Buscadores y filtros".
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Se manda `search`/`page`/`limit` al backend siempre, aunque hoy los
+  // ignore (confirmado contra el backend real: page=1 y page=2 devuelven
+  // lo mismo, limit=10 igual trae los 284) — el día que empiece a
+  // respetarlos, `paginationInfo` deja de ser null y esto pasa a ser
+  // paginación/búsqueda real sin tocar nada más (mismo patrón que
+  // TrucksPage con minCapacity/maxCapacity). Mientras tanto, el filtro
+  // client-side de abajo es el que hace el trabajo. Ver CLAUDE.md,
+  // "Buscadores y filtros".
+  const [paginationInfo, setPaginationInfo] = useState<{ total: number; page: number; limit: number } | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const isFirstSearchRun = React.useRef(true);
+  useEffect(() => {
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
+      return;
+    }
+    setPage(1);
+    setRefreshTrigger((n) => n + 1);
+  }, [debouncedSearchTerm]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -78,11 +100,24 @@ export const CarriersPage: React.FC = () => {
     }
   });
 
-  const fetchCarriers = async () => {
+  const fetchCarriers = async (targetPage: number = page) => {
     try {
-      const res = await carrierService.getCarriers();
+      const res = await carrierService.getCarriers({
+        page: targetPage,
+        limit: 20,
+        search: debouncedSearchTerm.trim() || undefined,
+      });
       if (res.data.success) {
         setCarriers(res.data.data);
+        setPaginationInfo(
+          res.data.pagination
+            ? {
+                total: res.data.pagination.total,
+                page: res.data.pagination.page ?? targetPage,
+                limit: res.data.pagination.limit ?? 20,
+              }
+            : null,
+        );
       }
     } catch (err) {
       console.error(err);
@@ -93,10 +128,11 @@ export const CarriersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCarriers();
-  }, []);
+    fetchCarriers(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, refreshTrigger]);
 
-  useAutoRefresh(fetchCarriers);
+  useAutoRefresh(() => fetchCarriers(page));
 
   useEffect(() => {
     let active = true;
@@ -137,7 +173,14 @@ export const CarriersPage: React.FC = () => {
     navigate(`/carriers/${carrier.id}`);
   };
 
+  // Mientras el backend ignore `search` (paginationInfo === null, todavía
+  // trae la lista completa), filtrar acá es seguro — no hay páginas
+  // escondidas. En cuanto empiece a paginar/filtrar de verdad, hay que
+  // confiar en lo que ya vino filtrado y dejar de tocarlo (filtrar de
+  // nuevo sobre una página parcial rompería justo lo que CLAUDE.md pide
+  // evitar).
   const filteredCarriers = useMemo(() => {
+    if (paginationInfo) return carriers;
     const term = searchTerm.trim().toLowerCase();
     if (!term) return carriers;
     return carriers.filter((c) =>
@@ -145,7 +188,7 @@ export const CarriersPage: React.FC = () => {
         .filter(Boolean)
         .some((field) => field!.toLowerCase().includes(term)),
     );
-  }, [carriers, searchTerm]);
+  }, [carriers, searchTerm, paginationInfo]);
 
 
   const handleEdit = (carrier: Carrier) => {
@@ -384,7 +427,7 @@ export const CarriersPage: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-              Total: {filteredCarriers.length}
+              Total: {paginationInfo?.total ?? filteredCarriers.length}
             </span>
           </div>
           <CarrierList
@@ -393,6 +436,11 @@ export const CarriersPage: React.FC = () => {
             onRowClick={handleRowClick}
             canWrite={canWrite}
             onDeleteConfirm={askDelete}
+            pagination={
+              paginationInfo
+                ? { total: paginationInfo.total, page, onPageChange: (p) => setPage(p) }
+                : undefined
+            }
           />
         </div>
       )}
