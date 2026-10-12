@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -173,22 +173,11 @@ export const CarriersPage: React.FC = () => {
     navigate(`/carriers/${carrier.id}`);
   };
 
-  // Mientras el backend ignore `search` (paginationInfo === null, todavía
-  // trae la lista completa), filtrar acá es seguro — no hay páginas
-  // escondidas. En cuanto empiece a paginar/filtrar de verdad, hay que
-  // confiar en lo que ya vino filtrado y dejar de tocarlo (filtrar de
-  // nuevo sobre una página parcial rompería justo lo que CLAUDE.md pide
-  // evitar).
-  const filteredCarriers = useMemo(() => {
-    if (paginationInfo) return carriers;
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return carriers;
-    return carriers.filter((c) =>
-      [c.name, c.cuit, c.contactEmail, c.contactPhone]
-        .filter(Boolean)
-        .some((field) => field!.toLowerCase().includes(term)),
-    );
-  }, [carriers, searchTerm, paginationInfo]);
+  // Sin filtro de respaldo client-side a propósito: lo que se muestra es
+  // exactamente lo que devuelve el backend para `search`/`page`/`limit`,
+  // nada más. Hoy el backend los ignora, así que el buscador no filtra
+  // todavía (muestra siempre todo) — el día que el backend lo implemente,
+  // empieza a funcionar solo, sin tocar nada de acá.
 
 
   const handleEdit = (carrier: Carrier) => {
@@ -427,11 +416,11 @@ export const CarriersPage: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <span className="shrink-0 text-xs bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 px-3 py-1 rounded-full font-bold">
-              Total: {paginationInfo?.total ?? filteredCarriers.length}
+              Total: {paginationInfo?.total ?? carriers.length}
             </span>
           </div>
           <CarrierList
-            carriers={filteredCarriers}
+            carriers={carriers}
             loading={loading}
             onRowClick={handleRowClick}
             canWrite={canWrite}

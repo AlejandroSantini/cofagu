@@ -2,20 +2,19 @@ import { test, expect } from "@playwright/test";
 import { apiOk, fulfill, loginAs } from "./utils";
 
 /**
- * Pedido real (WhatsApp, 2026-10-12): "Empresas Transportistas" no tenía
- * buscador — con 284+ registros reales, scrollear para encontrar uno era
- * incómodo. También se pidió explícitamente que la paginación/búsqueda sea
- * responsabilidad del backend, no del frontend.
+ * Pedido real (WhatsApp, 2026-10-12): "Empresas Transportistas" necesitaba
+ * buscador. Pedido explícito de seguimiento: que la búsqueda y la
+ * paginación sean 100% responsabilidad del backend — sin ningún filtro de
+ * respaldo en el frontend, ni para search ni para paginar.
  *
- * Se manda `search`/`page`/`limit` al backend siempre (igual que
- * TrucksPage con minCapacity/maxCapacity) — hoy el backend real los ignora
- * por completo (confirmado: page=1 y page=2 devuelven lo mismo, limit=10
- * igual trae los 284, `search` no filtra nada), así que el filtro
- * client-side de respaldo es el que realmente filtra MIENTRAS tanto. En
- * cuanto el backend empiece a mandar `pagination` en la respuesta, el
- * filtro local se apaga solo y se confía 100% en lo que ya vino filtrado
- * del servidor — filtrar de nuevo ahí rompería justo lo que CLAUDE.md
- * pide evitar (solo verías lo que matchea dentro de la página actual).
+ * Se manda `search`/`page`/`limit` a GET /carriers siempre (igual que
+ * TrucksPage con minCapacity/maxCapacity, pero sin el filtro client-side
+ * de respaldo que sí tiene ese caso). Lo que se muestra es EXACTAMENTE lo
+ * que devuelve el backend, sin tocarlo. Hoy el backend ignora esos
+ * parámetros (confirmado: page=1 y page=2 devuelven lo mismo, limit=10
+ * igual trae todo, `search` no filtra nada) — así que el buscador
+ * todavía no filtra nada visualmente, a propósito: el día que el backend
+ * lo implemente, empieza a funcionar solo, sin ningún cambio de acá.
  */
 const CARRIERS = [
   { id: 1, name: "Agrored s.r.l", cuit: "30-70830465-0", contactEmail: "agroredurdi@gmail.com", contactPhone: "3446634150" },
@@ -23,8 +22,8 @@ const CARRIERS = [
   { id: 3, name: "Bourlot alberto", cuit: "20-22012885-8", contactEmail: null, contactPhone: "3446222222" },
 ];
 
-test.describe("Empresas Transportistas — buscador", () => {
-  test("manda search/page/limit al backend, y mientras los ignore, filtra client-side de respaldo", async ({ page }) => {
+test.describe("Empresas Transportistas — buscador 100% backend", () => {
+  test("manda search/page/limit al backend en cada tecla, sin filtrar nada del lado del cliente", async ({ page }) => {
     await loginAs(page, "ADMIN");
     const searchesSent: (string | null)[] = [];
     await page.route("**/api/carriers*", (r) => {
@@ -37,30 +36,21 @@ test.describe("Empresas Transportistas — buscador", () => {
     await page.goto("/carriers");
 
     await expect(page.getByText("Agrored s.r.l")).toBeVisible();
-    await expect(page.getByText("Transportes del Sur")).toBeVisible();
-    await expect(page.getByText("Bourlot alberto")).toBeVisible();
     await expect(page.getByText("Total: 3", { exact: true })).toBeVisible();
 
-    const search = page.getByPlaceholder("Buscar por nombre, CUIT, email o teléfono...");
+    await page.getByPlaceholder("Buscar por nombre, CUIT, email o teléfono...").fill("sur");
 
-    await search.fill("sur");
-    await expect(page.getByText("Transportes del Sur")).toBeVisible();
-    await expect(page.getByText("Agrored s.r.l")).toHaveCount(0);
-    await expect(page.getByText("Total: 1", { exact: true })).toBeVisible();
+    // El pedido viajó al backend con el término...
     await expect.poll(() => searchesSent).toContain("sur");
-
-    await search.fill("3446222222");
+    // ...pero como el backend de hoy lo ignora y devuelve todo, la pantalla
+    // sigue mostrando los 3 — el frontend NO filtra nada por su cuenta.
+    await expect(page.getByText("Agrored s.r.l")).toBeVisible();
     await expect(page.getByText("Bourlot alberto")).toBeVisible();
-    await expect(page.getByText("Transportes del Sur")).toHaveCount(0);
-
-    await search.fill("20-22012885-8");
-    await expect(page.getByText("Bourlot alberto")).toBeVisible();
+    await expect(page.getByText("Total: 3", { exact: true })).toBeVisible();
   });
 
-  test("si el backend empieza a paginar de verdad (manda `pagination`), deja de filtrar en el cliente y confía en lo que llegó", async ({ page }) => {
+  test("en cuanto el backend devuelve `pagination`, se muestra exactamente lo que mandó (ya filtrado/paginado)", async ({ page }) => {
     await loginAs(page, "ADMIN");
-    // Simula backend YA actualizado: pagina de verdad y solo devuelve lo
-    // que matchea el search recibido — menos registros que el total real.
     await page.route("**/api/carriers*", (r) => {
       const url = new URL(r.request().url());
       const search = url.searchParams.get("search");
@@ -80,11 +70,6 @@ test.describe("Empresas Transportistas — buscador", () => {
 
     await page.getByPlaceholder("Buscar por nombre, CUIT, email o teléfono...").fill("sur");
 
-    // El backend ya devolvió solo lo que matchea — el cliente no debe
-    // volver a filtrar sobre eso (si lo hiciera, el resultado sería el
-    // mismo acá, pero la regresión real sería que una vez que el backend
-    // pagine de verdad, un filtro local adicional ocultaría resultados
-    // válidos de otras páginas). Total refleja lo que mandó el backend.
     await expect(page.getByText("Transportes del Sur")).toBeVisible();
     await expect(page.getByText("Agrored s.r.l")).toHaveCount(0);
     await expect(page.getByText("Total: 1", { exact: true })).toBeVisible();
