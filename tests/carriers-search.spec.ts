@@ -22,6 +22,15 @@ const CARRIERS = [
   { id: 3, name: "Bourlot alberto", cuit: "20-22012885-8", contactEmail: null, contactPhone: "3446222222" },
 ];
 
+// Más de 10 para probar que no se arme una paginación falsa de a 10.
+const MANY_CARRIERS = Array.from({ length: 15 }, (_, i) => ({
+  id: 100 + i,
+  name: `Transporte ${i}`,
+  cuit: `30-7000000${i}-0`,
+  contactEmail: `t${i}@example.com`,
+  contactPhone: `34460000${i}`,
+}));
+
 test.describe("Empresas Transportistas — buscador 100% backend", () => {
   test("manda search/page/limit al backend en cada tecla, sin filtrar nada del lado del cliente", async ({ page }) => {
     await loginAs(page, "ADMIN");
@@ -73,5 +82,21 @@ test.describe("Empresas Transportistas — buscador 100% backend", () => {
     await expect(page.getByText("Transportes del Sur")).toBeVisible();
     await expect(page.getByText("Agrored s.r.l")).toHaveCount(0);
     await expect(page.getByText("Total: 1", { exact: true })).toBeVisible();
+  });
+
+  test("con más de 10 registros y sin pagination del backend, muestra TODO en una sola página (sin armar '1 2 3...' de a 10)", async ({
+    page,
+  }) => {
+    await loginAs(page, "ADMIN");
+    await page.route("**/api/carriers*", (r) => fulfill(r, apiOk(MANY_CARRIERS)));
+
+    await page.goto("/carriers");
+
+    // Los 15 están visibles de una, no solo los primeros 10.
+    for (const c of MANY_CARRIERS) {
+      await expect(page.getByText(c.name, { exact: true })).toBeVisible();
+    }
+    // No hay botones de página 2/3 — una sola página real.
+    await expect(page.getByRole("button", { name: "2", exact: true })).toHaveCount(0);
   });
 });

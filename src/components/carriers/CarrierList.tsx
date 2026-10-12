@@ -12,9 +12,11 @@ interface CarrierListProps {
   onDeleteConfirm: (id: number) => void;
   /** Paginación server-side — solo se pasa cuando el backend la soporta de verdad. */
   pagination?: { total: number; page: number; onPageChange: (p: number) => void };
+  /** Tamaño de página real que pidió el backend (para itemsPerPage de la tabla). */
+  pageSize?: number;
 }
 
-const CarrierList: React.FC<CarrierListProps> = ({ carriers, loading, onRowClick, canWrite, onDeleteConfirm, pagination }) => {
+const CarrierList: React.FC<CarrierListProps> = ({ carriers, loading, onRowClick, canWrite, onDeleteConfirm, pagination, pageSize }) => {
   const columns = [
     { header: 'Nombre / Razón Social', render: (c: Carrier) => <span className="font-bold text-slate-900 dark:text-white">{c.name}</span> },
     { header: 'CUIT', render: (c: Carrier) => <span className="font-mono text-sm text-slate-600 dark:text-zinc-400 whitespace-nowrap">{c.cuit}</span> },
@@ -57,6 +59,7 @@ const CarrierList: React.FC<CarrierListProps> = ({ carriers, loading, onRowClick
       isLoading={loading}
       onRowClick={handleRow}
       pagination={pagination}
+      itemsPerPage={pageSize}
     />
   );
 };

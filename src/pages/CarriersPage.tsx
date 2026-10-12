@@ -425,11 +425,19 @@ export const CarriersPage: React.FC = () => {
             onRowClick={handleRowClick}
             canWrite={canWrite}
             onDeleteConfirm={askDelete}
+            // Server-side siempre, nunca el fallback de paginación local de
+            // `Table` (que cortaría de a 10 por su cuenta). Con paginación
+            // real del backend, pageSize = su `limit`. Sin ella (caso de
+            // hoy), pageSize = la cantidad recibida: la tabla muestra TODO
+            // sin armar páginas falsas — la ausencia de controles de
+            // paginación reales es la señal de que falta el backend, no
+            // algo para disimular acá.
             pagination={
               paginationInfo
                 ? { total: paginationInfo.total, page, onPageChange: (p) => setPage(p) }
-                : undefined
+                : { total: carriers.length, page: 1, onPageChange: () => {} }
             }
+            pageSize={paginationInfo ? paginationInfo.limit : Math.max(carriers.length, 1)}
           />
         </div>
       )}
