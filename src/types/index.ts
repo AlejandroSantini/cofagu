@@ -23,6 +23,8 @@ export interface Carrier {
   users?: User[];
   /** Id del usuario LOGISTICS que lo maneja como cliente propio, o null si no está gestionado por ninguna. */
   managedById?: number | null;
+  /** Si está en true, sus postulaciones se aceptan solas sin revisión manual. */
+  autoAccept?: boolean;
 }
 
 export interface Driver {

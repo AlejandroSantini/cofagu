@@ -67,6 +67,8 @@ export const carrierService = {
     /** Paginación server-side. Hoy el backend ignora page/limit y devuelve todo siempre. */
     page?: number;
     limit?: number;
+    /** Filtra solo auto-aceptados (true) o manuales (false). Omitir trae todos. */
+    autoAccept?: boolean;
   }) => api.get<ApiResponse<Carrier[]>>("/carriers", { params }),
   getCarrier: (id: number) => api.get<ApiResponse<Carrier>>(`/carriers/${id}`),
   createCarrier: (data: CreateCarrierPayload) =>
@@ -75,6 +77,13 @@ export const carrierService = {
     api.put<ApiResponse<Carrier>>(`/carriers/${id}`, data),
   deleteCarrier: (id: number) =>
     api.delete<ApiResponse<void>>(`/carriers/${id}`),
+  setAutoAccept: (id: number, autoAccept: boolean) =>
+    api.patch<ApiResponse<Carrier>>(`/carriers/${id}/auto-accept`, { autoAccept }),
+  setAutoAcceptBatch: (carrierIds: number[], autoAccept: boolean) =>
+    api.patch<ApiResponse<{ updatedCount: number; autoAccept: boolean }>>(
+      "/carriers/auto-accept/batch",
+      { carrierIds, autoAccept },
+    ),
   getCarrierHistory: (id: number) =>
     api.get<ApiResponse<Application[]>>(`/carriers/${id}/history`),
   getCarrierDrivers: (carrierId: number) =>

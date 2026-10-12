@@ -16,6 +16,7 @@ import {
   Search,
   ParkingSquare,
   Fuel,
+  Zap,
 } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../store/useNotificationStore";
@@ -98,6 +99,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       ? [
           { label: "Documentación", icon: FileText, path: "/documents" },
           { label: "Grupos", icon: Layers, path: "/groups" },
+          { label: "Postulaciones Automáticas", icon: Zap, path: "/auto-accept-carriers" },
           { label: "Personal / Usuarios", icon: Users, path: "/users" },
         ]
       : []),

@@ -23,6 +23,7 @@ import { CarrierDocumentsPage } from './pages/CarrierDocumentsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 
 import { GroupsPage } from './pages/GroupsPage';
+import { AutoAcceptCarriersPage } from './pages/AutoAcceptCarriersPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -164,6 +165,19 @@ function App() {
               <AppLayout>
                 <RoleGate allowedRoles={['ADMIN']}>
                   <GroupsPage />
+                </RoleGate>
+              </AppLayout>
+            ) : <Navigate to="/login" />
+          }
+        />
+
+        <Route
+          path="/auto-accept-carriers"
+          element={
+            token ? (
+              <AppLayout>
+                <RoleGate allowedRoles={['ADMIN']}>
+                  <AutoAcceptCarriersPage />
                 </RoleGate>
               </AppLayout>
             ) : <Navigate to="/login" />

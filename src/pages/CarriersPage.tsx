@@ -35,14 +35,10 @@ export const CarriersPage: React.FC = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  // Se manda `search`/`page`/`limit` al backend siempre, aunque hoy los
-  // ignore (confirmado contra el backend real: page=1 y page=2 devuelven
-  // lo mismo, limit=10 igual trae los 284) — el día que empiece a
-  // respetarlos, `paginationInfo` deja de ser null y esto pasa a ser
-  // paginación/búsqueda real sin tocar nada más (mismo patrón que
-  // TrucksPage con minCapacity/maxCapacity). Mientras tanto, el filtro
-  // client-side de abajo es el que hace el trabajo. Ver CLAUDE.md,
-  // "Buscadores y filtros".
+  // Paginación/búsqueda 100% server-side (search/page/limit se mandan
+  // siempre, sin filtro de respaldo client-side) — ver CLAUDE.md,
+  // "Buscadores y filtros". `paginationInfo` refleja lo que el backend
+  // devuelva en `pagination`.
   const [paginationInfo, setPaginationInfo] = useState<{ total: number; page: number; limit: number } | null>(null);
 
   useEffect(() => {
@@ -50,10 +46,17 @@ export const CarriersPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const isFirstSearchRun = React.useRef(true);
+  // Comparamos contra el valor anterior (no un simple flag de "primera
+  // corrida") porque bajo StrictMode (dev) React re-ejecuta este efecto una
+  // vez de más al montar con el mismo valor — un flag booleano queda mal
+  // seteado por esa repetición fantasma y dispara un refetch de más con la
+  // búsqueda todavía vacía, que puede pisar el resultado ya filtrado si esa
+  // respuesta vieja resuelve después.
+  const prevSearchRef = React.useRef(debouncedSearchTerm);
   useEffect(() => {
-    if (isFirstSearchRun.current) {
-      isFirstSearchRun.current = false;
+    const prev = prevSearchRef.current;
+    prevSearchRef.current = debouncedSearchTerm;
+    if (prev === debouncedSearchTerm) {
       return;
     }
     setPage(1);
@@ -100,6 +103,8 @@ export const CarriersPage: React.FC = () => {
     }
   });
 
+  // Pedido directo (auto-refresh, etc.) — no compite con el efecto de abajo,
+  // así que no necesita guarda contra respuestas obsoletas.
   const fetchCarriers = async (targetPage: number = page) => {
     try {
       const res = await carrierService.getCarriers({
@@ -127,8 +132,46 @@ export const CarriersPage: React.FC = () => {
     }
   };
 
+  // React (en dev, por StrictMode) puede disparar este efecto más de una vez
+  // seguida, y con el debounce de la búsqueda puede haber un fetch viejo (sin
+  // search) todavía en vuelo cuando ya se pidió uno nuevo (con search). Si el
+  // viejo resuelve después, pisaría la lista filtrada con la vieja — por eso
+  // la guarda `ignore` descarta cualquier respuesta que ya no corresponda a
+  // este efecto.
   useEffect(() => {
-    fetchCarriers(page);
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await carrierService.getCarriers({
+          page,
+          limit: 20,
+          search: debouncedSearchTerm.trim() || undefined,
+        });
+        if (ignore) return;
+        if (res.data.success) {
+          setCarriers(res.data.data);
+          setPaginationInfo(
+            res.data.pagination
+              ? {
+                  total: res.data.pagination.total,
+                  page: res.data.pagination.page ?? page,
+                  limit: res.data.pagination.limit ?? 20,
+                }
+              : null,
+          );
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          setError('Error al cargar la lista de transportistas.');
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, refreshTrigger]);
 
