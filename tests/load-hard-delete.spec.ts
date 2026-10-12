@@ -121,10 +121,11 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
     // Reportado: "¿y si esa publicación no completa se cancela y ya salieron
     // algunos trips?" — antes, si ningún cupo estaba COMPLETED todavía, el
     // botón borraba el viaje entero vía DELETE /trips/:id, afectando también
-    // a los camiones IN_PROGRESS (ya en ruta con carga). Ahora, cualquier
-    // sub-load que no esté CANCELLED (asignado, demorado, en curso o
-    // completado) deja el botón deshabilitado directamente — ni siquiera se
-    // puede intentar. Ver también "Cerrar Cupos Restantes" más abajo.
+    // a los camiones IN_PROGRESS (ya en ruta con carga). Un sub-load
+    // IN_PROGRESS/DELAYED/COMPLETED deja el botón deshabilitado — ni
+    // siquiera se puede intentar. Ver también "Cerrar Cupos Restantes" más
+    // abajo. (Un sub-load solo ASIGNADO, sin salir, NO bloquea — ver el
+    // test siguiente.)
     await loginAs(page, "ADMIN");
     await mockGet(page, "**/api/trips/5", {
       ...baseTrip,
@@ -154,12 +155,46 @@ test.describe("ADMIN — borrado definitivo de publicaciones", () => {
     await expect(cancelBtn).toBeDisabled();
     await expect(cancelBtn).toHaveAttribute(
       "title",
-      /Ya hay camiones asignados, en curso o completados/,
+      /Ya hay camiones en curso, demorados o completados/,
     );
 
     // Ni el viaje ni el camión en curso se tocaron.
     await expect.poll(() => deleteTripCalled).toBe(false);
     await expect.poll(() => deleteLoadCalled).toBe(false);
+  });
+
+  test("viaje con cupos solo ASIGNADOS (nadie salió todavía): 'Cancelar Viaje Completo' sigue habilitado", async ({
+    page,
+  }) => {
+    // Reporte real (WhatsApp, 2026-10-12): "antes funcionaba, ahora no me
+    // deja cancelar el viaje completo" — tenía camiones ya ASIGNADOS (sin
+    // CTG, no salieron) y necesitaba cancelar todo de una, no uno por uno.
+    // Confirmado contra el backend real: DELETE /trips/:id cascadea limpio
+    // cuando el único sub-load está en ASSIGNED — no hay riesgo real.
+    await loginAs(page, "ADMIN");
+    await mockGet(page, "**/api/trips/7", {
+      ...baseTrip,
+      id: 7,
+      status: "ACTIVE",
+      maxTrucks: 2,
+      loads: [{ id: 501, status: "ASSIGNED", carrierId: 10, truckId: 5 }],
+    });
+    let deleteTripCalled = false;
+    await page.route("**/api/trips/7", (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      deleteTripCalled = true;
+      return fulfill(route, apiOk(null));
+    });
+
+    await page.goto("/loads/7?type=trip");
+
+    const cancelBtn = page.getByRole("button", { name: "Cancelar Viaje Completo" });
+    await expect(cancelBtn).toBeEnabled();
+
+    await cancelBtn.click();
+    await page.getByRole("button", { name: "Cancelar Carga" }).click();
+
+    await expect.poll(() => deleteTripCalled).toBe(true);
   });
 
   test("'Reducir / Cerrar Cupos' por defecto cierra todos los restantes, sin tocar el camión en curso", async ({

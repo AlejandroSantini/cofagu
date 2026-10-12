@@ -375,16 +375,18 @@ export const LoadsPage: React.FC = () => {
         : loads.find(l => l.id === delId || String(l.id) === String(delId));
 
       if (targetLoad && targetLoad.loads && targetLoad.loads.length > 0) {
-        // Cualquier sub-load que no esté CANCELLED representa un camión
-        // realmente comprometido (asignado, demorado, en curso o ya
-        // completado) — cancelar el viaje completo lo afectaría, incluidos
-        // los que ya salieron a la ruta con carga. Nunca se borra el viaje
-        // entero si hay algo así; para liberar un cupo puntual hay que
-        // cancelar esa postulación individual desde su propia tarjeta.
-        const committedSubloads = targetLoad.loads.filter((l: any) => l.status !== 'CANCELLED');
-        if (committedSubloads.length > 0) {
+        // Un camión recién ASIGNADO (sin CTG, no salió todavía) se puede
+        // cancelar en bloque sin riesgo — confirmado contra el backend
+        // real. Lo que hay que proteger es lo que ya salió con carga (en
+        // curso, demorado) o ya completó. Defensa en profundidad: el botón
+        // ya queda deshabilitado en ese caso (ver LoadDetails), esto es
+        // solo por si se llega acá por otro camino.
+        const inTransitOrCompleted = targetLoad.loads.filter((l: any) =>
+          ['IN_PROGRESS', 'DELAYED', 'COMPLETED'].includes(l.status),
+        );
+        if (inTransitOrCompleted.length > 0) {
           showToast(
-            'Este viaje ya tiene camiones asignados, en curso o completados — no se puede cancelar la publicación completa sin afectarlos. Para liberar un cupo puntual, cancelá esa postulación individual desde su tarjeta.',
+            'Este viaje ya tiene camiones en curso, demorados o completados — no se puede cancelar la publicación completa sin afectarlos. Para liberar un cupo puntual, cancelá esa postulación individual desde su tarjeta.',
             'error',
           );
           confirmDelete();

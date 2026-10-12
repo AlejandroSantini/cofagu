@@ -268,10 +268,22 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     load.status === "COMPLETED"
       ? 1
       : 0);
-  // Cualquier sub-load no CANCELLED representa un camión ya comprometido
-  // (asignado, demorado, en curso o completado) — cancelar el viaje
-  // completo lo afectaría.
-  const hasCommittedSubloads =
+  // Un camión recién ASIGNADO (sin CTG, no salió todavía) no corre ningún
+  // riesgo real al cancelarlo en bloque junto con el resto — confirmado
+  // contra el backend real: DELETE /trips/:id cascadea limpio en ese caso.
+  // Lo que SÍ hay que proteger es un camión que ya salió con carga (en
+  // curso, demorado) o que ya completó — ahí sí cancelar el viaje completo
+  // lo afectaría. Pedido explícito (WhatsApp, 2026-10-12): antes se podía
+  // cancelar el viaje entero con cupos asignados, dejó de poder hacerse.
+  const hasInTransitOrCompletedSubloads =
+    load.loads !== undefined &&
+    load.loads.some((l: any) =>
+      ["IN_PROGRESS", "DELAYED", "COMPLETED"].includes(l.status),
+    );
+  // Cualquier sub-load no CANCELLED (incluye ASIGNADO) — se usa solo para
+  // decidir si mostrar "Reducir / Cerrar Cupos" (acción no destructiva,
+  // sin el mismo riesgo que cancelar todo de una).
+  const hasAnyCommittedSubloads =
     load.loads !== undefined && load.loads.some((l: any) => l.status !== "CANCELLED");
   const maxCapacity = load.maxTrucks || 1;
 
@@ -1221,10 +1233,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   variant="danger"
                   icon={Trash2}
                   className="w-full sm:w-auto"
-                  disabled={hasCommittedSubloads}
+                  disabled={hasInTransitOrCompletedSubloads}
                   title={
-                    hasCommittedSubloads
-                      ? "Ya hay camiones asignados, en curso o completados — cancelá esa postulación puntual desde su tarjeta, o usá \"Reducir / Cerrar Cupos\" para bajar el total sin tocarlos."
+                    hasInTransitOrCompletedSubloads
+                      ? "Ya hay camiones en curso, demorados o completados — cancelá esa postulación puntual desde su tarjeta, o usá \"Reducir / Cerrar Cupos\" para bajar el total sin tocarlos."
                       : undefined
                   }
                   onClick={() => onCancelLoad(load.id)}
@@ -1236,7 +1248,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               load.loads !== undefined &&
               load.status !== "CANCELLED" &&
               load.status !== "COMPLETED" &&
-              hasCommittedSubloads &&
+              hasAnyCommittedSubloads &&
               (load.maxTrucks || 0) > acceptedCount && (
                 <Button
                   variant="outline"
