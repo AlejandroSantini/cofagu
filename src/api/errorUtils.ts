@@ -7,7 +7,11 @@ export const getErrorMessage = (err: unknown, defaultMessage: string): string =>
     }
 
     const data = err.response?.data;
-    let message = data?.message || err.message || defaultMessage;
+    // El backend manda el motivo en `error` (ej. "No hay cupos disponibles
+    // para este viaje") o en `message`. `err.message` de axios ("Request
+    // failed with status code 400") no le sirve al usuario: si no hay
+    // ninguno de los dos, va el mensaje por defecto.
+    let message = data?.error || data?.message || defaultMessage;
 
     // Check if it's a stringified JSON array (Zod error)
     if (typeof message === 'string' && message.trim().startsWith('[') && message.trim().endsWith(']')) {

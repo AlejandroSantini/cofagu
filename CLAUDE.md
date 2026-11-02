@@ -96,6 +96,30 @@ tests de cobertura de una feature nueva salvo que se pida explícitamente.
 `useAutoRefresh` controlan el polling de fondo de las listas. Cambiar ese valor
 único ajusta el intervalo en toda la app.
 
+### Notificaciones push (FCM)
+- **Cómo funciona del lado del front:** `usePushNotifications` (montado en
+  `App.tsx`) pide permiso, registra `public/firebase-messaging-sw.js` (la
+  versión de `importScripts` tiene que coincidir con `firebase` de
+  `package.json`) y manda el token con `POST /users/fcm-token`. Cada vez que
+  se abre la app con el permiso ya concedido **vuelve a mandar el token**.
+  En foreground el mensaje se muestra como toast + suma al badge; en segundo
+  plano lo muestra FCM (el SW solo dibuja a mano los mensajes *data-only*,
+  para no duplicar). En iPhone solo anda con la app instalada en la pantalla
+  de inicio.
+- **Pendiente de backend (causa de "no suena / no llega", reportado 2026-10-13):**
+  1. `User.fcmToken` es **un solo token por usuario** y `POST /users/fcm-token`
+     lo pisa: solo recibe push el último dispositivo que abrió la app
+     (celular vs. PC, varios choferes en la misma cuenta). Hace falta guardar
+     un token por dispositivo y enviar a todos (`sendEachForMulticast`).
+  2. El envío (`firebase.service.js`) no lleva prioridad: sin
+     `android.priority: 'high'` / `webpush.headers.Urgency: 'high'` /
+     `apns-priority: 10`, Android en reposo y los navegadores la demoran o
+     descartan.
+  3. Los tokens vencidos (`registration-token-not-registered`) no se borran.
+  Hasta que eso esté, **no hay arreglo posible desde el front**: el front ya
+  registra bien el token; el problema es cómo se guarda y se envía. No
+  "parchearlo" del lado del cliente.
+
 ### Buscadores y filtros: la búsqueda la hace el backend
 **Las listas vienen paginadas y la búsqueda es siempre server-side.** Un
 buscador manda el término al backend (`?search=`, con debounce de ~300ms) y
