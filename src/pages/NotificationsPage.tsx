@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Bell, CheckCircle, Clock, Check, ArrowRight, XCircle, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCircle, Clock, Check, ArrowRight, XCircle, AlertTriangle, Ban } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
@@ -65,7 +65,11 @@ export default function NotificationsPage() {
     if (!notification.read) {
       handleMarkAsRead(notification.id);
     }
-    if (notification.link) {
+    // Cupos completos: la postulación ya no tiene vuelta, lo útil es ir al
+    // listado de viajes activos a buscar otra carga (no al viaje lleno).
+    if (notification.type === 'TRIP_QUOTA_FILLED') {
+      navigate('/loads');
+    } else if (notification.link) {
       navigate(notification.link);
     }
   };
@@ -82,6 +86,8 @@ export default function NotificationsPage() {
         return <Clock className="h-6 w-6 text-yellow-500" />;
       case 'TRIP_CANCELLED':
         return <XCircle className="h-6 w-6 text-rose-500" />;
+      case 'TRIP_QUOTA_FILLED':
+        return <Ban className="h-6 w-6 text-slate-500" />;
       case 'TRIP_REJECTED':
         return <AlertTriangle className="h-6 w-6 text-rose-500" />;
       default:

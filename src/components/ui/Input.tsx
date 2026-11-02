@@ -9,10 +9,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, icon: Icon, rightElement, error, className = '', ...props }, ref) => {
+  // Asocia el <label> al input (accesibilidad y getByLabel en los tests).
+  const autoId = React.useId();
+  const inputId = props.id ?? autoId;
   return (
     <div className={`flex flex-col w-full ${label ? 'gap-2' : ''}`}>
       {label && (
-        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1 whitespace-nowrap">
+        <label htmlFor={inputId} className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1 whitespace-nowrap">
           {label}
         </label>
       )}
@@ -24,6 +27,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, ic
         )}
         <input 
           ref={ref}
+          id={inputId}
           className={`
             w-full h-12 bg-white dark:bg-zinc-900 border-2 rounded-md px-4 
             ${Icon ? 'pl-11' : ''} 

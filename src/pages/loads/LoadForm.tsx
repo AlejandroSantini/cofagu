@@ -1,18 +1,43 @@
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loadSchema, type LoadFormValues } from "../../schemas/load.schema";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { MapPin, Calendar, DollarSign, Save, Truck, Users } from "lucide-react";
+import { MapPin, Calendar, DollarSign, Save, Truck, Users, Repeat } from "lucide-react";
 import { carrierService, groupService } from "../../api/services";
-import { type CarrierGroup } from "../../types";
+import { type CarrierGroup, type Load } from "../../types";
+import { isoToDateOnly } from "../../utils/dateOnly";
 
 interface LoadFormProps {
   onSubmit: (data: LoadFormValues) => void;
   onCancel: () => void;
   isLoading: boolean;
+  /** Si viene, el formulario edita ese viaje (precargado) en vez de crear uno. */
+  initialTrip?: Load | null;
+  /** Error de cupo devuelto por el backend al editar ("no puede ser menor a…"). */
+  maxTrucksError?: string;
+}
+
+function tripToFormValues(trip: Load): Partial<LoadFormValues> {
+  return {
+    origin: trip.origin || "",
+    destination: trip.destination || "",
+    loadingDate: isoToDateOnly(trip.loadingDate || trip.date),
+    quotaDate: isoToDateOnly(trip.quotaDate),
+    loadingTimeStart: trip.loadingTimeStart || "",
+    loadingTimeEnd: trip.loadingTimeEnd || "",
+    cereal: trip.cereal || "",
+    maxTrucks: String(trip.maxTrucks ?? 1),
+    notes: trip.notes || "",
+    isCombo: !!trip.isCombo,
+    leg2Origin: trip.leg2Origin || "",
+    leg2Destination: trip.leg2Destination || "",
+    leg2Cargo: trip.leg2Cargo || "",
+    leg2LoadingDate: isoToDateOnly(trip.leg2LoadingDate),
+    leg2Notes: trip.leg2Notes || "",
+  };
 }
 
 interface GroupCarrier {
@@ -40,7 +65,10 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   onSubmit,
   onCancel,
   isLoading,
+  initialTrip,
+  maxTrucksError,
 }) => {
+  const isEditing = !!initialTrip;
   const [groups, setGroups] = React.useState<CarrierGroup[]>([]);
   const [selectedGroups, setSelectedGroups] = React.useState<
     Record<number, { checked: boolean; rate: string }>
@@ -53,7 +81,13 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   // grupos actualmente tildados.
   const [groupCarriers, setGroupCarriers] = React.useState<Record<number, GroupCarrier[]>>({});
   const [loadingGroupCarriers, setLoadingGroupCarriers] = React.useState<Record<number, boolean>>({});
-  const [excludedCarrierIds, setExcludedCarrierIds] = React.useState<Record<number, true>>({});
+  const [excludedCarrierIds, setExcludedCarrierIds] = React.useState<Record<number, true>>(() => {
+    const initial: Record<number, true> = {};
+    (initialTrip?.excludedCarriers || []).forEach((e) => {
+      initial[typeof e === "number" ? e : e.carrierId] = true;
+    });
+    return initial;
+  });
   const [excludedLogisticsIds, setExcludedLogisticsIds] = React.useState<Record<number, true>>({});
 
   // Transportistas manejados por cada logística (managedById), para poder
@@ -131,13 +165,20 @@ export const LoadForm: React.FC<LoadFormProps> = ({
           });
           setGroups(fetchedGroups);
           
-          // Pre-select general group
+          // Al crear se pre-tilda el grupo general; al editar, los grupos
+          // y tarifas que ya tiene el viaje.
           const initialSelections: Record<number, { checked: boolean; rate: string }> = {};
-          fetchedGroups.forEach((g: CarrierGroup) => {
-            if (g.isGeneral) {
-              initialSelections[g.id] = { checked: true, rate: "" };
-            }
-          });
+          if (initialTrip?.targetGroups?.length) {
+            initialTrip.targetGroups.forEach((tg) => {
+              initialSelections[tg.groupId] = { checked: true, rate: String(Number(tg.rate)) };
+            });
+          } else {
+            fetchedGroups.forEach((g: CarrierGroup) => {
+              if (g.isGeneral) {
+                initialSelections[g.id] = { checked: true, rate: "" };
+              }
+            });
+          }
           setSelectedGroups(initialSelections);
           Object.keys(initialSelections).forEach((groupId) => ensureGroupCarriersLoaded(Number(groupId)));
         }
@@ -152,14 +193,14 @@ export const LoadForm: React.FC<LoadFormProps> = ({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isValid },
   } = useForm<LoadFormValues>({
     resolver: zodResolver(loadSchema),
     mode: "onChange",
-    defaultValues: {
-      maxTrucks: "1",
-    },
+    defaultValues: initialTrip ? tripToFormValues(initialTrip) : { maxTrucks: "1", isCombo: false },
   });
+  const isCombo = useWatch({ control, name: "isCombo" });
 
   const handleFormSubmit = (data: LoadFormValues) => {
     const errors: Record<number, string> = {};
@@ -189,7 +230,17 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     // exclusiones "fantasma" de un grupo que se destildó después.
     // Una logística excluida se resuelve a los ids de carrier de TODOS los
     // transportistas que maneja (el payload del backend es por carrierId).
+    // Al editar, las exclusiones que se habían resuelto desde una logística
+    // son ids de transportistas que no figuran sueltos en el listado: se
+    // conservan tal cual (si no, el viaje se los volvería a mandar).
+    const listedCarrierIds = new Set(
+      combinedCarriers.filter((c) => c.type === "carrier").map((c) => c.id),
+    );
+    const keptInitialExclusions = (initialTrip?.excludedCarriers || [])
+      .map((e) => (typeof e === "number" ? e : e.carrierId))
+      .filter((id) => !listedCarrierIds.has(id));
     const excludedCarriers = [
+      ...keptInitialExclusions,
       ...combinedCarriers
         .filter((c) => c.type === "carrier" && excludedCarrierIds[c.id])
         .map((c) => c.id),
@@ -201,7 +252,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
     onSubmit({
       ...data,
       targetGroups: targetGroupsPayload,
-      excludedCarriers,
+      excludedCarriers: [...new Set(excludedCarriers)],
     });
   };
 
@@ -262,7 +313,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
             placeholder="Ej: 1"
             icon={Truck}
             {...register("maxTrucks")}
-            error={errors.maxTrucks?.message}
+            error={errors.maxTrucks?.message || maxTrucksError}
           />
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">
@@ -276,6 +327,82 @@ export const LoadForm: React.FC<LoadFormProps> = ({
           </div>
         </div>
 
+        {/* Combo ida y vuelta: mismo camión hace los 2 tramos por una sola
+            tarifa plana. Al editar no se puede convertir un viaje común en
+            combo (ni al revés): los camiones ya asignados quedarían a mitad
+            de un circuito distinto. */}
+        <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-4">
+          <label
+            className={`flex items-start gap-3 select-none p-4 rounded-md border transition-all ${
+              isCombo
+                ? "bg-white dark:bg-zinc-900 border-emerald-500/30 shadow-sm"
+                : "border-slate-200 dark:border-zinc-800"
+            } ${isEditing ? "cursor-default" : "cursor-pointer"}`}
+          >
+            <input
+              type="checkbox"
+              disabled={isEditing}
+              {...register("isCombo")}
+              className="rounded-sm h-4 w-4 mt-0.5 shrink-0 text-emerald-600 border-slate-300 focus:ring-emerald-500 disabled:cursor-not-allowed"
+            />
+            <div className="flex items-start gap-3">
+              <Repeat size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                  Combo ida y vuelta (2 tramos)
+                </span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  El mismo camión lleva el cereal a destino y vuelve cargado (ej. fertilizante).
+                  La tarifa de cada grupo es la tarifa plana total por el combo completo.
+                  {isEditing && " No se puede cambiar en un viaje ya publicado."}
+                </p>
+              </div>
+            </div>
+          </label>
+
+          {isCombo && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="combo-leg2-fields">
+              <Input
+                label="Origen de la vuelta"
+                placeholder="Ej: Rosario"
+                icon={MapPin}
+                {...register("leg2Origin")}
+                error={errors.leg2Origin?.message}
+              />
+              <Input
+                label="Destino de la vuelta"
+                placeholder="Ej: Cooperativa Urdinarrain"
+                icon={MapPin}
+                {...register("leg2Destination")}
+                error={errors.leg2Destination?.message}
+              />
+              <Input
+                label="Carga de la vuelta"
+                placeholder="Ej: Fertilizante"
+                {...register("leg2Cargo")}
+                error={errors.leg2Cargo?.message}
+              />
+              <Input
+                label="Fecha de carga de la vuelta"
+                type="date"
+                icon={Calendar}
+                {...register("leg2LoadingDate")}
+                error={errors.leg2LoadingDate?.message}
+              />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-2">
+                  Observaciones de la vuelta
+                </label>
+                <textarea
+                  className="w-full bg-white dark:bg-zinc-900 border-2 rounded-md px-4 py-3 text-sm text-slate-900 dark:text-white border-slate-100 dark:border-zinc-800 focus:border-emerald-500 focus:outline-none transition-all resize-none h-20"
+                  placeholder="Ej: Carga en planta de 08:00 a 14:00"
+                  {...register("leg2Notes")}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Groups Selection */}
         <div className="border-t border-slate-100 dark:border-zinc-800 pt-6 space-y-4">
           <div className="bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-md border border-slate-200/70 dark:border-zinc-800 flex items-center gap-3">
@@ -287,7 +414,9 @@ export const LoadForm: React.FC<LoadFormProps> = ({
                 Tarifas por Grupo
               </h4>
               <p className="text-xs text-slate-400 dark:text-zinc-500">
-                Asigne la tarifa correspondiente para cada grupo de transportistas.
+                {isCombo
+                  ? "Tarifa plana total por el combo completo (ida y vuelta) para cada grupo."
+                  : "Asigne la tarifa correspondiente para cada grupo de transportistas."}
               </p>
             </div>
           </div>
@@ -503,7 +632,7 @@ export const LoadForm: React.FC<LoadFormProps> = ({
             icon={Save}
             className="w-full sm:w-auto"
           >
-            Publicar
+            {isEditing ? "Guardar cambios" : "Publicar"}
           </Button>
         </div>
       </form>

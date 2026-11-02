@@ -1,6 +1,11 @@
 import React from 'react';
+import { Pencil } from 'lucide-react';
 import { type Load } from '../../types';
+import { getFreeSlots, isQuotaFullApplication, QUOTA_FULL_MESSAGE } from '../../utils/cupos';
+import { QuotaFullBadge } from '../../components/loads/QuotaFullBadge';
+import { ComboBadge } from '../../components/loads/ComboProgress';
 import { Table } from '../../components/ui/Table';
+import { Button } from '../../components/ui/Button';
 
 interface LoadsTableProps {
   loads: Load[];
@@ -11,9 +16,15 @@ interface LoadsTableProps {
   myCarrierId?: number | null;
   isAdmin?: boolean;
   isEmployee?: boolean;
+  /** Abre la edición del viaje. Solo se muestra en los viajes que el usuario creó (`canEdit`). */
+  onEditTrip?: (load: Load) => void;
 }
 
-export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, myCarrierId, isEmployee }) => {
+/** Mismo criterio que el botón "Editar Viaje" del detalle. */
+const canEditRow = (l: Load) =>
+  (l.canEdit === true || l.isCreator === true) && l.status !== 'COMPLETED' && l.status !== 'CANCELLED';
+
+export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowClick, statusFilter, isCarrier, myCarrierId, isEmployee, onEditTrip }) => {
   const columns = [
     {
       header: 'Fecha de Carga',
@@ -43,10 +54,24 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
       header: 'Ruta',
       className: 'min-w-[170px]',
       render: (l: Load) => (
-        <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap">
-          <span>{l.origin}</span>
-          <span className="text-emerald-500 font-black shrink-0">→</span>
-          <span>{l.destination}</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap">
+            <span>{l.origin}</span>
+            <span className="text-emerald-500 font-black shrink-0">→</span>
+            <span>{l.destination}</span>
+          </div>
+          {/* Combo: el tramo 2 (vuelta) va debajo; la tarifa es por el combo completo. */}
+          {l.isCombo && (
+            <>
+              <div className="flex items-center gap-1.5 font-bold text-slate-600 dark:text-zinc-300 text-xs whitespace-nowrap">
+                <span>{l.leg2Origin || l.destination}</span>
+                <span className="text-emerald-500 font-black shrink-0">→</span>
+                <span>{l.leg2Destination || 'S/D'}</span>
+                {l.leg2Cargo && <span className="font-medium text-slate-500 dark:text-slate-400">({l.leg2Cargo})</span>}
+              </div>
+              <ComboBadge />
+            </>
+          )}
         </div>
       )
     },
@@ -151,14 +176,31 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
             {
               header: 'Cupos Disponibles',
               render: (l: Load) => {
-                const acceptedCount = l.applications?.filter(a => a.status === 'ACCEPTED').length || 0;
-                const maxCapacity = l.maxTrucks || 1;
-                const cupos = Math.max(0, maxCapacity - acceptedCount);
-                
+                const cupos = getFreeSlots(l);
+
+                // El backend sigue mostrando en ACTIVE el viaje que completó
+                // cupos si el transportista tenía una postulación ahí, para
+                // que no le desaparezca sin explicación.
+                const quotaFullForMe = l.applications?.some(
+                  (a) =>
+                    (myCarrierId == null || a.carrierId === myCarrierId) &&
+                    isQuotaFullApplication(a, l),
+                );
+                if (quotaFullForMe) {
+                  return (
+                    <div className="flex flex-col items-start gap-1">
+                      <QuotaFullBadge />
+                      <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        {QUOTA_FULL_MESSAGE}
+                      </span>
+                    </div>
+                  );
+                }
+
                 if (l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS' || l.status === 'COMPLETED' || cupos <= 0) {
                   return (
                     <span className="text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-1 rounded-sm whitespace-nowrap border border-rose-200/50 dark:border-rose-900/40">
-                      Sin cupo disponible
+                      Sin cupos disponibles
                     </span>
                   );
                 }
@@ -193,7 +235,29 @@ export const LoadsTable: React.FC<LoadsTableProps> = ({ loads, isLoading, onRowC
               )
             }
           ]
-    ) : [])
+    ) : []),
+    ...(onEditTrip && loads.some(canEditRow)
+      ? [
+          {
+            header: '',
+            className: 'w-px',
+            render: (l: Load) =>
+              canEditRow(l) ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={Pencil}
+                  aria-label="Editar viaje"
+                  title="Editar viaje"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditTrip(l);
+                  }}
+                />
+              ) : null,
+          },
+        ]
+      : []),
   ];
 
   // Balanza: mientras ninguna carga tenga `resolvedRate`, ocultamos la

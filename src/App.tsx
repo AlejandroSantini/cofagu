@@ -99,6 +99,11 @@ function App() {
           element={token ? <AppLayout><LoadsPage /></AppLayout> : <Navigate to="/login" />}
         />
 
+        {/* El backend manda `link: '/scale'` en las notificaciones de
+            Balanza ("🚨 Camión canceló carga"). La pantalla de Balanza es
+            /loads (para EMPLOYEE arranca en Asignados). */}
+        <Route path="/scale" element={<Navigate to="/loads" replace />} />
+
         <Route
           path="/notifications"
           element={token ? <AppLayout><NotificationsPage /></AppLayout> : <Navigate to="/login" />}

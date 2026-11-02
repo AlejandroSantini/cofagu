@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   type Load,
   type Application,
@@ -13,6 +14,8 @@ import { Input } from "../../components/ui/Input";
 import { SearchInput } from "../../components/ui/SearchInput";
 import { Modal } from "../../components/ui/Modal";
 import { KgDifferenceWarning } from "../../components/loads/KgDifferenceWarning";
+import { QuotaFullBadge } from "../../components/loads/QuotaFullBadge";
+import { ComboBadge, ComboProgress } from "../../components/loads/ComboProgress";
 
 import {
   Trash2,
@@ -31,9 +34,15 @@ import {
   XCircle,
   RefreshCw,
   Lock,
+  Pencil,
 } from "lucide-react";
 
 import { api } from "../../api/axios";
+import {
+  getFreeSlots,
+  isQuotaFullApplication,
+  QUOTA_FULL_MESSAGE,
+} from "../../utils/cupos";
 
 const SecureImagePreview: React.FC<{
   src: string;
@@ -150,7 +159,11 @@ interface LoadDetailsProps {
     invoiceUrl?: string;
     waybillUrl?: string;
   }, appId?: number) => Promise<boolean>;
-  onUpdateLoad?: (id: number | string, data: Partial<Load>) => Promise<boolean>;
+  onUpdateLoad?: (id: number | string, data: Omit<Partial<Load>, "excludedCarriers">) => Promise<boolean>;
+  /** Abre el formulario de edición del viaje (solo si `load.canEdit`). */
+  onEditTrip?: () => void;
+  /** Tras registrar un paso del combo (descarga ida, remito, cierre). */
+  onComboUpdated?: (message: string) => void | Promise<void>;
 
   // Assignment resources props
   carrierDrivers: Driver[];
@@ -174,6 +187,8 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   onCancelApplication,
   onCompleteLoad,
   onUpdateLoad,
+  onEditTrip,
+  onComboUpdated,
   carrierDrivers,
   carrierTrucks,
   onFetchCarrierResources,
@@ -257,6 +272,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   // embebidas y completas en GET /trips/:id, sin paginar — no hay
   // endpoint que busque dentro de un viaje. Ver CLAUDE.md, "Buscadores".
   const [myTrucksSearch, setMyTrucksSearch] = useState("");
+  const navigate = useNavigate();
 
   const acceptedCount =
     load.applications?.filter((a) => a.status === "ACCEPTED").length ||
@@ -286,6 +302,25 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
   const hasAnyCommittedSubloads =
     load.loads !== undefined && load.loads.some((l: any) => l.status !== "CANCELLED");
   const maxCapacity = load.maxTrucks || 1;
+  // Mismo cálculo que el backend al validar la postulación (ver utils/cupos).
+  const freeSlots = getFreeSlots(load);
+  // Carga que el camión canceló / fue rechazada: balanza no tiene nada que
+  // pesar ni CTG que cargar (el camión no se va a presentar).
+  const isLoadCancelled =
+    (load.status as string) === "CANCELLED" || (load.status as string) === "REJECTED";
+  // Solo el creador del viaje lo puede editar (backend responde 403 a
+  // cualquier otro) y no una vez finalizado o cancelado.
+  const canEditTrip =
+    !!onEditTrip &&
+    load.loads !== undefined &&
+    (load.canEdit === true || load.isCreator === true) &&
+    load.status !== "COMPLETED" &&
+    !isLoadCancelled;
+  const handleComboUpdated = (message: string) => onComboUpdated?.(message);
+  // En un combo la carga NO termina con los kg descargados del tramo 1:
+  // termina cuando balanza registra el pesaje de la vuelta (status COMPLETED).
+  const unloadedMeansCompleted = (w: unknown) =>
+    !load.isCombo && w != null && Number(w) > 0;
 
 
   // Para LOGISTICS, el carrierId efectivo se resuelve desde los trucks cargados (user.carrierId es null)
@@ -341,6 +376,22 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
     }
     return app.carrierId === effectiveCarrierId;
   });
+
+  // Un transportista puede estar vinculado a VARIAS logísticas (al dar de
+  // alta un CUIT que ya existía, el backend lo vincula). Por eso `myTrips`
+  // de una logística incluye postulaciones que hizo OTRA logística (u el
+  // propio transportista) con ese mismo transportista. Verlas está bien;
+  // cancelarlas no: pasó que una logística canceló ("rechazó") el viaje de
+  // otra con el camión ya cargado y viajando, y el cupo quedó libre
+  // (reclamo de WhatsApp, 2026-10-20). Solo cancela la logística que postuló.
+  const canCancelMyTrip = (app: Application): boolean => {
+    if (!isLogistics) return true;
+    return (
+      app.logisticsId === user?.id ||
+      app.createdByUser?.id === user?.id ||
+      app.logisticsUser?.id === user?.id
+    );
+  };
 
   const myActiveApps = myTrips.filter(
     (a) => a.status !== "CANCELLED",
@@ -908,6 +959,18 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 break-words">
                 {load.origin} → {load.destination}
               </h2>
+              {load.isCombo && (
+                <div className="mt-2 space-y-1" data-testid="combo-route">
+                  <ComboBadge />
+                  <p className="text-sm font-bold text-slate-600 dark:text-zinc-300 break-words">
+                    Vuelta: {load.leg2Origin || load.destination} → {load.leg2Destination || "S/D"}
+                    {load.leg2Cargo ? ` (${load.leg2Cargo})` : ""}
+                    {load.leg2LoadingDate
+                      ? ` · carga ${new Date(load.leg2LoadingDate).toLocaleDateString("es-AR")}`
+                      : ""}
+                  </p>
+                </div>
+              )}
             </div>
             <Badge variant={getStatusBadgeVariant(estadoReal)}>
               {estadoReal === "ACTIVE" 
@@ -1029,9 +1092,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       Cupos Disponibles
                     </span>
                     <span className="text-sm font-black text-slate-800 dark:text-zinc-200">
-                      {load.cuposPendientes !== undefined
-                        ? `${load.cuposPendientes} libres`
-                        : `${load.maxTrucks ? load.maxTrucks - acceptedCount : 1} libres`}
+                      {freeSlots} libres
                     </span>
                   </div>
                 </div>
@@ -1100,6 +1161,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               </span>
               <p className="text-sm text-slate-700 dark:text-zinc-300 font-medium">
                 {load.notes}
+              </p>
+            </div>
+          )}
+
+          {load.isCombo && load.leg2Notes && (
+            <div className="bg-slate-50 dark:bg-zinc-800/30 p-4 rounded-md border border-slate-100 dark:border-zinc-800/50">
+              <span className="text-xs font-bold text-slate-400 block uppercase mb-1">
+                Notas de la vuelta
+              </span>
+              <p className="text-sm text-slate-700 dark:text-zinc-300 font-medium">
+                {load.leg2Notes}
               </p>
             </div>
           )}
@@ -1226,6 +1298,16 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
           {/* Actions Triggers */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800/50 w-full">
+            {canEditTrip && (
+              <Button
+                variant="outline"
+                icon={Pencil}
+                className="w-full sm:w-auto"
+                onClick={onEditTrip}
+              >
+                Editar Viaje
+              </Button>
+            )}
             {(isAdmin || isOperator) &&
               load.status !== "CANCELLED" &&
               load.status !== "COMPLETED" && (
@@ -1272,7 +1354,17 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               )}
             {(isCarrier || isLogistics) && (
               <>
-                {load.status === "ACTIVE" && !hasApplied && load.cuposPendientes !== 0 && (
+                {load.status === "ACTIVE" && !hasApplied && freeSlots === 0 && (
+                  <Button
+                    variant="secondary"
+                    icon={Send}
+                    className="w-full sm:w-auto font-bold"
+                    disabled
+                  >
+                    Sin cupos disponibles
+                  </Button>
+                )}
+                {load.status === "ACTIVE" && !hasApplied && freeSlots > 0 && (
                   <Button
                     variant="primary"
                     icon={Send}
@@ -1449,6 +1541,10 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
 
                     const isPending = app.status === "PENDING";
                     const isAccepted = app.status === "ACCEPTED";
+                    // Quedó afuera porque el viaje se llenó con otros camiones:
+                    // no es un rechazo, se muestra "Cupos completos".
+                    const isQuotaFullOut =
+                      !isPending && !isAccepted && isQuotaFullApplication(app, load);
                     const tripStatus =
                       matchedLoad?.status ||
                       app.tripStatus ||
@@ -1466,7 +1562,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                       app.tripStatus === "COMPLETED" ||
                       load.status === "COMPLETED" ||
                       matchedLoad?.status === "COMPLETED" ||
-                      (unloadedW != null && Number(unloadedW) > 0);
+                      unloadedMeansCompleted(unloadedW);
                     const canManageCtg =
                       user?.role !== "ADMIN" &&
                       (isStaff ||
@@ -1512,6 +1608,9 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </span>
                             )}
                           </div>
+                          {isQuotaFullOut ? (
+                            <QuotaFullBadge className="shrink-0" />
+                          ) : (
                           <Badge
                             variant={
                               isAccepted
@@ -1533,8 +1632,11 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                   : "ASIGNADO"
                               : isPending
                                 ? "PENDIENTE"
-                                : "RECHAZADA"}
+                                : app.status === "CANCELLED"
+                                  ? "CANCELADA"
+                                  : "RECHAZADA"}
                           </Badge>
+                          )}
                         </div>
 
                         {app.notes && !isAccepted && (
@@ -1649,9 +1751,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                               </div>
                             )}
 
+                            {load.isCombo && isAccepted && matchedLoad && (
+                              <ComboProgress
+                                subload={matchedLoad}
+                                trip={load}
+                                canOperateLegs={isAdmin}
+                                canCompleteAtScale={isAdmin || user?.role === "EMPLOYEE"}
+                                onUpdated={handleComboUpdated}
+                              />
+                            )}
+
                             <div className="flex flex-col gap-2 mt-2">
                               {/* ACCEPTED ACTIONS (CTG) */}
-                              {isAccepted && canManageCtg &&
+                              {isAccepted && canManageCtg && !isLoadCancelled &&
                                 (tripStatus === "ASSIGNED" ||
                                   tripStatus === "IN_PROGRESS" ||
                                   app.status === "ACCEPTED") && (
@@ -1853,8 +1965,19 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         </div>
                       )}
 
+                      {load.isCombo && load.loads === undefined && !isLoadCancelled && (
+                        <ComboProgress
+                          subload={load}
+                          trip={load}
+                          canOperateLegs={isAdmin}
+                          canCompleteAtScale={isAdmin || user?.role === "EMPLOYEE"}
+                          onUpdated={handleComboUpdated}
+                        />
+                      )}
+
                       <div className="flex flex-col gap-2 mt-2">
                         {user?.role !== "ADMIN" &&
+                          !isLoadCancelled &&
                           typeof directAssignmentTrip.id === "number" &&
                           (isStaff ||
                             user?.role === "OPERATOR" ||
@@ -1905,8 +2028,15 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             const myAcceptedTrips = myTrips.filter(
               (app) => app.status === "ACCEPTED",
             );
+            // Una PENDING en un viaje que ya completó sus cupos no está "en
+            // revisión": quedó afuera. Va a su propia tarjeta de "Cupos
+            // completos" junto con las que el backend ya canceló por cupo.
+            const myQuotaFullApps = myTrips.filter((app) =>
+              isQuotaFullApplication(app, load),
+            );
             const myPendingApps = myTrips.filter(
-              (app) => app.status === "PENDING",
+              (app) =>
+                app.status === "PENDING" && !isQuotaFullApplication(app, load),
             );
 
             // Mismos datos que se muestran en la tarjeta de cada camión —
@@ -1952,6 +2082,56 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                   </div>
                 )}
 
+                {/* Postulaciones que quedaron afuera porque se completaron los cupos */}
+                {myQuotaFullApps.length > 0 && (
+                  <div
+                    data-testid="quota-full-apps"
+                    className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800 pb-3">
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                        Postulaciones sin cupo ({myQuotaFullApps.length})
+                      </h3>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={Send}
+                        className="w-full sm:w-auto font-bold"
+                        onClick={() => navigate("/loads")}
+                      >
+                        Ver cargas disponibles
+                      </Button>
+                    </div>
+                    {myQuotaFullApps.map((app) => (
+                      <div
+                        key={app.id}
+                        className="p-4 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 border bg-slate-50 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-700"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-bold text-slate-700 dark:text-zinc-200">
+                            {app.statusMessage || QUOTA_FULL_MESSAGE}
+                          </span>
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            {app.driver && (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <span className="font-semibold">Chofer:</span>
+                                {app.driver.name}
+                              </span>
+                            )}
+                            {app.truck && (
+                              <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <span className="font-semibold">Camión:</span>
+                                {app.truck.chassisPlate || app.truck.plate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <QuotaFullBadge className="shrink-0 self-start sm:self-center" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Pending applications — one card per truck */}
                 {myPendingApps.length > 0 && (
                   <div className="bg-white dark:bg-zinc-900 rounded-md p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
@@ -1981,6 +2161,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <Badge variant="warning">PENDIENTE</Badge>
+                          {canCancelMyTrip(pendingApp) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1993,6 +2174,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           >
                             Cancelar
                           </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -2053,7 +2235,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                           effectiveTripStatus === "COMPLETED" ||
                           load.status === "COMPLETED" ||
                           trip.tripStatus === "COMPLETED" ||
-                          (unloadedW != null && Number(unloadedW) > 0);
+                          unloadedMeansCompleted(unloadedW);
 
                         const driverName =
                           trip.driver?.name ||
@@ -2207,6 +2389,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                     )}
                                   </>
                                 )}
+                                {canCancelMyTrip(trip) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2219,12 +2402,25 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                                 >
                                   Cancelar Postulación / Viaje
                                 </Button>
+                                )}
                               </div>
                             )}
 
-                            {/* In progress: trip cannot be cancelled once started */}
+                            {load.isCombo && matchedLoad && (isTripInProgress || isTripCompleted) && (
+                              <ComboProgress
+                                subload={matchedLoad}
+                                trip={load}
+                                canOperateLegs={isCarrier || isLogistics}
+                                canCompleteAtScale={isCarrier || isLogistics}
+                                onUpdated={handleComboUpdated}
+                              />
+                            )}
+
+                            {/* In progress: trip cannot be cancelled once started.
+                                En un combo la llegada se registra por tramo (arriba). */}
                             {isTripInProgress &&
                               !isTripCompleted &&
+                              !load.isCombo &&
                               (isCarrier || isLogistics) && (
                                 <Button
                                   variant="primary"

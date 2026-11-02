@@ -110,6 +110,13 @@ export interface Application {
   // Pendiente de backend: GET /loads/applications/cancelled (ver prompt).
   tripId?: number;
   cancellationReason?: string;
+  // Helpers que arma el backend en GET /trips, /trips/:id y
+  // /loads/applications/cancelled. OJO: en /trips `isQuotaFull` es el estado
+  // del VIAJE (viene true también en las ACCEPTED); para saber si ESTA
+  // postulación quedó afuera por cupos usar `isQuotaFullApplication`.
+  statusLabel?: string;
+  statusMessage?: string | null;
+  isQuotaFull?: boolean;
   createdAt?: string;
   updatedAt?: string;
   trip?: {
@@ -136,7 +143,12 @@ export interface ScaleLoadSearchResult {
   cereal: string;
   origin: string;
   destination: string;
-  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED';
+  // CANCELLED/REJECTED solo vienen al buscar con `?search=` (sin búsqueda el
+  // backend ya los saca: balanza no tiene que esperar ese camión).
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+  statusLabel?: string;
+  isCancelled?: boolean;
+  cancellationReason?: string | null;
   ctg: string | null;
   loadedWeight: number | null;
   unloadedWeight: number | null;
@@ -206,7 +218,39 @@ export interface Load {
     name: string;
     email?: string;
   } | null;
+  // Autoría (GET /trips y /trips/:id). Solo el creador puede editar el viaje
+  // (PUT /trips/:id devuelve 403 a cualquier otro).
+  createdById?: number | null;
+  createdBy?: { id: number; name: string; email?: string } | null;
+  isCreator?: boolean;
+  canEdit?: boolean;
+  /** IDs de transportistas excluidos de este viaje puntual. */
+  excludedCarriers?: ({ carrierId: number } | number)[];
+  // Combo ida y vuelta: tramo 1 = origin→destination (cereal, sale con CTG
+  // por balanza); tramo 2 = leg2Origin→leg2Destination (leg2Cargo, sale con
+  // remito y se pesa en balanza al volver). La tarifa es plana por el combo.
+  isCombo?: boolean;
+  leg2Origin?: string | null;
+  leg2Destination?: string | null;
+  leg2Cargo?: string | null;
+  leg2LoadingDate?: string | null;
+  leg2Notes?: string | null;
+  // Solo en cargas (sub-load) de un combo.
+  currentLeg?: 1 | 2;
+  comboStage?: ComboStage | null;
+  leg2Remito?: string | null;
+  leg2RemitoUrl?: string | null;
+  leg2LoadedWeight?: number | string | null;
+  leg2UnloadedWeight?: number | string | null;
 }
+
+export type ComboStage =
+  | 'PENDING'
+  | 'LEG1_ASSIGNED'
+  | 'LEG1_IN_PROGRESS'
+  | 'LEG1_COMPLETED'
+  | 'LEG2_IN_PROGRESS'
+  | 'COMPLETED';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -268,6 +312,12 @@ export interface CreateLoadPayload {
   targetGroups?: { groupId: number; rate: number }[];
   /** IDs de transportistas de los grupos destinatarios excluidos de este viaje puntual. */
   excludedCarriers?: number[];
+  isCombo?: boolean;
+  leg2Origin?: string | null;
+  leg2Destination?: string | null;
+  leg2Cargo?: string | null;
+  leg2LoadingDate?: string | null;
+  leg2Notes?: string | null;
   ctg?: string;
   loadedWeight?: number;
   unloadedWeight?: number;

@@ -13,6 +13,8 @@ interface TableProps<T> {
   isLoading?: boolean;
   emptyMessage?: string;
   onRowClick?: (item: T) => void;
+  /** Clases extra por fila (ej. resaltar una fila cancelada). */
+  rowClassName?: (item: T) => string | undefined;
   /** Filas de esqueleto a mostrar mientras `isLoading`. Default 5. */
   skeletonRows?: number;
 }
@@ -23,6 +25,7 @@ export function Table<T>({
   isLoading,
   emptyMessage = "No hay registros disponibles.",
   onRowClick,
+  rowClassName,
   skeletonRows = 5,
   itemsPerPage = 10,
   pagination
@@ -100,6 +103,7 @@ export function Table<T>({
                   className={`
                     transition-colors group
                     ${onRowClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/50' : 'hover:bg-slate-50/50 dark:hover:bg-zinc-800/20'}
+                    ${rowClassName?.(item) ?? ''}
                   `}
                 >
                   {columns.map((col, colIdx) => (

@@ -148,17 +148,20 @@ export const loadService = {
     api.get<ApiResponse<TechnicalCenterSearchResult[]>>("/loads/technical-center/loads/search", { params: { search } }),
   /** Balanza (EMPLOYEE) y ADMIN: busca por transportista/patente/chofer entre
    * ASSIGNED, IN_PROGRESS y COMPLETED a la vez, con status/ctg/pesos por
-   * registro — no hace falta cambiar de pestaña para ver la situación. */
-  searchScaleLoads: (search: string) =>
-    api.get<ApiResponse<ScaleLoadSearchResult[]>>("/loads/scale/loads/search", { params: { search } }),
+   * registro — no hace falta cambiar de pestaña para ver la situación.
+   * Sin `search` el backend devuelve solo ASSIGNED + IN_PROGRESS; `status`
+   * (uno o varios separados por coma) pide un estado puntual. */
+  searchScaleLoads: (search: string, status?: string) =>
+    api.get<ApiResponse<ScaleLoadSearchResult[]>>("/loads/scale/loads/search", { params: { search, status } }),
   getTrips: (params?: { status?: string; carrierId?: number }) =>
     api.get<ApiResponse<Load[]>>("/trips", { params }),
   getTrip: (id: number | string) => api.get<ApiResponse<Load>>(`/trips/${id}`),
   getLoad: (id: number | string) => api.get<ApiResponse<Load>>(`/loads/${id}`),
   deleteTrip: (id: number | string) =>
     api.delete<ApiResponse<void>>(`/trips/${id}`),
-  /** Confirmado contra backend real: acepta actualización parcial (solo los campos enviados). */
-  updateTrip: (id: number | string, data: { maxTrucks?: number }) =>
+  /** Actualización parcial (solo los campos enviados). Solo el creador del
+   * viaje puede editarlo (403 si no); devuelve el viaje completo actualizado. */
+  updateTrip: (id: number | string, data: Partial<CreateLoadPayload>) =>
     api.put<ApiResponse<Load>>(`/trips/${id}`, data),
   getApplication: (id: number) =>
     api.get<ApiResponse<Application>>(`/loads/applications/${id}`),
@@ -178,6 +181,18 @@ export const loadService = {
     api.delete<ApiResponse<void>>(`/loads/${id}`),
   patchLoadStatus: (id: number | string, status: string) =>
     api.patch<ApiResponse<void>>(`/loads/${id}/status`, { status }),
+  // Combo ida y vuelta (ver docs/api/loads.md del backend). `id` es el del
+  // sub-load (load.loads[].id), no el del viaje.
+  completeComboLeg1: (id: number | string, data: { unloadedWeight: number; notes?: string }) =>
+    api.post<ApiResponse<Load>>(`/loads/${id}/combo/leg1-complete`, data),
+  startComboLeg2: (
+    id: number | string,
+    data: { remito: string; loadedWeight?: number; notes?: string },
+  ) => api.post<ApiResponse<Load>>(`/loads/${id}/combo/start-leg2`, data),
+  completeCombo: (
+    id: number | string,
+    data: { unloadedWeight: number; mileage?: number; fuelConsumption?: number; notes?: string },
+  ) => api.post<ApiResponse<Load>>(`/loads/${id}/combo/complete`, data),
   confirmDeparture: (
     id: number | string,
     data: { ctg: string; loadedWeight: number },

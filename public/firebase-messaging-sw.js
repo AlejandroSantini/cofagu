@@ -1,3 +1,40 @@
+// Cupos completos (TRIP_QUOTA_FILLED): al tocarla se va al listado de viajes
+// activos para buscar otra carga, no al viaje que ya se llenó (el `link` que
+// manda backend). Tiene que registrarse ANTES de los importScripts: el SDK de
+// Firebase agrega su propio 'notificationclick' para las notificaciones que
+// dibuja él (con `notification` en el payload) y corta la propagación, así
+// que un listener registrado después nunca se entera.
+function getNotificationType(notification) {
+  const data = notification && notification.data;
+  if (!data) return undefined;
+  if (data.type) return data.type;
+  const fcmMsg = data.FCM_MSG;
+  return fcmMsg && fcmMsg.data ? fcmMsg.data.type : undefined;
+}
+
+function openAppAt(targetUrl) {
+  return clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    for (let i = 0; i < windowClients.length; i++) {
+      const client = windowClients[i];
+      if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
+        return client.focus().then((focused) =>
+          (focused || client).navigate(targetUrl).catch(() => clients.openWindow(targetUrl))
+        );
+      }
+    }
+    if (clients.openWindow) {
+      return clients.openWindow(targetUrl);
+    }
+  });
+}
+
+self.addEventListener('notificationclick', function(event) {
+  if (getNotificationType(event.notification) !== 'TRIP_QUOTA_FILLED') return;
+  event.stopImmediatePropagation();
+  event.notification.close();
+  event.waitUntil(openAppAt('/loads'));
+});
+
 // La versión DEBE coincidir con la del SDK que usa la app (firebase en package.json).
 // Un desfasaje de major (p. ej. SW 10.x con app 12.x) hace que el token se obtenga
 // pero las notificaciones en segundo plano nunca se muestren.

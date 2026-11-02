@@ -136,6 +136,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
         // Actualiza el badge de la campanita al toque, sin esperar al polling
         // de 1 minuto de AppLayout.
         useNotificationStore.getState().incrementUnread();
+        useNotificationStore.getState().registerPush(payload.data?.type);
       });
     } catch (err) {
       console.error('[FCM] Error setting up onMessage listener:', err);

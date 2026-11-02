@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck, type Application, type ScaleLoadSearchResult } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
+import { isQuotaFullApplication, QUOTA_FULL_LABEL, QUOTA_FULL_MESSAGE } from '../../utils/cupos';
+import { QuotaFullBadge } from '../../components/loads/QuotaFullBadge';
 import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -12,6 +15,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
+import { useNotificationStore } from '../../store/useNotificationStore';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -30,6 +34,11 @@ import { LoadForm } from './LoadForm';
 import { LoadDetails } from './LoadDetails';
 
 import { Plus, ChevronLeft, AlertTriangle } from 'lucide-react';
+
+// Balanza: carga que el camión canceló (o que fue rechazada). Solo aparece
+// al buscar una patente puntual — sin búsqueda el backend ya la saca.
+const isScaleLoadCancelled = (r: ScaleLoadSearchResult) =>
+  r.isCancelled === true || r.status === 'CANCELLED' || r.status === 'REJECTED';
 
 export const LoadsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -54,6 +63,13 @@ export const LoadsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  // Viaje en edición (solo su creador: `canEdit`). Mientras no es null el
+  // formulario se muestra precargado en lugar del detalle.
+  const [editingTrip, setEditingTrip] = useState<Load | null>(null);
+  // "Editar" desde la tabla: se navega al detalle y, cuando llega el viaje
+  // completo (GET /trips/:id, con grupos y excluidos), se abre el formulario.
+  const [pendingEditTripId, setPendingEditTripId] = useState<number | null>(null);
+  const [editMaxTrucksError, setEditMaxTrucksError] = useState('');
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   
   // Filtering & Selection for Assignment
@@ -115,6 +131,11 @@ export const LoadsPage: React.FC = () => {
   const isBalanceSearchRole = user?.role === 'ADMIN' || isEmployee;
   const [scaleSearchResults, setScaleSearchResults] = useState<ScaleLoadSearchResult[] | null>(null);
   const [scaleSearchLoading, setScaleSearchLoading] = useState(false);
+  // Sin búsqueda el backend devuelve solo ASSIGNED + IN_PROGRESS (los que
+  // balanza todavía espera; los cancelados desaparecen solos). Completadas
+  // ya no viene en esa vista general, así que se pide por estado.
+  const scaleStatusParam =
+    !debouncedPlateSearch.trim() && activeTab === 'COMPLETED' ? 'COMPLETED' : undefined;
   useEffect(() => {
     let active = true;
     if (!isBalanceSearchRole) {
@@ -122,7 +143,7 @@ export const LoadsPage: React.FC = () => {
       return;
     }
     setScaleSearchLoading(true);
-    loadService.searchScaleLoads(debouncedPlateSearch.trim())
+    loadService.searchScaleLoads(debouncedPlateSearch.trim(), scaleStatusParam)
       .then((res) => {
         // Validar que sea array: al pedirse siempre (no solo al buscar),
         // puede pisar un mock de otro endpoint con patrón amplio
@@ -145,7 +166,18 @@ export const LoadsPage: React.FC = () => {
         if (active) setScaleSearchLoading(false);
       });
     return () => { active = false; };
-  }, [isBalanceSearchRole, debouncedPlateSearch, refreshTrigger]);
+  }, [isBalanceSearchRole, debouncedPlateSearch, refreshTrigger, scaleStatusParam]);
+
+  // Balanza: cuando llega una push con la app abierta (típicamente
+  // "🚨 Camión canceló carga", TRIP_CANCELLED) se refresca la grilla al
+  // toque para que el camión cancelado salga de la espera. No se filtra por
+  // `type` (TRIP_CANCELLED / TRIP_REJECTED / …): cualquier push puede
+  // cambiar la grilla y un refresco de más no cuesta nada.
+  const lastPushAt = useNotificationStore((s) => s.lastPush?.at);
+  useEffect(() => {
+    if (!isBalanceSearchRole || !lastPushAt) return;
+    setRefreshTrigger((prev) => prev + 1);
+  }, [isBalanceSearchRole, lastPushAt]);
 
   // Sin término de búsqueda, respeta la pestaña activa (mismo criterio que
   // tenía `loads` antes); buscando, muestra cualquier estado (cross-tab).
@@ -328,6 +360,26 @@ export const LoadsPage: React.FC = () => {
   }, [selectedCarrierId, showForm]);
 
 
+  // Ajuste de estado durante el render (no en un effect): apenas llega el
+  // viaje pedido desde la tabla, se abre su edición.
+  if (
+    pendingEditTripId != null &&
+    selectedLoad &&
+    Number(selectedLoad.id) === pendingEditTripId &&
+    selectedLoad.loads !== undefined
+  ) {
+    setPendingEditTripId(null);
+    setError('');
+    setEditMaxTrucksError('');
+    setEditingTrip(selectedLoad);
+  }
+
+  const handleEditFromTable = (load: Load) => {
+    const tripId = Number(load.tripId || load.id);
+    setPendingEditTripId(tripId);
+    navigate(`/loads/${tripId}?type=trip`);
+  };
+
   const handleRowClick = async (load: Load) => {
     // If we're clicking a Load object (from a non-ACTIVE tab), navigate to its parent Trip ID
     // so we can see the full trip context (with all trucks) in the detail view.
@@ -343,17 +395,74 @@ export const LoadsPage: React.FC = () => {
   };
 
 
+  // `forUpdate`: `isCombo` no se manda al editar (no se puede convertir un
+  // viaje publicado en combo ni al revés; el checkbox queda bloqueado).
+  const buildTripPayload = (data: LoadFormValues, forUpdate = false) => {
+    const { isCombo, leg2Origin, leg2Destination, leg2Cargo, leg2LoadingDate, leg2Notes, ...rest } = data;
+    return {
+      ...rest,
+      maxTrucks: Number(data.maxTrucks),
+      loadingDate: dateOnlyToISOString(data.loadingDate),
+      quotaDate: dateOnlyToISOString(data.quotaDate),
+      date: dateOnlyToISOString(data.loadingDate),
+      ...(isCombo
+        ? {
+            ...(forUpdate ? {} : { isCombo: true }),
+            leg2Origin: leg2Origin?.trim(),
+            leg2Destination: leg2Destination?.trim(),
+            leg2Cargo: leg2Cargo?.trim(),
+            leg2LoadingDate: leg2LoadingDate ? dateOnlyToISOString(leg2LoadingDate) : null,
+            leg2Notes: leg2Notes?.trim() || null,
+          }
+        : {}),
+    };
+  };
+
+  const onSubmitEdit = async (data: LoadFormValues) => {
+    if (!editingTrip) return;
+    setSubmitLoading(true);
+    setError('');
+    setEditMaxTrucksError('');
+    try {
+      const res = await loadService.updateTrip(editingTrip.id, buildTripPayload(data, true));
+      if (res.data && res.data.success !== false) {
+        showToast('Viaje actualizado con éxito');
+        setEditingTrip(null);
+        await refreshDetails();
+        triggerRefresh();
+      }
+    } catch (err) {
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      const message = getErrorMessage(err, 'Error al guardar los cambios del viaje.');
+      if (status === 403) {
+        // Solo el creador puede editar: se cierra el formulario.
+        showToast(message, 'error');
+        setEditingTrip(null);
+      } else if (status === 404) {
+        showToast(message, 'error');
+        setEditingTrip(null);
+        navigate('/loads');
+        triggerRefresh();
+      } else if (status === 400 && /cupo de camiones/i.test(message)) {
+        setEditMaxTrucksError(message);
+      } else if (status === 400 && /no se puede editar/i.test(message)) {
+        // El viaje ya finalizó o se canceló mientras se editaba.
+        showToast(message, 'error');
+        setEditingTrip(null);
+        await refreshDetails();
+      } else {
+        setError(message);
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const onSubmit = async (data: LoadFormValues) => {
     setSubmitLoading(true);
     setError('');
     try {
-      const res = await loadService.createTrip({
-        ...data,
-        maxTrucks: Number(data.maxTrucks),
-        loadingDate: dateOnlyToISOString(data.loadingDate),
-        quotaDate: dateOnlyToISOString(data.quotaDate),
-        date: dateOnlyToISOString(data.loadingDate)
-      });
+      const res = await loadService.createTrip(buildTripPayload(data));
       if (res.data && res.data.success !== false) {
         showToast('Carga publicada con éxito');
         handleBack();
@@ -481,10 +590,18 @@ export const LoadsPage: React.FC = () => {
         triggerRefresh();
         return true;
       }
-    } catch (err: any) {
-      const errMsg = err.response?.data?.message || 'Error al enviar postulación';
+    } catch (err: unknown) {
+      const errMsg = getErrorMessage(err, 'Error al enviar postulación');
       showToast(errMsg, 'error');
-      if (err.response?.status === 400 && (errMsg.toLowerCase().includes('seguro') || errMsg.toLowerCase().includes('póliza'))) {
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      const lowerMsg = errMsg.toLowerCase();
+      // Sin cupos: los datos en pantalla quedaron viejos (otro camión tomó el
+      // último cupo). Se refresca para que se vea "Sin cupos disponibles".
+      if (status === 400 && lowerMsg.includes('cupos')) {
+        refreshDetails();
+        triggerRefresh();
+      }
+      if (status === 400 && (lowerMsg.includes('seguro') || lowerMsg.includes('póliza'))) {
         setTimeout(() => {
           navigate('/trucks');
         }, 3000);
@@ -698,6 +815,8 @@ export const LoadsPage: React.FC = () => {
   const handleBack = () => {
     setError('');
     setShowForm(false);
+    setEditingTrip(null);
+    setEditMaxTrucksError('');
   };
 
   const handleTabChange = (tab: 'ACTIVE' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') => {
@@ -905,7 +1024,9 @@ export const LoadsPage: React.FC = () => {
                 ? 'Control de Combustible (Estación / Playero)'
                 : isEmployee
                   ? 'Control de Báscula y Planta'
-                  : showForm
+                  : editingTrip
+                    ? 'Editar Viaje'
+                    : showForm
                     ? 'Nueva Carga'
                     : selectedLoad
                       ? 'Detalle de Carga'
@@ -916,7 +1037,9 @@ export const LoadsPage: React.FC = () => {
                 ? 'Consulta de camiones activos habilitados para carga de combustible.'
                 : isEmployee
                   ? 'Listado de cargas para ingreso/salida y registro de CTG.'
-                  : showForm 
+                  : editingTrip
+                    ? 'Modificá los datos del viaje publicado. Los transportistas ven los cambios al instante.'
+                    : showForm 
                     ? 'Publica una nueva solicitud de traslado.' 
                     : selectedLoad 
                       ? 'Consulta la información, postulaciones y estado operativo de este viaje.' 
@@ -929,13 +1052,18 @@ export const LoadsPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={() => {
+                  // Editando: "Volver" vuelve al detalle del viaje, no al listado.
+                  if (editingTrip) {
+                    handleBack();
+                    return;
+                  }
                   if (showForm) handleBack();
                   if (id) navigate('/loads');
                 }}
                 icon={ChevronLeft}
                 className="w-full md:w-fit px-8"
               >
-                Volver al Listado
+                {editingTrip ? 'Volver al Viaje' : 'Volver al Listado'}
               </Button>
             ) : (
               canWrite && !isEmployee && !isPlayero && !isLogistics && (
@@ -1116,13 +1244,29 @@ export const LoadsPage: React.FC = () => {
             />
           </div>
         </div>
+      ) : editingTrip ? (
+        <LoadForm
+          key={`edit-${editingTrip.id}`}
+          initialTrip={editingTrip}
+          maxTrucksError={editMaxTrucksError}
+          onSubmit={onSubmitEdit}
+          onCancel={handleBack}
+          isLoading={submitLoading}
+        />
       ) : selectedLoad ? (
-
-
-
         <LoadDetails
           load={selectedLoad}
           user={user}
+          onEditTrip={() => {
+            setError('');
+            setEditMaxTrucksError('');
+            setEditingTrip(selectedLoad);
+          }}
+          onComboUpdated={async (message) => {
+            showToast(message, 'success');
+            await refreshDetails();
+            triggerRefresh();
+          }}
           onCancelLoad={askDelete}
           onCloseRemainingCupos={(id, minTrucks, currentMaxTrucks) => {
             askCloseCupos({ id, minTrucks, currentMaxTrucks });
@@ -1319,15 +1463,25 @@ export const LoadsPage: React.FC = () => {
                 },
                 {
                   header: 'Estado',
-                  render: (r: ScaleLoadSearchResult) => (
-                    <Badge
-                      variant={
-                        r.status === 'COMPLETED' ? 'success' : r.status === 'IN_PROGRESS' ? 'primary' : 'info'
-                      }
-                    >
-                      {r.status === 'COMPLETED' ? 'DESCARGÓ' : r.status === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
-                    </Badge>
-                  ),
+                  render: (r: ScaleLoadSearchResult) =>
+                    isScaleLoadCancelled(r) ? (
+                      <div className="flex flex-col items-start gap-1 max-w-xs">
+                        <Badge variant="error">{r.statusLabel || 'Canceló carga'}</Badge>
+                        {r.cancellationReason && (
+                          <span className="text-xs text-rose-700 dark:text-rose-400 whitespace-normal">
+                            Motivo: {r.cancellationReason}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge
+                        variant={
+                          r.status === 'COMPLETED' ? 'success' : r.status === 'IN_PROGRESS' ? 'primary' : 'info'
+                        }
+                      >
+                        {r.status === 'COMPLETED' ? 'DESCARGÓ' : r.status === 'IN_PROGRESS' ? 'EN VIAJE' : 'ASIGNADO'}
+                      </Badge>
+                    ),
                 },
                 {
                   header: 'CTG',
@@ -1355,7 +1509,17 @@ export const LoadsPage: React.FC = () => {
                   ? 'No se encontraron viajes para esa búsqueda.'
                   : 'No hay viajes en este estado.'
               }
-              onRowClick={(r) => navigate(`/loads/${r.id}?type=load`)}
+              // Un camión que canceló no se abre: en el detalle están los
+              // botones de balanza (CTG / kilos) y no tienen que usarse.
+              onRowClick={(r) => {
+                if (isScaleLoadCancelled(r)) return;
+                navigate(`/loads/${r.id}?type=load`);
+              }}
+              rowClassName={(r) =>
+                isScaleLoadCancelled(r)
+                  ? 'bg-rose-50/60 dark:bg-rose-950/20 cursor-not-allowed!'
+                  : undefined
+              }
             />
           ) : activeTab === 'CANCELLED' && !isPlayero ? (
             cancelledApps === null && !loading ? (
@@ -1413,11 +1577,28 @@ export const LoadsPage: React.FC = () => {
                   },
                   {
                     header: 'Motivo',
-                    render: (a: Application) => (
-                      <span className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 italic">
-                        {a.cancellationReason || 'Sin especificar'}
-                      </span>
-                    ),
+                    render: (a: Application) =>
+                      isQuotaFullApplication(a) ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <QuotaFullBadge />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {a.statusMessage || QUOTA_FULL_MESSAGE}
+                          </span>
+                          {/* Backend marca "Cupos completos" a todo motivo que
+                              diga "cupo", también los cargados a mano ("se
+                              cayó el cupo por problemas en destino"): ese
+                              texto se sigue mostrando para no perderlo. */}
+                          {a.cancellationReason && !a.cancellationReason.startsWith(QUOTA_FULL_LABEL) && (
+                            <span className="text-xs text-slate-600 dark:text-zinc-400 italic">
+                              {a.cancellationReason}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 italic">
+                          {a.cancellationReason || 'Sin especificar'}
+                        </span>
+                      ),
                   },
                 ]}
                 data={cancelledApps ?? []}
@@ -1436,6 +1617,7 @@ export const LoadsPage: React.FC = () => {
               isAdmin={user?.role === 'ADMIN'}
               isEmployee={isEmployee}
               myCarrierId={user?.carrierId}
+              onEditTrip={handleEditFromTable}
             />
           )}
           </div>
