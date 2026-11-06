@@ -110,7 +110,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row overflow-hidden transition-colors duration-300">
+    // `fixed inset-0` (no `h-screen`) + `overscroll-y-contain` en <main>: el
+    // único scroll de la app es el de <main>. Con `h-screen` (100vh) en iOS
+    // el documento también quedaba scrolleable (100vh > alto visible), había
+    // dos scrolls anidados y al volver para arriba el gesto quedaba "agarrado"
+    // por el documento: el scroll se trababa hasta tocar algo.
+    <div className="fixed inset-0 bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row overflow-hidden transition-colors duration-300">
       {/* MOBILE TOP HEADER */}
       <header
         className="lg:hidden bg-zinc-100 dark:bg-zinc-950 text-slate-800 dark:text-white sticky top-0 z-[60] shadow-sm border-b border-zinc-200 dark:border-zinc-900"
@@ -257,7 +262,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-y-auto w-full min-w-0 max-w-full overflow-x-hidden dark:bg-zinc-950 transition-colors duration-300">
+      <main className="flex-1 overflow-y-auto overscroll-y-contain w-full min-w-0 max-w-full overflow-x-hidden dark:bg-zinc-950 transition-colors duration-300">
         <div className="px-3 py-4 md:p-8 lg:p-12 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
           {children}
         </div>
