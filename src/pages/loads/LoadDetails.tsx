@@ -44,6 +44,7 @@ import {
   QUOTA_FULL_MESSAGE,
 } from "../../utils/cupos";
 import { uniqueTargetGroupRate } from "../../utils/rate";
+import { findSubloadForApplication } from "../../utils/subloads";
 
 const SecureImagePreview: React.FC<{
   src: string;
@@ -336,11 +337,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
         if (a.carrierId !== effectiveCarrierId) return false;
         if (a.status === "PENDING") return true;
         if (a.status !== "ACCEPTED") return false;
-        const matchedLoad = load.loads?.find(
-          (l: any) =>
-            l.carrierId === a.carrierId &&
-            (l.truckId === a.truckId || l.truckId === a.truck?.id),
-        );
+        const matchedLoad = findSubloadForApplication(load.loads, a);
         const effectiveTripStatus = matchedLoad?.status || a.tripStatus;
         return effectiveTripStatus !== "COMPLETED";
       })
@@ -1525,10 +1522,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
               return (
                 <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
                   {appsToShow.map((app) => {
-                    const matchedLoad = load.loads?.find((l: any) => 
-                      l.carrierId === app.carrierId && 
-                      (l.truckId === app.truckId || l.truckId === app.truck?.id)
-                    );
+                    const matchedLoad = findSubloadForApplication(load.loads, app);
 
                     const isPending = app.status === "PENDING";
                     const isAccepted = app.status === "ACCEPTED";
@@ -2033,11 +2027,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
             // Mismos datos que se muestran en la tarjeta de cada camión —
             // así el buscador matchea exactamente lo que el usuario ve.
             const truckSearchHaystack = (trip: Application) => {
-              const matched = load.loads?.find(
-                (l: any) =>
-                  l.carrierId === trip.carrierId &&
-                  (l.truckId === trip.truckId || l.truckId === trip.truck?.id),
-              );
+              const matched = findSubloadForApplication(load.loads, trip);
               return [
                 trip.driver?.name ||
                   carrierDrivers.find((d) => d.id === trip.driverId)?.name,
@@ -2195,10 +2185,7 @@ export const LoadDetails: React.FC<LoadDetailsProps> = ({
                     )}
                     <div className="space-y-4">
                       {visibleAcceptedTrips.map((trip) => {
-                        const matchedLoad = load.loads?.find((l: any) => 
-                          l.carrierId === trip.carrierId && 
-                          (l.truckId === trip.truckId || l.truckId === trip.truck?.id)
-                        );
+                        const matchedLoad = findSubloadForApplication(load.loads, trip);
                         
                         const effectiveTripStatus =
                           matchedLoad?.status ||

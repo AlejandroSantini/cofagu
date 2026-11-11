@@ -5,6 +5,7 @@ import { loadService, driverService, truckService } from '../../api/services';
 import { type Load, type Driver, type Truck, type Application, type ScaleLoadSearchResult } from '../../types';
 import { getErrorMessage } from '../../api/errorUtils';
 import { isQuotaFullApplication, QUOTA_FULL_LABEL, QUOTA_FULL_MESSAGE } from '../../utils/cupos';
+import { findSubloadForApplication } from '../../utils/subloads';
 import { QuotaFullBadge } from '../../components/loads/QuotaFullBadge';
 import { dateOnlyToISOString } from '../../utils/dateOnly';
 import { type LoadFormValues } from '../../schemas/load.schema';
@@ -692,10 +693,7 @@ export const LoadsPage: React.FC = () => {
     if (!isLoad && selectedLoad.loads && selectedLoad.applications) {
       const app = selectedLoad.applications.find((a: any) => a.id === appId);
       if (app) {
-        const matchedLoad = selectedLoad.loads.find((l: any) =>
-          l.carrierId === app.carrierId &&
-          (l.truckId === app.truckId || l.truckId === app.truck?.id)
-        );
+        const matchedLoad = findSubloadForApplication(selectedLoad.loads, app);
         if (matchedLoad) {
           targetId = Number(matchedLoad.id);
         } else {
@@ -763,10 +761,7 @@ export const LoadsPage: React.FC = () => {
     if (appId && !isLoad) {
       const selectedApp = selectedLoad.applications?.find((a: any) => a.id === appId);
       if (selectedApp) {
-        const matchedLoad = selectedLoad.loads?.find((l: any) =>
-          l.carrierId === selectedApp.carrierId &&
-          (l.truckId === selectedApp.truckId || l.truckId === selectedApp.truck?.id)
-        );
+        const matchedLoad = findSubloadForApplication(selectedLoad.loads, selectedApp);
         if (matchedLoad) {
           targetId = matchedLoad.id;
         } else {
